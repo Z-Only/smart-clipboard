@@ -12,7 +12,7 @@
       @click="store.setCategory(cat.key)"
     >
       <span class="w-5 text-center text-xs">{{ cat.icon }}</span>
-      <span class="truncate">{{ cat.label }}</span>
+      <span class="truncate">{{ $t(cat.labelKey) }}</span>
     </button>
   </div>
 </template>

@@ -1,3 +1,5 @@
+[English](README.md) | [中文](README.zh-CN.md)
+
 # Smart Clipboard Manager
 
 A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + **Vue 3** + **Rust**. It runs in the background, automatically captures and classifies clipboard content, and provides instant search and retrieval.
@@ -13,6 +15,7 @@ A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + *
 - **Favorites** -- Pin frequently used entries to prevent auto-cleanup
 - **Configurable** -- Max entries, retention period, excluded apps, monitor interval
 - **Auto-Start** -- Optionally launch on system login
+- **Multi-Language** -- English and Chinese UI support
 - **Lightweight** -- ~5MB binary, minimal CPU/memory usage thanks to Rust + native WebView
 
 ## Screenshots
@@ -28,6 +31,7 @@ A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + *
 | Framework | Tauri 2 |
 | Database | SQLite with FTS5 (via rusqlite) |
 | Clipboard | arboard |
+| i18n | vue-i18n |
 
 ## Getting Started
 
@@ -69,6 +73,7 @@ The built binary will be in `src-tauri/target/release/bundle/`.
 4. Search, filter by category, or click an entry to paste it
 5. Star entries to keep them permanently
 6. Right-click the tray icon for quick access and settings
+7. Switch language in Settings (English / Chinese)
 
 ## Project Structure
 
@@ -77,6 +82,9 @@ smart-clipboard/
 ├── src/                          # Vue 3 frontend
 │   ├── components/               # UI components
 │   ├── composables/              # Vue composables
+│   ├── i18n/                     # Internationalization
+│   │   ├── locales/              # Language files (en, zh-CN)
+│   │   └── index.ts              # i18n configuration
 │   ├── stores/                   # Pinia state management
 │   └── types/                    # TypeScript types
 ├── src-tauri/                    # Rust backend
@@ -95,6 +103,7 @@ smart-clipboard/
 ## Roadmap
 
 - [x] **Phase 1 -- MVP**: Clipboard monitoring, storage, classification, search UI, hotkey, tray, settings
+- [x] **i18n**: Multi-language support (English, Chinese)
 - [ ] **Phase 2 -- Smart Enhancements**: Sensitive content detection, content transforms, image support, usage stats
 - [ ] **Phase 3 -- Sync & Advanced**: LAN sync, E2E encrypted cloud sync, clipboard templates, plugin system
 
@@ -116,6 +125,7 @@ This project is licensed under the MIT License -- see the [LICENSE](LICENSE) fil
 
 - [Tauri](https://tauri.app/) -- Cross-platform app framework
 - [Vue.js](https://vuejs.org/) -- Frontend framework
+- [vue-i18n](https://vue-i18n.intlify.dev/) -- Internationalization for Vue.js
 - [shadcn-vue](https://www.shadcn-vue.com/) -- UI components
 - [arboard](https://github.com/1Password/arboard) -- Cross-platform clipboard library
 - [rusqlite](https://github.com/rusqlite/rusqlite) -- SQLite bindings for Rust

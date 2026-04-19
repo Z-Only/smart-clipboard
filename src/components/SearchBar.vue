@@ -11,7 +11,7 @@
     <Input
       ref="inputRef"
       v-model="searchText"
-      placeholder="Search clipboard..."
+      :placeholder="$t('search.placeholder')"
       class="pl-9 pr-9 h-9"
       @keydown.escape="handleEscape"
     />

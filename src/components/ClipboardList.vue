@@ -5,7 +5,7 @@
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
       </svg>
-      Loading...
+      {{ $t('list.loading') }}
     </div>
 
     <div v-else-if="entries.length === 0" class="flex flex-col items-center justify-center h-40 text-muted-foreground">
@@ -14,8 +14,8 @@
         <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
         <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
       </svg>
-      <span class="text-sm">No entries yet</span>
-      <span class="text-xs mt-1">Copy something to get started</span>
+      <span class="text-sm">{{ $t('list.noEntries') }}</span>
+      <span class="text-xs mt-1">{{ $t('list.noEntriesHint') }}</span>
     </div>
 
     <div v-else ref="listRef" class="flex flex-col">
@@ -35,7 +35,7 @@
       </template>
 
       <div v-if="hasMore" ref="sentinelRef" class="flex items-center justify-center py-4 text-muted-foreground text-xs">
-        <span v-if="isLoading">Loading more...</span>
+        <span v-if="isLoading">{{ $t('list.loadingMore') }}</span>
         <span v-else>&nbsp;</span>
       </div>
     </div>
@@ -44,11 +44,13 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from "vue";
+import { useI18n } from "vue-i18n";
 import { storeToRefs } from "pinia";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import EntryCard from "./EntryCard.vue";
 import { useClipboardStore } from "@/stores/clipboardStore";
 
+const { t } = useI18n();
 const store = useClipboardStore();
 const { entries, isLoading, hasMore } = storeToRefs(store);
 
@@ -67,9 +69,9 @@ const groupedEntries = computed(() => {
     let label: string;
 
     if (isSameDay(date, today)) {
-      label = "Today";
+      label = t("list.today");
     } else if (isSameDay(date, yesterday)) {
-      label = "Yesterday";
+      label = t("list.yesterday");
     } else {
       label = date.toLocaleDateString(undefined, {
         month: "short",

@@ -30,7 +30,7 @@
         :class="entry.is_favorite ? 'text-yellow-500 !opacity-100' : ''"
         :style="entry.is_favorite ? 'opacity: 1' : ''"
         @click.stop="$emit('toggleFavorite', entry.id)"
-        title="Toggle favorite"
+        :title="t('entry.toggleFavorite')"
       >
         <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
           :fill="entry.is_favorite ? 'currentColor' : 'none'"
@@ -41,7 +41,7 @@
       <button
         class="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
         @click.stop="$emit('delete', entry.id)"
-        title="Delete"
+        :title="t('entry.delete')"
       >
         <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -55,8 +55,11 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { Badge } from "@/components/ui/badge";
 import type { ClipboardEntry } from "@/types";
+
+const { t } = useI18n();
 
 const props = defineProps<{
   entry: ClipboardEntry;
@@ -69,22 +72,11 @@ defineEmits<{
   delete: [id: number];
 }>();
 
-const CATEGORY_LABELS: Record<string, string> = {
-  url: "URL",
-  email: "Email",
-  color: "Color",
-  filepath: "File",
-  json: "JSON",
-  xml: "XML",
-  code: "Code",
-  phone: "Phone",
-  address: "Addr",
-  text: "Text",
-};
-
-const categoryLabel = computed(
-  () => CATEGORY_LABELS[props.entry.category] || props.entry.category
-);
+const categoryLabel = computed(() => {
+  const key = `entry.categoryLabels.${props.entry.category}`;
+  const translated = t(key);
+  return translated !== key ? translated : props.entry.category;
+});
 
 const isCodeLike = computed(() =>
   ["code", "json", "xml"].includes(props.entry.category)
@@ -107,10 +99,10 @@ const relativeTime = computed(() => {
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
 
-  if (diffSec < 60) return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHour < 24) return `${diffHour}h ago`;
-  if (diffDay < 7) return `${diffDay}d ago`;
+  if (diffSec < 60) return t("entry.justNow");
+  if (diffMin < 60) return t("entry.minutesAgo", { n: diffMin });
+  if (diffHour < 24) return t("entry.hoursAgo", { n: diffHour });
+  if (diffDay < 7) return t("entry.daysAgo", { n: diffDay });
   return created.toLocaleDateString();
 });
 </script>

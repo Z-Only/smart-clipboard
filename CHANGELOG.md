@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-04-20
+
+### Added
+
+- **Multi-language support (i18n)**: Full internationalization with vue-i18n, supporting English and Chinese
+- **Language switcher**: Users can switch between English and Chinese in the Settings panel
+- **Auto language detection**: Defaults to system language (Chinese for zh-* locales, English otherwise)
+- **Bilingual README**: Separate README.md (English) and README.zh-CN.md (Chinese) with language switch links
+
 ## [0.1.0] - 2026-04-20
 
 ### Added

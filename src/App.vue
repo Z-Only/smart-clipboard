@@ -7,7 +7,7 @@
       </div>
       <button
         class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-        title="Settings"
+        :title="$t('app.settings')"
         @click="showSettings = true"
       >
         <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
@@ -37,7 +37,7 @@
 
     <!-- Status bar -->
     <div class="flex items-center justify-between px-3 py-1.5 text-xs text-muted-foreground">
-      <span>{{ totalCount }} entries</span>
+      <span>{{ $t('app.entries', { count: totalCount }) }}</span>
       <span class="opacity-60">Cmd+Shift+V</span>
     </div>
 

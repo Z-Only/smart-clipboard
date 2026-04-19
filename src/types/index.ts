@@ -34,20 +34,20 @@ export type CategoryType =
 
 export interface CategoryItem {
   key: CategoryType;
-  label: string;
+  labelKey: string;
   icon: string;
 }
 
 export const CATEGORIES: CategoryItem[] = [
-  { key: "all", label: "All", icon: "📋" },
-  { key: "favorites", label: "Favorites", icon: "⭐" },
-  { key: "url", label: "Links", icon: "🔗" },
-  { key: "email", label: "Email", icon: "📧" },
-  { key: "code", label: "Code", icon: "💻" },
-  { key: "json", label: "JSON", icon: "{}" },
-  { key: "filepath", label: "Files", icon: "📁" },
-  { key: "color", label: "Colors", icon: "🎨" },
-  { key: "phone", label: "Phone", icon: "📞" },
-  { key: "address", label: "Address", icon: "📍" },
-  { key: "text", label: "Text", icon: "📝" },
+  { key: "all", labelKey: "categories.all", icon: "📋" },
+  { key: "favorites", labelKey: "categories.favorites", icon: "⭐" },
+  { key: "url", labelKey: "categories.url", icon: "🔗" },
+  { key: "email", labelKey: "categories.email", icon: "📧" },
+  { key: "code", labelKey: "categories.code", icon: "💻" },
+  { key: "json", labelKey: "categories.json", icon: "{}" },
+  { key: "filepath", labelKey: "categories.filepath", icon: "📁" },
+  { key: "color", labelKey: "categories.color", icon: "🎨" },
+  { key: "phone", labelKey: "categories.phone", icon: "📞" },
+  { key: "address", labelKey: "categories.address", icon: "📍" },
+  { key: "text", labelKey: "categories.text", icon: "📝" },
 ];
