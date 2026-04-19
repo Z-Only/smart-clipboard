@@ -83,6 +83,53 @@
           </select>
         </div>
 
+        <!-- Appearance Mode -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium">{{ $t('settings.appearance') }}</label>
+          <p class="text-xs text-muted-foreground">{{ $t('settings.appearanceHint') }}</p>
+          <div class="flex gap-1.5">
+            <button
+              v-for="mode in appearanceModes"
+              :key="mode"
+              class="flex-1 h-8 rounded-md border text-xs font-medium transition-colors"
+              :class="appearance === mode
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-input bg-background text-foreground hover:bg-accent'"
+              @click="setAppearance(mode)"
+            >
+              {{ $t(`settings.appearance${mode.charAt(0).toUpperCase() + mode.slice(1)}`) }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Theme Color -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium">{{ $t('settings.themeColor') }}</label>
+          <p class="text-xs text-muted-foreground">{{ $t('settings.themeColorHint') }}</p>
+          <div class="flex gap-2 flex-wrap">
+            <button
+              v-for="color in themeColors"
+              :key="color.id"
+              class="flex flex-col items-center gap-1 group"
+              @click="setThemeColor(color.id)"
+            >
+              <span
+                class="w-7 h-7 rounded-full border-2 transition-all"
+                :class="themeColor === color.id
+                  ? 'border-foreground scale-110'
+                  : 'border-transparent hover:border-muted-foreground/50'"
+                :style="{ backgroundColor: color.swatch }"
+              />
+              <span
+                class="text-[10px]"
+                :class="themeColor === color.id ? 'text-foreground font-medium' : 'text-muted-foreground'"
+              >
+                {{ $t(`settings.theme${color.id.charAt(0).toUpperCase() + color.id.slice(1)}`) }}
+              </span>
+            </button>
+          </div>
+        </div>
+
         <Separator />
 
         <!-- Action buttons -->
@@ -103,6 +150,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { setLocale, getLocale } from "@/i18n";
+import { useTheme, type AppearanceMode, type ThemeColor } from "@/composables/useTheme";
 
 interface AppConfig {
   max_entries: number;
@@ -121,6 +169,17 @@ const currentLocale = computed(() => locale.value);
 function changeLanguage(lang: string) {
   setLocale(lang);
 }
+
+const { appearance, themeColor, setAppearance, setThemeColor } = useTheme();
+const appearanceModes: AppearanceMode[] = ["system", "light", "dark"];
+const themeColors: { id: ThemeColor; swatch: string }[] = [
+  { id: "zinc", swatch: "#71717a" },
+  { id: "blue", swatch: "#3b82f6" },
+  { id: "green", swatch: "#22c55e" },
+  { id: "rose", swatch: "#f43f5e" },
+  { id: "orange", swatch: "#f97316" },
+  { id: "violet", swatch: "#8b5cf6" },
+];
 
 const form = reactive<AppConfig>({
   max_entries: 5000,

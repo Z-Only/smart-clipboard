@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-04-20
+
+### Added
+
+- **Appearance mode switching**: System / Light / Dark mode with OS preference detection via `prefers-color-scheme` media query
+- **Multi-theme color selection**: 6 color themes — Zinc (default), Blue, Green, Rose, Orange, Violet
+- **Theme composable**: `useTheme` composable with reactive state, localStorage persistence, and real-time OS theme listener
+- **Theme CSS variables**: OKLCh color overrides for primary/ring/sidebar colors in both light and dark variants
+- **Settings UI**: Appearance toggle buttons and color picker dots integrated into SettingsPanel
+- **i18n support**: Theme-related labels in both English and Chinese
+
 ## [0.2.0] - 2026-04-20
 
 ### Added

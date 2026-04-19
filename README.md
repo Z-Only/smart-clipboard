@@ -15,6 +15,8 @@ A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + *
 - **Favorites** -- Pin frequently used entries to prevent auto-cleanup
 - **Configurable** -- Max entries, retention period, excluded apps, monitor interval
 - **Auto-Start** -- Optionally launch on system login
+- **Appearance Modes** -- System / Light / Dark mode with automatic OS preference detection
+- **Theme Colors** -- 6 built-in color themes: Zinc, Blue, Green, Rose, Orange, Violet
 - **Multi-Language** -- English and Chinese UI support
 - **Lightweight** -- ~5MB binary, minimal CPU/memory usage thanks to Rust + native WebView
 
@@ -74,6 +76,7 @@ The built binary will be in `src-tauri/target/release/bundle/`.
 5. Star entries to keep them permanently
 6. Right-click the tray icon for quick access and settings
 7. Switch language in Settings (English / Chinese)
+8. Choose appearance mode (System / Light / Dark) and theme color in Settings
 
 ## Project Structure
 
@@ -104,6 +107,7 @@ smart-clipboard/
 
 - [x] **Phase 1 -- MVP**: Clipboard monitoring, storage, classification, search UI, hotkey, tray, settings
 - [x] **i18n**: Multi-language support (English, Chinese)
+- [x] **Theming**: Appearance mode switching (System/Light/Dark) and 6 color themes
 - [ ] **Phase 2 -- Smart Enhancements**: Sensitive content detection, content transforms, image support, usage stats
 - [ ] **Phase 3 -- Sync & Advanced**: LAN sync, E2E encrypted cloud sync, clipboard templates, plugin system
 

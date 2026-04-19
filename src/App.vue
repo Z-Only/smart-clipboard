@@ -57,8 +57,10 @@ import ClipboardList from "@/components/ClipboardList.vue";
 import SettingsPanel from "@/components/SettingsPanel.vue";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useClipboard } from "@/composables/useClipboard";
+import { useTheme } from "@/composables/useTheme";
 
 const store = useClipboardStore();
+useTheme();
 const { totalCount } = storeToRefs(store);
 
 const searchBarRef = ref<InstanceType<typeof SearchBar> | null>(null);
