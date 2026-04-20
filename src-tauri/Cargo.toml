@@ -31,3 +31,5 @@ log = "0.4"
 dirs = "6"
 base64 = "0.22"
 image = "0.25"
+
+mdns-sd = "0.11"

@@ -73,30 +73,48 @@ pub struct SearchQuery {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DiscoveredDevice {
     pub id: String,
     pub name: String,
+    pub device_name: String,
     pub host: String,
-    pub port: u16,
+    pub address: String,
+    pub ip: String,
+    pub port: i64,
     pub version: String,
+    pub status: String,
     pub last_seen_at: NaiveDateTime,
     pub is_paired: bool,
+    pub enabled: bool,
+    pub sync_enabled: bool,
+    pub paired_at: Option<NaiveDateTime>,
+    pub fingerprint: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PairedDevice {
     pub id: String,
     pub name: String,
+    pub device_name: String,
     pub host: String,
+    pub address: String,
+    pub ip: String,
     pub port: i64,
+    pub status: String,
     pub public_key: Option<Vec<u8>>,
     pub shared_secret: Option<Vec<u8>>,
     pub last_seen_at: Option<NaiveDateTime>,
     pub is_active: bool,
+    pub enabled: bool,
+    pub sync_enabled: bool,
     pub paired_at: NaiveDateTime,
+    pub fingerprint: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SyncStatus {
     pub enabled: bool,
     pub state: String,

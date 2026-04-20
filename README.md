@@ -10,7 +10,7 @@ This repository now includes a **Phase 3 LAN Sync MVP**. In this release, the pr
 
 - Sync settings panel in the desktop UI
 - Editable device name and sync port
-- Discovered device list (MVP scaffolding)
+- Real mDNS / DNS-SD discovered device list with automatic refresh and deduplication
 - Pair / unpair device workflow
 - Per-device sync enable toggle
 - Persistent paired device storage and sync config
@@ -19,12 +19,19 @@ This repository now includes a **Phase 3 LAN Sync MVP**. In this release, the pr
 
 This is a **partial Phase 3 delivery**. It intentionally focuses on the product surface and persistence layer first. The following items are **not fully implemented yet** in this release:
 
-- Real mDNS device discovery
 - Live WebSocket transport between devices
 - End-to-end encryption key exchange and payload encryption
 - Cross-device clipboard propagation
 
 This makes the release safe for incremental rollout while keeping the design direction intact.
+
+### Newly completed in this session
+
+- Real mDNS / DNS-SD service advertisement using `_smartclip._tcp.local.`
+- Real LAN device discovery in the Tauri sync backend
+- Periodic online/offline state refresh via last-seen timestamps
+- Device deduplication by advertised `device_id`
+- Backend response shaping to stay compatible with the existing SyncPanel / DeviceCard UI
 
 ## Features
 

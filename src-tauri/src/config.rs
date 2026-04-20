@@ -1,4 +1,5 @@
 use crate::sync::SyncConfig;
+use serde_json::Value;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -14,6 +15,7 @@ pub struct AppConfig {
     pub sensitive_expiry_minutes: u64,
     #[serde(default)]
     pub sync: SyncConfig,
+    pub sync_metadata: Option<Value>,
 }
 
 impl Default for AppConfig {
@@ -26,6 +28,7 @@ impl Default for AppConfig {
             autostart_enabled: false,
             sensitive_expiry_minutes: 5,
             sync: SyncConfig::default(),
+            sync_metadata: None,
         }
     }
 }
@@ -49,9 +52,7 @@ impl ConfigManager {
     fn load_from_file(path: &PathBuf) -> AppConfig {
         if path.exists() {
             match std::fs::read_to_string(path) {
-                Ok(contents) => {
-                    serde_json::from_str(&contents).unwrap_or_default()
-                }
+                Ok(contents) => serde_json::from_str(&contents).unwrap_or_default(),
                 Err(_) => AppConfig::default(),
             }
         } else {
@@ -64,8 +65,7 @@ impl ConfigManager {
     }
 
     pub fn update(&self, new_config: AppConfig) -> Result<(), String> {
-        let json =
-            serde_json::to_string_pretty(&new_config).map_err(|e| e.to_string())?;
+        let json = serde_json::to_string_pretty(&new_config).map_err(|e| e.to_string())?;
         std::fs::write(&self.config_path, json).map_err(|e| e.to_string())?;
         *self.config.lock().unwrap() = new_config;
         Ok(())

@@ -6,10 +6,13 @@
 - Added a Phase 3 LAN Sync MVP management experience with a dedicated Sync panel in the desktop UI.
 - Added sync configuration, discovered-device list, paired-device list, and per-device enable/disable controls.
 - Added backend sync scaffolding with persisted sync config, paired devices storage, and Tauri sync commands.
+- Added real mDNS / DNS-SD LAN discovery with `_smartclip._tcp.local.` service advertisement and browsing.
+- Added discovered-device deduplication, last-seen refresh, and online/offline status updates in the Phase 3 sync backend.
 
 ### Changed
 - Updated the app version to 0.6.0 for the Phase 3 partial delivery.
-- Clarified that this release ships the management and persistence layer first, while transport and encryption remain for follow-up work.
+- Replaced demo discovered devices with real mDNS discovery results while keeping the existing Sync panel UI contract stable.
+- Clarified that this release now ships real LAN discovery, while transport and encryption remain for follow-up work.
 
 All notable changes to this project will be documented in this file.
 

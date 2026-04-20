@@ -5,7 +5,10 @@ use chrono::{Local, NaiveDateTime};
 use rusqlite::{params, Connection, Result};
 
 use super::migrations;
-use super::models::{CategoryCount, ClipboardEntry, DayCount, PairedDevice, SearchQuery, SearchResult, Statistics, Tag, Template};
+use super::models::{
+    CategoryCount, ClipboardEntry, DayCount, PairedDevice, SearchQuery, SearchResult, Statistics,
+    Tag, Template,
+};
 
 pub struct Database {
     conn: Mutex<Connection>,
@@ -188,7 +191,9 @@ impl Database {
         let conn = self.conn.lock().unwrap();
 
         let total_entries: i64 =
-            conn.query_row("SELECT COUNT(*) FROM clipboard_entries", [], |row| row.get(0))?;
+            conn.query_row("SELECT COUNT(*) FROM clipboard_entries", [], |row| {
+                row.get(0)
+            })?;
 
         let total_favorites: i64 = conn.query_row(
             "SELECT COUNT(*) FROM clipboard_entries WHERE is_favorite = 1",
@@ -253,13 +258,23 @@ impl Database {
                 Ok(PairedDevice {
                     id: row.get(0)?,
                     name: row.get(1)?,
+                    device_name: row.get(1)?,
                     host: row.get(2)?,
+                    address: row.get(2)?,
+                    ip: row.get(2)?,
                     port: row.get(3)?,
+                    status: "unknown".to_string(),
                     public_key: row.get(4)?,
                     shared_secret: row.get(5)?,
-                    last_seen_at: row.get::<_, Option<String>>(6)?.map(|v| parse_datetime(&v)).transpose()?,
+                    last_seen_at: row
+                        .get::<_, Option<String>>(6)?
+                        .map(|v| parse_datetime(&v))
+                        .transpose()?,
                     is_active: row.get::<_, i32>(7)? != 0,
+                    enabled: row.get::<_, i32>(7)? != 0,
+                    sync_enabled: row.get::<_, i32>(7)? != 0,
                     paired_at: parse_datetime(&row.get::<_, String>(8)?)?,
+                    fingerprint: None,
                 })
             })?
             .filter_map(|r| r.ok())
@@ -297,13 +312,19 @@ impl Database {
 
     pub fn unpair_device(&self, device_id: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
-        conn.execute("DELETE FROM paired_devices WHERE id = ?1", params![device_id])?;
+        conn.execute(
+            "DELETE FROM paired_devices WHERE id = ?1",
+            params![device_id],
+        )?;
         Ok(())
     }
 
     pub fn set_paired_device_active(&self, device_id: &str, enabled: bool) -> Result<()> {
         let conn = self.conn.lock().unwrap();
-        let now = Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string();
+        let now = Local::now()
+            .naive_local()
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string();
         conn.execute(
             "UPDATE paired_devices SET is_active = ?1, last_seen_at = ?2 WHERE id = ?3",
             params![enabled as i32, now, device_id],
@@ -420,7 +441,13 @@ impl Database {
         })
     }
 
-    pub fn update_template(&self, id: i64, name: &str, content: &str, category: &str) -> Result<Template> {
+    pub fn update_template(
+        &self,
+        id: i64,
+        name: &str,
+        content: &str,
+        category: &str,
+    ) -> Result<Template> {
         let conn = self.conn.lock().unwrap();
         let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
         let rows = conn.execute(
@@ -491,9 +518,7 @@ impl Database {
 
     pub fn get_template_categories_list(&self) -> Result<Vec<String>> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare(
-            "SELECT DISTINCT category FROM templates ORDER BY category",
-        )?;
+        let mut stmt = conn.prepare("SELECT DISTINCT category FROM templates ORDER BY category")?;
         let categories = stmt
             .query_map([], |row| row.get(0))?
             .filter_map(|r| r.ok())
@@ -866,7 +891,9 @@ mod tests {
     #[test]
     fn test_add_and_get_entry_tags() {
         let db = Database::new(":memory:").unwrap();
-        let entry_id = db.insert_entry(&make_entry("tagged content", "text")).unwrap();
+        let entry_id = db
+            .insert_entry(&make_entry("tagged content", "text"))
+            .unwrap();
         let tag1 = db.create_tag("tag1").unwrap();
         let tag2 = db.create_tag("tag2").unwrap();
 
@@ -883,7 +910,9 @@ mod tests {
     #[test]
     fn test_add_tag_to_entry_idempotent() {
         let db = Database::new(":memory:").unwrap();
-        let entry_id = db.insert_entry(&make_entry("tagged content", "text")).unwrap();
+        let entry_id = db
+            .insert_entry(&make_entry("tagged content", "text"))
+            .unwrap();
         let tag = db.create_tag("tag1").unwrap();
         let tag_id = tag.id.unwrap();
 
@@ -898,7 +927,9 @@ mod tests {
     #[test]
     fn test_remove_tag_from_entry() {
         let db = Database::new(":memory:").unwrap();
-        let entry_id = db.insert_entry(&make_entry("tagged content", "text")).unwrap();
+        let entry_id = db
+            .insert_entry(&make_entry("tagged content", "text"))
+            .unwrap();
         let tag = db.create_tag("removable").unwrap();
         let tag_id = tag.id.unwrap();
 
@@ -932,7 +963,9 @@ mod tests {
     #[test]
     fn test_delete_entry_cascades_tag_associations() {
         let db = Database::new(":memory:").unwrap();
-        let entry_id = db.insert_entry(&make_entry("will be deleted", "text")).unwrap();
+        let entry_id = db
+            .insert_entry(&make_entry("will be deleted", "text"))
+            .unwrap();
         let tag = db.create_tag("cascade_test").unwrap();
         let tag_id = tag.id.unwrap();
 
@@ -1053,8 +1086,10 @@ mod tests {
     #[test]
     fn test_get_statistics_entries_by_day() {
         let db = Database::new(":memory:").unwrap();
-        db.insert_entry(&make_entry("today entry 1", "text")).unwrap();
-        db.insert_entry(&make_entry("today entry 2", "url")).unwrap();
+        db.insert_entry(&make_entry("today entry 1", "text"))
+            .unwrap();
+        db.insert_entry(&make_entry("today entry 2", "url"))
+            .unwrap();
 
         let stats = db.get_statistics().unwrap();
         assert!(!stats.entries_by_day.is_empty());
@@ -1071,7 +1106,8 @@ mod tests {
         db.update_use_count(&e1.hash).unwrap();
         db.update_use_count(&e1.hash).unwrap();
 
-        db.insert_entry(&make_entry("less popular", "text")).unwrap();
+        db.insert_entry(&make_entry("less popular", "text"))
+            .unwrap();
 
         let stats = db.get_statistics().unwrap();
         assert_eq!(stats.most_used.len(), 2);
@@ -1084,7 +1120,8 @@ mod tests {
     fn test_get_statistics_most_used_limit_10() {
         let db = Database::new(":memory:").unwrap();
         for i in 0..15 {
-            db.insert_entry(&make_entry(&format!("entry {}", i), "text")).unwrap();
+            db.insert_entry(&make_entry(&format!("entry {}", i), "text"))
+                .unwrap();
         }
 
         let stats = db.get_statistics().unwrap();
@@ -1094,7 +1131,9 @@ mod tests {
     #[test]
     fn test_delete_tag_cascades_associations() {
         let db = Database::new(":memory:").unwrap();
-        let entry_id = db.insert_entry(&make_entry("tagged content", "text")).unwrap();
+        let entry_id = db
+            .insert_entry(&make_entry("tagged content", "text"))
+            .unwrap();
         let tag = db.create_tag("will_be_deleted").unwrap();
         let tag_id = tag.id.unwrap();
 
@@ -1114,7 +1153,9 @@ mod tests {
     #[test]
     fn test_create_template() {
         let db = Database::new(":memory:").unwrap();
-        let tpl = db.create_template("greeting", "Hello {{name}}!", "general").unwrap();
+        let tpl = db
+            .create_template("greeting", "Hello {{name}}!", "general")
+            .unwrap();
         assert!(tpl.id.is_some());
         assert_eq!(tpl.name, "greeting");
         assert_eq!(tpl.content, "Hello {{name}}!");
@@ -1154,10 +1195,14 @@ mod tests {
     #[test]
     fn test_update_template() {
         let db = Database::new(":memory:").unwrap();
-        let tpl = db.create_template("old_name", "old content", "general").unwrap();
+        let tpl = db
+            .create_template("old_name", "old content", "general")
+            .unwrap();
         let id = tpl.id.unwrap();
 
-        let updated = db.update_template(id, "new_name", "new content", "work").unwrap();
+        let updated = db
+            .update_template(id, "new_name", "new content", "work")
+            .unwrap();
         assert_eq!(updated.name, "new_name");
         assert_eq!(updated.content, "new content");
         assert_eq!(updated.category, "work");
@@ -1173,7 +1218,9 @@ mod tests {
     #[test]
     fn test_delete_template() {
         let db = Database::new(":memory:").unwrap();
-        let tpl = db.create_template("to_delete", "content", "general").unwrap();
+        let tpl = db
+            .create_template("to_delete", "content", "general")
+            .unwrap();
         let id = tpl.id.unwrap();
 
         db.delete_template(id).unwrap();
