@@ -3,6 +3,7 @@ export default {
     name: "Smart Clipboard",
     entries: "{count} entries",
     settings: "Settings",
+    statistics: "Statistics",
   },
   search: {
     placeholder: "Search clipboard...",
@@ -109,5 +110,16 @@ export default {
     noTags: "No tags yet",
     deleteTag: "Delete tag",
     filterByTag: "Filter by tag",
+  },
+  statistics: {
+    title: "Statistics",
+    totalEntries: "Total Entries",
+    totalFavorites: "Favorites",
+    storageSize: "Storage Size",
+    categoryBreakdown: "By Category",
+    dailyActivity: "Daily Activity (30 days)",
+    mostUsed: "Most Used",
+    noData: "No data yet",
+    times: "{n} times",
   },
 };

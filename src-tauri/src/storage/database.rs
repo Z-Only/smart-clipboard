@@ -5,7 +5,7 @@ use chrono::{Local, NaiveDateTime};
 use rusqlite::{params, Connection, Result};
 
 use super::migrations;
-use super::models::{ClipboardEntry, SearchQuery, SearchResult, Tag};
+use super::models::{CategoryCount, ClipboardEntry, DayCount, SearchQuery, SearchResult, Statistics, Tag};
 
 pub struct Database {
     conn: Mutex<Connection>,
@@ -180,6 +180,67 @@ impl Database {
         } else {
             Ok(None)
         }
+    }
+
+    // --- Statistics methods ---
+
+    pub fn get_statistics(&self) -> Result<Statistics> {
+        let conn = self.conn.lock().unwrap();
+
+        let total_entries: i64 =
+            conn.query_row("SELECT COUNT(*) FROM clipboard_entries", [], |row| row.get(0))?;
+
+        let total_favorites: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM clipboard_entries WHERE is_favorite = 1",
+            [],
+            |row| row.get(0),
+        )?;
+
+        // Entries by category
+        let mut cat_stmt = conn.prepare(
+            "SELECT category, COUNT(*) as count FROM clipboard_entries GROUP BY category ORDER BY count DESC",
+        )?;
+        let entries_by_category: Vec<CategoryCount> = cat_stmt
+            .query_map([], |row| {
+                Ok(CategoryCount {
+                    category: row.get(0)?,
+                    count: row.get(1)?,
+                })
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        // Entries by day (last 30 days)
+        let mut day_stmt = conn.prepare(
+            "SELECT DATE(created_at) as date, COUNT(*) as count FROM clipboard_entries GROUP BY DATE(created_at) ORDER BY date DESC LIMIT 30",
+        )?;
+        let entries_by_day: Vec<DayCount> = day_stmt
+            .query_map([], |row| {
+                Ok(DayCount {
+                    date: row.get(0)?,
+                    count: row.get(1)?,
+                })
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        // Most used entries (top 10)
+        let mut most_stmt = conn.prepare(
+            "SELECT id, content, content_type, category, hash, source_app, is_favorite, is_sensitive, use_count, created_at, updated_at, expires_at FROM clipboard_entries ORDER BY use_count DESC LIMIT 10",
+        )?;
+        let most_used: Vec<ClipboardEntry> = most_stmt
+            .query_map([], |row| row_to_entry(row))?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        Ok(Statistics {
+            total_entries,
+            total_favorites,
+            entries_by_category,
+            entries_by_day,
+            most_used,
+            storage_size_bytes: 0, // Will be set by the command
+        })
     }
 
     // --- Tag management methods ---
@@ -755,6 +816,89 @@ mod tests {
 
         let found = db.get_entry_by_id(id).unwrap();
         assert!(found.is_none());
+    }
+
+    // --- Statistics tests ---
+
+    #[test]
+    fn test_get_statistics_empty_db() {
+        let db = Database::new(":memory:").unwrap();
+        let stats = db.get_statistics().unwrap();
+        assert_eq!(stats.total_entries, 0);
+        assert_eq!(stats.total_favorites, 0);
+        assert!(stats.entries_by_category.is_empty());
+        assert!(stats.entries_by_day.is_empty());
+        assert!(stats.most_used.is_empty());
+        assert_eq!(stats.storage_size_bytes, 0);
+    }
+
+    #[test]
+    fn test_get_statistics_total_counts() {
+        let db = Database::new(":memory:").unwrap();
+        db.insert_entry(&make_entry("entry 1", "text")).unwrap();
+        db.insert_entry(&make_entry("entry 2", "url")).unwrap();
+        let id3 = db.insert_entry(&make_entry("entry 3", "code")).unwrap();
+        db.toggle_favorite(id3).unwrap();
+
+        let stats = db.get_statistics().unwrap();
+        assert_eq!(stats.total_entries, 3);
+        assert_eq!(stats.total_favorites, 1);
+    }
+
+    #[test]
+    fn test_get_statistics_entries_by_category() {
+        let db = Database::new(":memory:").unwrap();
+        db.insert_entry(&make_entry("url1", "url")).unwrap();
+        db.insert_entry(&make_entry("url2", "url")).unwrap();
+        db.insert_entry(&make_entry("text1", "text")).unwrap();
+        db.insert_entry(&make_entry("code1", "code")).unwrap();
+
+        let stats = db.get_statistics().unwrap();
+        assert_eq!(stats.entries_by_category.len(), 3);
+        // Should be ordered by count DESC
+        assert_eq!(stats.entries_by_category[0].category, "url");
+        assert_eq!(stats.entries_by_category[0].count, 2);
+    }
+
+    #[test]
+    fn test_get_statistics_entries_by_day() {
+        let db = Database::new(":memory:").unwrap();
+        db.insert_entry(&make_entry("today entry 1", "text")).unwrap();
+        db.insert_entry(&make_entry("today entry 2", "url")).unwrap();
+
+        let stats = db.get_statistics().unwrap();
+        assert!(!stats.entries_by_day.is_empty());
+        // All entries created "now" should be on the same day
+        assert_eq!(stats.entries_by_day[0].count, 2);
+    }
+
+    #[test]
+    fn test_get_statistics_most_used() {
+        let db = Database::new(":memory:").unwrap();
+        let e1 = make_entry("popular", "text");
+        db.insert_entry(&e1).unwrap();
+        // Bump use_count by updating multiple times
+        db.update_use_count(&e1.hash).unwrap();
+        db.update_use_count(&e1.hash).unwrap();
+
+        db.insert_entry(&make_entry("less popular", "text")).unwrap();
+
+        let stats = db.get_statistics().unwrap();
+        assert_eq!(stats.most_used.len(), 2);
+        // Most used should come first
+        assert_eq!(stats.most_used[0].content, "popular");
+        assert_eq!(stats.most_used[0].use_count, 3); // 1 initial + 2 updates
+    }
+
+    #[test]
+    fn test_get_statistics_most_used_limit_10() {
+        let db = Database::new(":memory:").unwrap();
+        for i in 0..15 {
+            db.insert_entry(&make_entry(&format!("entry {}", i), "text")).unwrap();
+        }
+
+        let stats = db.get_statistics().unwrap();
+        assert_eq!(stats.most_used.len(), 10);
     }
 
     #[test]

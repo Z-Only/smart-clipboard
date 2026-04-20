@@ -5,7 +5,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use tauri::State;
 
 use crate::config::{AppConfig, ConfigManager};
-use crate::storage::{Database, SearchQuery, SearchResult, Tag};
+use crate::storage::{Database, SearchQuery, SearchResult, Statistics, Tag};
 use crate::AppDataDir;
 
 #[tauri::command]
@@ -55,6 +55,22 @@ pub async fn toggle_favorite(db: State<'_, Arc<Database>>, id: i64) -> Result<bo
 #[tauri::command]
 pub async fn get_entry_count(db: State<'_, Arc<Database>>) -> Result<i64, String> {
     db.get_entry_count().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_statistics(
+    db: State<'_, Arc<Database>>,
+    app_data_dir: State<'_, Arc<AppDataDir>>,
+) -> Result<Statistics, String> {
+    let mut stats = db.get_statistics().map_err(|e| e.to_string())?;
+
+    // Compute storage size from the DB file
+    let db_path = app_data_dir.0.join("clipboard.db");
+    stats.storage_size_bytes = std::fs::metadata(&db_path)
+        .map(|m| m.len())
+        .unwrap_or(0);
+
+    Ok(stats)
 }
 
 #[tauri::command]

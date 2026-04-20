@@ -3,6 +3,7 @@ export default {
     name: "智能剪贴板",
     entries: "{count} 条记录",
     settings: "设置",
+    statistics: "统计",
   },
   search: {
     placeholder: "搜索剪贴板...",
@@ -109,5 +110,16 @@ export default {
     noTags: "暂无标签",
     deleteTag: "删除标签",
     filterByTag: "按标签筛选",
+  },
+  statistics: {
+    title: "统计",
+    totalEntries: "总记录数",
+    totalFavorites: "收藏数",
+    storageSize: "存储大小",
+    categoryBreakdown: "按类别",
+    dailyActivity: "每日活跃（30天）",
+    mostUsed: "最常使用",
+    noData: "暂无数据",
+    times: "{n} 次",
   },
 };

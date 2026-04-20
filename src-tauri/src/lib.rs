@@ -37,6 +37,7 @@ pub fn run() {
             commands::delete_entry,
             commands::toggle_favorite,
             commands::get_entry_count,
+            commands::get_statistics,
             commands::paste_entry,
             commands::get_config,
             commands::update_config,

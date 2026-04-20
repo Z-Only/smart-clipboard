@@ -8,6 +8,28 @@ pub struct Tag {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryCount {
+    pub category: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DayCount {
+    pub date: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Statistics {
+    pub total_entries: i64,
+    pub total_favorites: i64,
+    pub entries_by_category: Vec<CategoryCount>,
+    pub entries_by_day: Vec<DayCount>,
+    pub most_used: Vec<ClipboardEntry>,
+    pub storage_size_bytes: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClipboardEntry {
     pub id: Option<i64>,
     pub content: String,
