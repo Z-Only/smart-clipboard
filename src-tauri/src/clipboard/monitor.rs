@@ -5,7 +5,7 @@ use std::time::Duration;
 use sha2::{Digest, Sha256};
 use tokio::sync::mpsc;
 
-use super::types::ClipboardChange;
+use super::types::{ClipboardChange, ImageData};
 
 pub struct ClipboardMonitor {
     interval: Duration,
@@ -39,6 +39,7 @@ impl ClipboardMonitor {
             let mut last_hash: Option<String> = None;
 
             while running.load(Ordering::SeqCst) {
+                // Check for text first
                 if let Ok(text) = clipboard.get_text() {
                     if !text.trim().is_empty() {
                         let hash = format!("{:x}", Sha256::digest(text.as_bytes()));
@@ -50,14 +51,45 @@ impl ClipboardMonitor {
 
                         if is_new {
                             last_hash = Some(hash);
-                            let change = ClipboardChange {
+                            let text_change = ClipboardChange {
                                 content: text,
                                 content_type: "text".to_string(),
                                 source_app: None,
+                                image_data: None,
                             };
-                            if tx.send(change).is_err() {
+                            if tx.send(text_change).is_err() {
                                 break;
                             }
+                            std::thread::sleep(interval);
+                            continue;
+                        }
+                    }
+                }
+
+                // Check for image if no new text was found
+                if let Ok(img) = clipboard.get_image() {
+                    let raw_bytes: Vec<u8> = img.bytes.into_owned();
+                    let hash = format!("{:x}", Sha256::digest(&raw_bytes));
+
+                    let is_new = match &last_hash {
+                        Some(prev) => prev != &hash,
+                        None => true,
+                    };
+
+                    if is_new {
+                        last_hash = Some(hash);
+                        let change = ClipboardChange {
+                            content: String::new(),
+                            content_type: "image".to_string(),
+                            source_app: None,
+                            image_data: Some(ImageData {
+                                bytes: raw_bytes,
+                                width: img.width,
+                                height: img.height,
+                            }),
+                        };
+                        if tx.send(change).is_err() {
+                            break;
                         }
                     }
                 }

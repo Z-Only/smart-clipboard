@@ -10,6 +10,7 @@ pub struct AppConfig {
     pub excluded_apps: Vec<String>,
     pub monitor_interval_ms: u64,
     pub autostart_enabled: bool,
+    pub sensitive_expiry_minutes: u64,
 }
 
 impl Default for AppConfig {
@@ -20,6 +21,7 @@ impl Default for AppConfig {
             excluded_apps: vec![],
             monitor_interval_ms: 500,
             autostart_enabled: false,
+            sensitive_expiry_minutes: 5,
         }
     }
 }

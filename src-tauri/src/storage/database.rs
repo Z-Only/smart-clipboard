@@ -1,10 +1,11 @@
+use std::path::Path;
 use std::sync::Mutex;
 
 use chrono::{Local, NaiveDateTime};
 use rusqlite::{params, Connection, Result};
 
 use super::migrations;
-use super::models::{ClipboardEntry, SearchQuery, SearchResult};
+use super::models::{CategoryCount, ClipboardEntry, DayCount, SearchQuery, SearchResult, Statistics, Tag};
 
 pub struct Database {
     conn: Mutex<Connection>,
@@ -107,6 +108,24 @@ impl Database {
         Ok(())
     }
 
+    /// Delete an entry and clean up associated image file if it's an image entry.
+    pub fn delete_entry_with_cleanup(&self, id: i64, _app_data_dir: &Path) -> Result<()> {
+        // First, get the entry to check if it's an image
+        if let Some(entry) = self.get_entry_by_id(id)? {
+            if entry.content_type == "image" {
+                // The content field holds the image file path
+                let image_path = Path::new(&entry.content);
+                if image_path.exists() {
+                    if let Err(e) = std::fs::remove_file(image_path) {
+                        log::warn!("Failed to delete image file {:?}: {}", image_path, e);
+                    }
+                }
+            }
+        }
+        // Delete from database
+        self.delete_entry(id)
+    }
+
     pub fn toggle_favorite(&self, id: i64) -> Result<bool> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
@@ -161,6 +180,154 @@ impl Database {
         } else {
             Ok(None)
         }
+    }
+
+    // --- Statistics methods ---
+
+    pub fn get_statistics(&self) -> Result<Statistics> {
+        let conn = self.conn.lock().unwrap();
+
+        let total_entries: i64 =
+            conn.query_row("SELECT COUNT(*) FROM clipboard_entries", [], |row| row.get(0))?;
+
+        let total_favorites: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM clipboard_entries WHERE is_favorite = 1",
+            [],
+            |row| row.get(0),
+        )?;
+
+        // Entries by category
+        let mut cat_stmt = conn.prepare(
+            "SELECT category, COUNT(*) as count FROM clipboard_entries GROUP BY category ORDER BY count DESC",
+        )?;
+        let entries_by_category: Vec<CategoryCount> = cat_stmt
+            .query_map([], |row| {
+                Ok(CategoryCount {
+                    category: row.get(0)?,
+                    count: row.get(1)?,
+                })
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        // Entries by day (last 30 days)
+        let mut day_stmt = conn.prepare(
+            "SELECT DATE(created_at) as date, COUNT(*) as count FROM clipboard_entries GROUP BY DATE(created_at) ORDER BY date DESC LIMIT 30",
+        )?;
+        let entries_by_day: Vec<DayCount> = day_stmt
+            .query_map([], |row| {
+                Ok(DayCount {
+                    date: row.get(0)?,
+                    count: row.get(1)?,
+                })
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        // Most used entries (top 10)
+        let mut most_stmt = conn.prepare(
+            "SELECT id, content, content_type, category, hash, source_app, is_favorite, is_sensitive, use_count, created_at, updated_at, expires_at FROM clipboard_entries ORDER BY use_count DESC LIMIT 10",
+        )?;
+        let most_used: Vec<ClipboardEntry> = most_stmt
+            .query_map([], |row| row_to_entry(row))?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        Ok(Statistics {
+            total_entries,
+            total_favorites,
+            entries_by_category,
+            entries_by_day,
+            most_used,
+            storage_size_bytes: 0, // Will be set by the command
+        })
+    }
+
+    // --- Tag management methods ---
+
+    pub fn create_tag(&self, name: &str) -> Result<Tag> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("INSERT INTO tags (name) VALUES (?1)", params![name])?;
+        let id = conn.last_insert_rowid();
+        Ok(Tag {
+            id: Some(id),
+            name: name.to_string(),
+        })
+    }
+
+    pub fn delete_tag(&self, id: i64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM tags WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn get_all_tags(&self) -> Result<Vec<Tag>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT id, name FROM tags ORDER BY name")?;
+        let tags = stmt
+            .query_map([], |row| {
+                Ok(Tag {
+                    id: Some(row.get(0)?),
+                    name: row.get(1)?,
+                })
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(tags)
+    }
+
+    pub fn add_tag_to_entry(&self, entry_id: i64, tag_id: i64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT OR IGNORE INTO entry_tags (entry_id, tag_id) VALUES (?1, ?2)",
+            params![entry_id, tag_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn remove_tag_from_entry(&self, entry_id: i64, tag_id: i64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "DELETE FROM entry_tags WHERE entry_id = ?1 AND tag_id = ?2",
+            params![entry_id, tag_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_entry_tags(&self, entry_id: i64) -> Result<Vec<Tag>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT t.id, t.name FROM tags t
+             INNER JOIN entry_tags et ON t.id = et.tag_id
+             WHERE et.entry_id = ?1
+             ORDER BY t.name",
+        )?;
+        let tags = stmt
+            .query_map(params![entry_id], |row| {
+                Ok(Tag {
+                    id: Some(row.get(0)?),
+                    name: row.get(1)?,
+                })
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(tags)
+    }
+
+    pub fn get_entries_by_tag(&self, tag_id: i64) -> Result<Vec<ClipboardEntry>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT e.id, e.content, e.content_type, e.category, e.hash, e.source_app, e.is_favorite, e.is_sensitive, e.use_count, e.created_at, e.updated_at, e.expires_at
+             FROM clipboard_entries e
+             INNER JOIN entry_tags et ON e.id = et.entry_id
+             WHERE et.tag_id = ?1
+             ORDER BY e.created_at DESC",
+        )?;
+        let entries = stmt
+            .query_map(params![tag_id], |row| row_to_entry(row))?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(entries)
     }
 }
 
@@ -460,5 +627,295 @@ mod tests {
         let deleted = db.delete_oldest_beyond_limit(5).unwrap();
         assert_eq!(deleted, 5);
         assert_eq!(db.get_entry_count().unwrap(), 5);
+    }
+
+    // --- Tag management tests ---
+
+    #[test]
+    fn test_create_tag() {
+        let db = Database::new(":memory:").unwrap();
+        let tag = db.create_tag("work").unwrap();
+        assert!(tag.id.is_some());
+        assert_eq!(tag.name, "work");
+    }
+
+    #[test]
+    fn test_create_duplicate_tag_fails() {
+        let db = Database::new(":memory:").unwrap();
+        db.create_tag("work").unwrap();
+        let result = db.create_tag("work");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_all_tags() {
+        let db = Database::new(":memory:").unwrap();
+        db.create_tag("work").unwrap();
+        db.create_tag("personal").unwrap();
+        db.create_tag("code").unwrap();
+
+        let tags = db.get_all_tags().unwrap();
+        assert_eq!(tags.len(), 3);
+        // Tags are ordered by name
+        assert_eq!(tags[0].name, "code");
+        assert_eq!(tags[1].name, "personal");
+        assert_eq!(tags[2].name, "work");
+    }
+
+    #[test]
+    fn test_delete_tag() {
+        let db = Database::new(":memory:").unwrap();
+        let tag = db.create_tag("to_delete").unwrap();
+        let id = tag.id.unwrap();
+
+        db.delete_tag(id).unwrap();
+        let tags = db.get_all_tags().unwrap();
+        assert!(tags.is_empty());
+    }
+
+    #[test]
+    fn test_add_and_get_entry_tags() {
+        let db = Database::new(":memory:").unwrap();
+        let entry_id = db.insert_entry(&make_entry("tagged content", "text")).unwrap();
+        let tag1 = db.create_tag("tag1").unwrap();
+        let tag2 = db.create_tag("tag2").unwrap();
+
+        db.add_tag_to_entry(entry_id, tag1.id.unwrap()).unwrap();
+        db.add_tag_to_entry(entry_id, tag2.id.unwrap()).unwrap();
+
+        let tags = db.get_entry_tags(entry_id).unwrap();
+        assert_eq!(tags.len(), 2);
+        let names: Vec<&str> = tags.iter().map(|t| t.name.as_str()).collect();
+        assert!(names.contains(&"tag1"));
+        assert!(names.contains(&"tag2"));
+    }
+
+    #[test]
+    fn test_add_tag_to_entry_idempotent() {
+        let db = Database::new(":memory:").unwrap();
+        let entry_id = db.insert_entry(&make_entry("tagged content", "text")).unwrap();
+        let tag = db.create_tag("tag1").unwrap();
+        let tag_id = tag.id.unwrap();
+
+        db.add_tag_to_entry(entry_id, tag_id).unwrap();
+        // Adding again should not fail (INSERT OR IGNORE)
+        db.add_tag_to_entry(entry_id, tag_id).unwrap();
+
+        let tags = db.get_entry_tags(entry_id).unwrap();
+        assert_eq!(tags.len(), 1);
+    }
+
+    #[test]
+    fn test_remove_tag_from_entry() {
+        let db = Database::new(":memory:").unwrap();
+        let entry_id = db.insert_entry(&make_entry("tagged content", "text")).unwrap();
+        let tag = db.create_tag("removable").unwrap();
+        let tag_id = tag.id.unwrap();
+
+        db.add_tag_to_entry(entry_id, tag_id).unwrap();
+        assert_eq!(db.get_entry_tags(entry_id).unwrap().len(), 1);
+
+        db.remove_tag_from_entry(entry_id, tag_id).unwrap();
+        assert_eq!(db.get_entry_tags(entry_id).unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_get_entries_by_tag() {
+        let db = Database::new(":memory:").unwrap();
+        let id1 = db.insert_entry(&make_entry("entry one", "text")).unwrap();
+        let id2 = db.insert_entry(&make_entry("entry two", "text")).unwrap();
+        let _id3 = db.insert_entry(&make_entry("entry three", "text")).unwrap();
+
+        let tag = db.create_tag("shared").unwrap();
+        let tag_id = tag.id.unwrap();
+
+        db.add_tag_to_entry(id1, tag_id).unwrap();
+        db.add_tag_to_entry(id2, tag_id).unwrap();
+
+        let entries = db.get_entries_by_tag(tag_id).unwrap();
+        assert_eq!(entries.len(), 2);
+        let ids: Vec<i64> = entries.iter().map(|e| e.id.unwrap()).collect();
+        assert!(ids.contains(&id1));
+        assert!(ids.contains(&id2));
+    }
+
+    #[test]
+    fn test_delete_entry_cascades_tag_associations() {
+        let db = Database::new(":memory:").unwrap();
+        let entry_id = db.insert_entry(&make_entry("will be deleted", "text")).unwrap();
+        let tag = db.create_tag("cascade_test").unwrap();
+        let tag_id = tag.id.unwrap();
+
+        db.add_tag_to_entry(entry_id, tag_id).unwrap();
+        assert_eq!(db.get_entry_tags(entry_id).unwrap().len(), 1);
+
+        // Delete the entry - cascade should remove from entry_tags
+        db.delete_entry(entry_id).unwrap();
+
+        // The tag itself should still exist
+        let tags = db.get_all_tags().unwrap();
+        assert_eq!(tags.len(), 1);
+
+        // But no entries should be associated with the tag
+        let entries = db.get_entries_by_tag(tag_id).unwrap();
+        assert!(entries.is_empty());
+    }
+
+    #[test]
+    fn test_delete_image_entry_with_cleanup() {
+        let db = Database::new(":memory:").unwrap();
+        let now = Local::now().naive_local();
+
+        // Create a temporary image file
+        let tmp_dir = std::env::temp_dir().join("smart_clipboard_test");
+        std::fs::create_dir_all(&tmp_dir).unwrap();
+        let img_path = tmp_dir.join("test_image.png");
+        std::fs::write(&img_path, b"fake png data").unwrap();
+        assert!(img_path.exists());
+
+        let hash = format!("{:x}", sha2::Sha256::digest(b"test image bytes"));
+        let entry = ClipboardEntry {
+            id: None,
+            content: img_path.to_string_lossy().to_string(),
+            content_type: "image".to_string(),
+            category: "image".to_string(),
+            hash,
+            source_app: None,
+            is_favorite: false,
+            is_sensitive: false,
+            use_count: 1,
+            created_at: now,
+            updated_at: now,
+            expires_at: None,
+        };
+        let id = db.insert_entry(&entry).unwrap();
+
+        // Delete with cleanup should remove the file
+        db.delete_entry_with_cleanup(id, &tmp_dir).unwrap();
+
+        // Entry should be gone from DB
+        let found = db.get_entry_by_id(id).unwrap();
+        assert!(found.is_none());
+
+        // Image file should be deleted
+        assert!(!img_path.exists());
+
+        // Clean up temp dir
+        std::fs::remove_dir_all(&tmp_dir).ok();
+    }
+
+    #[test]
+    fn test_delete_text_entry_with_cleanup_no_file_delete() {
+        let db = Database::new(":memory:").unwrap();
+        let entry = make_entry("just text", "text");
+        let id = db.insert_entry(&entry).unwrap();
+
+        // delete_entry_with_cleanup should work for text entries without touching files
+        let tmp_dir = std::env::temp_dir();
+        db.delete_entry_with_cleanup(id, &tmp_dir).unwrap();
+
+        let found = db.get_entry_by_id(id).unwrap();
+        assert!(found.is_none());
+    }
+
+    // --- Statistics tests ---
+
+    #[test]
+    fn test_get_statistics_empty_db() {
+        let db = Database::new(":memory:").unwrap();
+        let stats = db.get_statistics().unwrap();
+        assert_eq!(stats.total_entries, 0);
+        assert_eq!(stats.total_favorites, 0);
+        assert!(stats.entries_by_category.is_empty());
+        assert!(stats.entries_by_day.is_empty());
+        assert!(stats.most_used.is_empty());
+        assert_eq!(stats.storage_size_bytes, 0);
+    }
+
+    #[test]
+    fn test_get_statistics_total_counts() {
+        let db = Database::new(":memory:").unwrap();
+        db.insert_entry(&make_entry("entry 1", "text")).unwrap();
+        db.insert_entry(&make_entry("entry 2", "url")).unwrap();
+        let id3 = db.insert_entry(&make_entry("entry 3", "code")).unwrap();
+        db.toggle_favorite(id3).unwrap();
+
+        let stats = db.get_statistics().unwrap();
+        assert_eq!(stats.total_entries, 3);
+        assert_eq!(stats.total_favorites, 1);
+    }
+
+    #[test]
+    fn test_get_statistics_entries_by_category() {
+        let db = Database::new(":memory:").unwrap();
+        db.insert_entry(&make_entry("url1", "url")).unwrap();
+        db.insert_entry(&make_entry("url2", "url")).unwrap();
+        db.insert_entry(&make_entry("text1", "text")).unwrap();
+        db.insert_entry(&make_entry("code1", "code")).unwrap();
+
+        let stats = db.get_statistics().unwrap();
+        assert_eq!(stats.entries_by_category.len(), 3);
+        // Should be ordered by count DESC
+        assert_eq!(stats.entries_by_category[0].category, "url");
+        assert_eq!(stats.entries_by_category[0].count, 2);
+    }
+
+    #[test]
+    fn test_get_statistics_entries_by_day() {
+        let db = Database::new(":memory:").unwrap();
+        db.insert_entry(&make_entry("today entry 1", "text")).unwrap();
+        db.insert_entry(&make_entry("today entry 2", "url")).unwrap();
+
+        let stats = db.get_statistics().unwrap();
+        assert!(!stats.entries_by_day.is_empty());
+        // All entries created "now" should be on the same day
+        assert_eq!(stats.entries_by_day[0].count, 2);
+    }
+
+    #[test]
+    fn test_get_statistics_most_used() {
+        let db = Database::new(":memory:").unwrap();
+        let e1 = make_entry("popular", "text");
+        db.insert_entry(&e1).unwrap();
+        // Bump use_count by updating multiple times
+        db.update_use_count(&e1.hash).unwrap();
+        db.update_use_count(&e1.hash).unwrap();
+
+        db.insert_entry(&make_entry("less popular", "text")).unwrap();
+
+        let stats = db.get_statistics().unwrap();
+        assert_eq!(stats.most_used.len(), 2);
+        // Most used should come first
+        assert_eq!(stats.most_used[0].content, "popular");
+        assert_eq!(stats.most_used[0].use_count, 3); // 1 initial + 2 updates
+    }
+
+    #[test]
+    fn test_get_statistics_most_used_limit_10() {
+        let db = Database::new(":memory:").unwrap();
+        for i in 0..15 {
+            db.insert_entry(&make_entry(&format!("entry {}", i), "text")).unwrap();
+        }
+
+        let stats = db.get_statistics().unwrap();
+        assert_eq!(stats.most_used.len(), 10);
+    }
+
+    #[test]
+    fn test_delete_tag_cascades_associations() {
+        let db = Database::new(":memory:").unwrap();
+        let entry_id = db.insert_entry(&make_entry("tagged content", "text")).unwrap();
+        let tag = db.create_tag("will_be_deleted").unwrap();
+        let tag_id = tag.id.unwrap();
+
+        db.add_tag_to_entry(entry_id, tag_id).unwrap();
+        assert_eq!(db.get_entry_tags(entry_id).unwrap().len(), 1);
+
+        // Delete the tag - cascade should remove from entry_tags
+        db.delete_tag(tag_id).unwrap();
+
+        // Entry should have no tags
+        let tags = db.get_entry_tags(entry_id).unwrap();
+        assert!(tags.is_empty());
     }
 }

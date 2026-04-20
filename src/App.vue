@@ -7,6 +7,18 @@
       </div>
       <button
         class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        :title="$t('app.statistics')"
+        @click="showStatistics = true"
+      >
+        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10" />
+          <line x1="12" y1="20" x2="12" y2="4" />
+          <line x1="6" y1="20" x2="6" y2="14" />
+        </svg>
+      </button>
+      <button
+        class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
         :title="$t('app.settings')"
         @click="showSettings = true"
       >
@@ -43,6 +55,9 @@
 
     <!-- Settings panel -->
     <SettingsPanel :is-open="showSettings" @close="showSettings = false" />
+
+    <!-- Statistics panel -->
+    <StatisticsPanel :is-open="showStatistics" @close="showStatistics = false" />
   </div>
 </template>
 
@@ -55,6 +70,7 @@ import SearchBar from "@/components/SearchBar.vue";
 import CategoryFilter from "@/components/CategoryFilter.vue";
 import ClipboardList from "@/components/ClipboardList.vue";
 import SettingsPanel from "@/components/SettingsPanel.vue";
+import StatisticsPanel from "@/components/StatisticsPanel.vue";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useClipboard } from "@/composables/useClipboard";
 import { useTheme } from "@/composables/useTheme";
@@ -65,6 +81,7 @@ const { totalCount } = storeToRefs(store);
 
 const searchBarRef = ref<InstanceType<typeof SearchBar> | null>(null);
 const showSettings = ref(false);
+const showStatistics = ref(false);
 
 // Listen for clipboard changes from backend
 useClipboard();

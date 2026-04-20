@@ -18,6 +18,11 @@ A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + *
 - **Appearance Modes** -- System / Light / Dark mode with automatic OS preference detection
 - **Theme Colors** -- 6 built-in color themes: Zinc, Blue, Green, Rose, Orange, Violet
 - **Multi-Language** -- English and Chinese UI support
+- **Sensitive Detection** -- Auto-detects passwords, API keys, tokens, JWTs, and connection strings with optional auto-expiry
+- **Content Transforms** -- 12 one-click text transformations (case, encoding, formatting)
+- **Tag Management** -- Custom tags for organizing entries with filtering support
+- **Image Clipboard** -- Captures and displays clipboard images with PNG storage
+- **Usage Statistics** -- Dashboard with category breakdown, daily activity, and most-used entries
 - **Lightweight** -- ~5MB binary, minimal CPU/memory usage thanks to Rust + native WebView
 
 ## Screenshots
@@ -77,6 +82,10 @@ The built binary will be in `src-tauri/target/release/bundle/`.
 6. Right-click the tray icon for quick access and settings
 7. Switch language in Settings (English / Chinese)
 8. Choose appearance mode (System / Light / Dark) and theme color in Settings
+9. Right-click an entry for text transforms (URL encode, Base64, JSON format, etc.)
+10. Tag entries with custom labels for easy organization
+11. Copy images -- they'll appear in the clipboard history too
+12. Click the bar chart icon to view usage statistics
 
 ## Project Structure
 
@@ -108,7 +117,7 @@ smart-clipboard/
 - [x] **Phase 1 -- MVP**: Clipboard monitoring, storage, classification, search UI, hotkey, tray, settings
 - [x] **i18n**: Multi-language support (English, Chinese)
 - [x] **Theming**: Appearance mode switching (System/Light/Dark) and 6 color themes
-- [ ] **Phase 2 -- Smart Enhancements**: Sensitive content detection, content transforms, image support, usage stats
+- [x] **Phase 2 -- Smart Enhancements**: Sensitive content detection, content transforms, tag management, image support, usage stats
 - [ ] **Phase 3 -- Sync & Advanced**: LAN sync, E2E encrypted cloud sync, clipboard templates, plugin system
 
 ## Contributing

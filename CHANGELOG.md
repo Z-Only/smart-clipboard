@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-04-20
+
+### Added
+
+- **Sensitive info detection**: Automatically detects passwords, API keys, tokens, private keys, JWTs, and connection strings in clipboard content using 7 regex patterns
+- **Auto-expiry for sensitive content**: Sensitive entries are flagged and optionally auto-deleted after a configurable time (default: 5 minutes)
+- **Content transforms**: 12 one-click text transformations — UPPERCASE, lowercase, Title Case, URL Encode/Decode, JSON Format/Compact, Base64 Encode/Decode, Trim Whitespace, HTML Escape/Unescape
+- **Tag management**: User-defined tags for organizing clipboard entries with create/delete/assign operations, tag chips on entry cards, and sidebar tag filtering
+- **Image clipboard support**: Captures images from clipboard, stores as PNG files, displays thumbnails in the entry list, and supports copying images back to clipboard
+- **Usage statistics panel**: Dashboard showing total entries, favorites count, storage size, category distribution (horizontal bar chart), daily activity (30-day vertical bar chart), and top 10 most-used entries
+- **New dependencies**: `base64` (transforms), `image` (PNG encoding for image clipboard)
+
 ## [0.3.0] - 2026-04-20
 
 ### Added

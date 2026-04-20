@@ -13,6 +13,16 @@
         <Badge variant="secondary" class="text-[10px] px-1.5 py-0 shrink-0">
           {{ categoryLabel }}
         </Badge>
+        <Badge v-if="entry.is_sensitive" variant="destructive" class="text-[10px] px-1.5 py-0 shrink-0 flex items-center gap-0.5">
+          <svg class="h-2.5 w-2.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          {{ t('entry.sensitive') }}
+        </Badge>
+        <span v-if="expiryText" class="text-[10px] text-destructive/80 shrink-0">
+          {{ expiryText }}
+        </span>
         <span class="text-xs text-muted-foreground truncate">
           {{ relativeTime }}
         </span>
@@ -20,8 +30,31 @@
           {{ entry.source_app }}
         </span>
       </div>
-      <div class="text-sm leading-snug break-all line-clamp-3" :class="isCodeLike ? 'font-mono text-xs' : ''">
+      <!-- Image preview for image entries -->
+      <div v-if="isImage" class="flex items-center gap-2">
+        <img
+          :src="imageAssetUrl"
+          alt="Clipboard image"
+          class="rounded border border-border object-cover"
+          style="max-height: 64px; max-width: 120px;"
+          loading="lazy"
+        />
+        <span class="text-xs text-muted-foreground">
+          {{ t('entry.categoryLabels.image') }}
+        </span>
+      </div>
+      <!-- Text preview for non-image entries -->
+      <div v-else class="text-sm leading-snug break-all line-clamp-3" :class="isCodeLike ? 'font-mono text-xs' : ''">
         {{ truncatedContent }}
+      </div>
+      <div v-if="entryTags.length > 0" class="flex flex-wrap gap-1 mt-1.5">
+        <span
+          v-for="tag in entryTags"
+          :key="tag.id"
+          class="inline-flex items-center px-1.5 py-0 text-[10px] rounded-full bg-primary/15 text-primary border border-primary/20"
+        >
+          {{ tag.name }}
+        </span>
       </div>
     </div>
     <div class="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
@@ -38,6 +71,8 @@
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
         </svg>
       </button>
+      <TransformMenu v-if="!isImage" :content="entry.content" :category="entry.category" />
+      <TagPicker :entry-id="entry.id" @tags-changed="onTagsChanged" />
       <button
         class="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
         @click.stop="$emit('delete', entry.id)"
@@ -54,10 +89,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { Badge } from "@/components/ui/badge";
-import type { ClipboardEntry } from "@/types";
+import TransformMenu from "@/components/TransformMenu.vue";
+import TagPicker from "@/components/TagPicker.vue";
+import type { ClipboardEntry, Tag } from "@/types";
 
 const { t } = useI18n();
 
@@ -71,6 +109,34 @@ defineEmits<{
   toggleFavorite: [id: number];
   delete: [id: number];
 }>();
+
+const entryTags = ref<Tag[]>([]);
+
+async function loadEntryTags() {
+  try {
+    entryTags.value = await invoke<Tag[]>("get_entry_tags", { entryId: props.entry.id });
+  } catch (e) {
+    // silently ignore - tags are optional display
+  }
+}
+
+function onTagsChanged(tags: Tag[]) {
+  entryTags.value = tags;
+}
+
+// Load tags when entry changes
+watch(
+  () => props.entry.id,
+  () => loadEntryTags(),
+  { immediate: true }
+);
+
+const isImage = computed(() => props.entry.content_type === "image");
+
+const imageAssetUrl = computed(() => {
+  if (!isImage.value) return "";
+  return convertFileSrc(props.entry.content);
+});
 
 const categoryLabel = computed(() => {
   const key = `entry.categoryLabels.${props.entry.category}`;
@@ -88,6 +154,16 @@ const truncatedContent = computed(() => {
     return content.slice(0, 200) + "...";
   }
   return content;
+});
+
+const expiryText = computed(() => {
+  if (!props.entry.expires_at) return null;
+  const now = new Date();
+  const expiresAt = new Date(props.entry.expires_at);
+  const diffMs = expiresAt.getTime() - now.getTime();
+  if (diffMs <= 0) return null;
+  const diffMin = Math.ceil(diffMs / 60000);
+  return t("entry.expiresIn", { n: diffMin });
 });
 
 const relativeTime = computed(() => {
