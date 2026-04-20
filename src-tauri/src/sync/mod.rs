@@ -5,7 +5,7 @@ use std::time::Duration;
 use chrono::{Local, NaiveDateTime};
 use log::warn;
 use serde::{Deserialize, Serialize};
-use tokio::sync::RwLock;
+use tokio::sync::{broadcast, RwLock};
 
 use crate::config::{AppConfig, ConfigManager};
 use crate::storage::{Database, DiscoveredDevice, PairedDevice, SyncStatus};
@@ -106,6 +106,8 @@ pub struct SyncManager {
     connection_states: RwLock<HashMap<String, DeviceConnectionState>>,
     local_device: LocalDeviceInfo,
     local_private_key: Vec<u8>,
+    outgoing_tx: broadcast::Sender<protocol::SyncEntryPayload>,
+    app_handle: RwLock<Option<tauri::AppHandle>>,
 }
 
 impl SyncManager {
@@ -141,6 +143,8 @@ impl SyncManager {
             },
         };
 
+        let (outgoing_tx, _) = broadcast::channel::<protocol::SyncEntryPayload>(64);
+
         let manager = Arc::new(Self {
             db,
             config,
@@ -154,6 +158,8 @@ impl SyncManager {
                 public_key: keypair.public_key.clone(),
             },
             local_private_key: keypair.private_key,
+            outgoing_tx,
+            app_handle: RwLock::new(None),
         });
 
         manager.start_transport_tasks();
@@ -213,6 +219,105 @@ impl SyncManager {
             is_sensitive: entry.is_sensitive,
             source_device: self.local_device.device_id.clone(),
             created_at: entry.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+        }
+    }
+
+    /// Set the Tauri AppHandle for emitting frontend events.
+    pub fn set_app_handle(&self, handle: tauri::AppHandle) {
+        *self.app_handle.blocking_write() = Some(handle);
+    }
+
+    /// Get a clone of the AppHandle if available.
+    pub fn app_handle(&self) -> Option<tauri::AppHandle> {
+        self.app_handle.blocking_read().clone()
+    }
+
+    /// Get a reference to the database.
+    pub fn db_ref(&self) -> &Database {
+        &self.db
+    }
+
+    /// Subscribe to outgoing entry broadcasts (used by server/client connections).
+    pub fn subscribe_outgoing(&self) -> broadcast::Receiver<protocol::SyncEntryPayload> {
+        self.outgoing_tx.subscribe()
+    }
+
+    /// Broadcast a clipboard entry to all connected paired devices.
+    pub fn broadcast_entry(&self, entry: &crate::storage::ClipboardEntry) {
+        if !self.should_sync_entry(entry) {
+            return;
+        }
+        let payload = self.entry_to_sync_payload(entry);
+        log::info!("Broadcasting clipboard entry {} to paired devices", payload.hash);
+        let _ = self.outgoing_tx.send(payload);
+    }
+
+    /// Handle an incoming ClipboardSync message from a remote device.
+    pub fn handle_incoming_sync(
+        &self,
+        sender_device_id: &str,
+        payload: &protocol::SyncEntryPayload,
+    ) -> Result<Option<crate::storage::ClipboardEntry>, String> {
+        let hash = &payload.hash;
+
+        // 1. Check if we already have this entry (by hash in DB)
+        match self.db.find_by_hash(hash) {
+            Ok(Some(_)) => {
+                log::info!("Skipping duplicate sync entry: {}", hash);
+                let _ = self.db.insert_sync_log(hash, sender_device_id, "received");
+                return Ok(None);
+            }
+            Ok(None) => {}
+            Err(e) => return Err(format!("DB error during sync dedup: {}", e)),
+        }
+
+        // 2. Check sync_log for already-received entries
+        if self.db.has_received_entry(hash).unwrap_or(false) {
+            log::info!("Already received sync entry via sync_log: {}", hash);
+            return Ok(None);
+        }
+
+        // 3. Parse created_at
+        let created_at = chrono::NaiveDateTime::parse_from_str(&payload.created_at, "%Y-%m-%d %H:%M:%S")
+            .unwrap_or_else(|_| chrono::Local::now().naive_local());
+        let now = chrono::Local::now().naive_local();
+
+        // 4. Build ClipboardEntry
+        let entry = crate::storage::ClipboardEntry {
+            id: None,
+            content: payload.content.clone(),
+            content_type: payload.content_type.clone(),
+            category: payload.category.clone(),
+            hash: hash.clone(),
+            source_app: payload.source_app.clone(),
+            is_favorite: false,
+            is_sensitive: payload.is_sensitive,
+            use_count: 1,
+            created_at,
+            updated_at: now,
+            expires_at: None,
+            source_device: Some(sender_device_id.to_string()),
+        };
+
+        // 5. Insert into DB
+        match self.db.insert_entry(&entry) {
+            Ok(id) => {
+                let mut stored = entry;
+                stored.id = Some(id);
+                let _ = self.db.insert_sync_log(hash, sender_device_id, "received");
+                self.touch_last_sync(format!("Received clipboard entry from {}", sender_device_id));
+                log::info!("Stored synced entry {} from device {}", hash, sender_device_id);
+                Ok(Some(stored))
+            }
+            Err(e) => {
+                if e.to_string().contains("UNIQUE") {
+                    log::info!("Sync entry {} already exists (race dedup)", hash);
+                    let _ = self.db.insert_sync_log(hash, sender_device_id, "received");
+                    Ok(None)
+                } else {
+                    Err(format!("Failed to insert synced entry: {}", e))
+                }
+            }
         }
     }
 

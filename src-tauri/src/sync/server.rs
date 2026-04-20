@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use futures_util::{SinkExt, StreamExt};
 use log::{error, info, warn};
+use tauri::Emitter;
 use tokio::net::TcpListener;
 use tokio_tungstenite::{accept_async, tungstenite::Message};
 
@@ -111,61 +112,106 @@ async fn handle_connection(
         .await
         .map_err(|e| e.to_string())?;
 
-    while let Some(message) = read.next().await {
-        match message.map_err(|e| e.to_string())? {
-            Message::Text(text) => match sync_manager.decrypt_protocol_message(
-                &remote_device_id,
-                SyncMessage::from_text(text.as_str())?,
-            )? {
-                SyncMessage::Ping { ts } => {
-                    sync_manager.mark_ping(&remote_device_id);
-                    let pong = sync_manager
-                        .encrypt_protocol_message(&remote_device_id, &SyncMessage::Pong { ts })?;
-                    write
-                        .send(Message::Text(pong.to_text()?.into()))
-                        .await
-                        .map_err(|e| e.to_string())?;
+    let mut outgoing_rx = sync_manager.subscribe_outgoing();
+
+    loop {
+        tokio::select! {
+            maybe_msg = read.next() => {
+                match maybe_msg {
+                    Some(Ok(Message::Text(text))) => {
+                        match sync_manager.decrypt_protocol_message(&remote_device_id, SyncMessage::from_text(text.as_str())?)? {
+                            SyncMessage::Ping { ts } => {
+                                sync_manager.mark_ping(&remote_device_id);
+                                let pong = sync_manager.encrypt_protocol_message(&remote_device_id, &SyncMessage::Pong { ts })?;
+                                write.send(Message::Text(pong.to_text()?.into())).await.map_err(|e| e.to_string())?;
+                            }
+                            SyncMessage::Pong { .. } => {
+                                sync_manager.mark_pong(&remote_device_id);
+                            }
+                            SyncMessage::Disconnect { reason } => {
+                                sync_manager.mark_disconnected(&remote_device_id, Some(reason));
+                                break;
+                            }
+                            SyncMessage::ClipboardSyncPlaceholder { entry_hash, .. } => {
+                                let ack = sync_manager.encrypt_protocol_message(
+                                    &remote_device_id,
+                                    &SyncMessage::SyncAck { entry_hash, accepted: true },
+                                )?;
+                                write.send(Message::Text(ack.to_text()?.into())).await.map_err(|e| e.to_string())?;
+                            }
+                            SyncMessage::ClipboardSync { entry, sender_device_id, .. } => {
+                                let accepted = match sync_manager.handle_incoming_sync(&sender_device_id, &entry) {
+                                    Ok(Some(stored_entry)) => {
+                                        if let Some(handle) = sync_manager.app_handle() {
+                                            let _ = handle.emit("clipboard-changed", &stored_entry);
+                                        }
+                                        true
+                                    }
+                                    Ok(None) => true,
+                                    Err(e) => {
+                                        log::error!("Failed to handle incoming sync: {}", e);
+                                        false
+                                    }
+                                };
+                                let ack = sync_manager.encrypt_protocol_message(
+                                    &remote_device_id,
+                                    &SyncMessage::SyncAck { entry_hash: entry.hash.clone(), accepted },
+                                )?;
+                                write.send(Message::Text(ack.to_text()?.into())).await.map_err(|e| e.to_string())?;
+                            }
+                            SyncMessage::KeyVerification { fingerprint, device_id, verified } => {
+                                log::info!("Received key verification from {device_id}: fingerprint={fingerprint}, verified={verified}");
+                            }
+                            SyncMessage::SyncAck { .. }
+                            | SyncMessage::Hello { .. }
+                            | SyncMessage::HelloAck { .. }
+                            | SyncMessage::PairRequest { .. }
+                            | SyncMessage::PairResponse { .. }
+                            | SyncMessage::EncryptedPayload { .. } => {}
+                        }
+                    }
+                    Some(Ok(Message::Close(_))) | None => break,
+                    Some(Ok(Message::Ping(payload))) => {
+                        write.send(Message::Pong(payload)).await.map_err(|e| e.to_string())?;
+                    }
+                    Some(Ok(Message::Pong(_))) => sync_manager.mark_pong(&remote_device_id),
+                    Some(Ok(_)) => {}
+                    Some(Err(e)) => {
+                        log::warn!("WebSocket read error: {}", e);
+                        break;
+                    }
                 }
-                SyncMessage::Pong { .. } => {
-                    sync_manager.mark_pong(&remote_device_id);
-                }
-                SyncMessage::Disconnect { reason } => {
-                    sync_manager.mark_disconnected(&remote_device_id, Some(reason));
-                    break;
-                }
-                SyncMessage::ClipboardSyncPlaceholder { entry_hash, .. } => {
-                    let ack = sync_manager.encrypt_protocol_message(
-                        &remote_device_id,
-                        &SyncMessage::SyncAck {
-                            entry_hash,
-                            accepted: true,
-                        },
-                    )?;
-                    write
-                        .send(Message::Text(ack.to_text()?.into()))
-                        .await
-                        .map_err(|e| e.to_string())?;
-                }
-                SyncMessage::KeyVerification { fingerprint, device_id, verified } => {
-                    log::info!("Received key verification from {device_id}: fingerprint={fingerprint}, verified={verified}");
-                }
-                SyncMessage::SyncAck { .. }
-                | SyncMessage::Hello { .. }
-                | SyncMessage::HelloAck { .. }
-                | SyncMessage::PairRequest { .. }
-                | SyncMessage::PairResponse { .. }
-                | SyncMessage::EncryptedPayload { .. }
-                | SyncMessage::ClipboardSync { .. } => {}
-            },
-            Message::Close(_) => break,
-            Message::Ping(payload) => {
-                write
-                    .send(Message::Pong(payload))
-                    .await
-                    .map_err(|e| e.to_string())?;
             }
-            Message::Pong(_) => sync_manager.mark_pong(&remote_device_id),
-            _ => {}
+            result = outgoing_rx.recv() => {
+                match result {
+                    Ok(payload) => {
+                        let entry_hash = payload.hash.clone();
+                        if sync_manager.db_ref().has_sync_log(&entry_hash, &remote_device_id, "sent").unwrap_or(true) {
+                            continue;
+                        }
+                        let sync_msg = SyncMessage::ClipboardSync {
+                            entry: payload,
+                            sender_device_id: sync_manager.local_device_info().device_id.clone(),
+                            timestamp: chrono::Local::now().timestamp_millis(),
+                        };
+                        match sync_manager.encrypt_protocol_message(&remote_device_id, &sync_msg) {
+                            Ok(encrypted) => {
+                                if let Err(e) = write.send(Message::Text(encrypted.to_text().unwrap_or_default().into())).await {
+                                    log::error!("Failed to send sync entry to {}: {}", remote_device_id, e);
+                                    break;
+                                }
+                                let _ = sync_manager.db_ref().insert_sync_log(&entry_hash, &remote_device_id, "sent");
+                                sync_manager.touch_last_sync(format!("Sent clipboard entry to {}", remote_device_id));
+                            }
+                            Err(e) => log::error!("Failed to encrypt sync entry for {}: {}", remote_device_id, e),
+                        }
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                        log::warn!("Outgoing broadcast lagged by {} entries for server connection {}", n, remote_device_id);
+                    }
+                    Err(_) => break,
+                }
+            }
         }
     }
 

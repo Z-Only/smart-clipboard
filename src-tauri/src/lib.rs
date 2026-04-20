@@ -102,6 +102,7 @@ pub fn run() {
             app.manage(db.clone());
 
             let sync_manager = SyncManager::new(db.clone(), config_manager.clone());
+            sync_manager.set_app_handle(app.handle().clone());
             app.manage(sync_manager.clone());
 
             // Setup hotkey
@@ -139,6 +140,7 @@ pub fn run() {
             let app_handle = app.handle().clone();
             let config_for_rx = config_manager.clone();
             let images_dir_for_rx = images_dir.clone();
+            let sync_for_rx = sync_manager.clone();
 
             tauri::async_runtime::spawn(async move {
                 while let Some(change) = rx.recv().await {
@@ -239,6 +241,8 @@ pub fn run() {
                             let mut stored_entry = entry;
                             stored_entry.id = Some(id);
                             let _ = app_handle.emit("clipboard-changed", &stored_entry);
+                            // Broadcast to paired devices via sync pipeline
+                            sync_for_rx.broadcast_entry(&stored_entry);
                         }
                         Err(e) => {
                             log::error!("Failed to insert clipboard entry: {}", e);

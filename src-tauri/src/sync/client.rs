@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use futures_util::{SinkExt, StreamExt};
 use log::{debug, info, warn};
+use tauri::Emitter;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 use super::protocol::SyncMessage;
@@ -158,6 +159,7 @@ async fn connect_device_loop(
                     .await
                     .map_err(|e| e.to_string())?;
 
+                let mut outgoing_rx = sync_manager.subscribe_outgoing();
                 let mut heartbeat = tokio::time::interval(heartbeat_interval());
                 loop {
                     tokio::select! {
@@ -183,10 +185,30 @@ async fn connect_device_loop(
                                         let ack = sync_manager.encrypt_protocol_message(&device.id, &SyncMessage::SyncAck { entry_hash, accepted: true })?;
                                         write.send(Message::Text(ack.to_text()?.into())).await.map_err(|e| e.to_string())?;
                                     }
+                                    SyncMessage::ClipboardSync { entry, sender_device_id, .. } => {
+                                        let accepted = match sync_manager.handle_incoming_sync(&sender_device_id, &entry) {
+                                            Ok(Some(stored_entry)) => {
+                                                if let Some(handle) = sync_manager.app_handle() {
+                                                    let _ = handle.emit("clipboard-changed", &stored_entry);
+                                                }
+                                                true
+                                            }
+                                            Ok(None) => true,
+                                            Err(e) => {
+                                                log::error!("Failed to handle incoming sync: {}", e);
+                                                false
+                                            }
+                                        };
+                                        let ack = sync_manager.encrypt_protocol_message(
+                                            &device.id,
+                                            &SyncMessage::SyncAck { entry_hash: entry.hash.clone(), accepted },
+                                        )?;
+                                        write.send(Message::Text(ack.to_text()?.into())).await.map_err(|e| e.to_string())?;
+                                    }
                                     SyncMessage::KeyVerification { fingerprint, device_id, verified } => {
                                         log::info!("Received key verification from {device_id}: fingerprint={fingerprint}, verified={verified}");
                                     }
-                                    SyncMessage::SyncAck { .. } | SyncMessage::Hello { .. } | SyncMessage::HelloAck { .. } | SyncMessage::PairRequest { .. } | SyncMessage::PairResponse { .. } | SyncMessage::EncryptedPayload { .. } | SyncMessage::ClipboardSync { .. } => {}
+                                    SyncMessage::SyncAck { .. } | SyncMessage::Hello { .. } | SyncMessage::HelloAck { .. } | SyncMessage::PairRequest { .. } | SyncMessage::PairResponse { .. } | SyncMessage::EncryptedPayload { .. } => {}
                                 },
                                 Some(Ok(Message::Ping(payload))) => {
                                     write.send(Message::Pong(payload)).await.map_err(|e| e.to_string())?;
@@ -201,6 +223,36 @@ async fn connect_device_loop(
                                     sync_manager.mark_disconnected(&device.id, Some(err.to_string()));
                                     break;
                                 }
+                            }
+                        }
+                        result = outgoing_rx.recv() => {
+                            match result {
+                                Ok(payload) => {
+                                    let entry_hash = payload.hash.clone();
+                                    if sync_manager.db_ref().has_sync_log(&entry_hash, &device.id, "sent").unwrap_or(true) {
+                                        continue;
+                                    }
+                                    let sync_msg = SyncMessage::ClipboardSync {
+                                        entry: payload,
+                                        sender_device_id: sync_manager.local_device_info().device_id.clone(),
+                                        timestamp: chrono::Local::now().timestamp_millis(),
+                                    };
+                                    match sync_manager.encrypt_protocol_message(&device.id, &sync_msg) {
+                                        Ok(encrypted) => {
+                                            if let Err(e) = write.send(Message::Text(encrypted.to_text().unwrap_or_default().into())).await {
+                                                log::error!("Failed to send sync entry to {}: {}", device.id, e);
+                                                break;
+                                            }
+                                            let _ = sync_manager.db_ref().insert_sync_log(&entry_hash, &device.id, "sent");
+                                            sync_manager.touch_last_sync(format!("Sent clipboard entry to {}", device.name));
+                                        }
+                                        Err(e) => log::error!("Failed to encrypt sync entry for {}: {}", device.id, e),
+                                    }
+                                }
+                                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                                    log::warn!("Outgoing broadcast lagged by {} entries for device {}", n, device.id);
+                                }
+                                Err(_) => break,
                             }
                         }
                     }
