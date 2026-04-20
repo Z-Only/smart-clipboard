@@ -23,6 +23,7 @@ A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + *
 - **Tag Management** -- Custom tags for organizing entries with filtering support
 - **Image Clipboard** -- Captures and displays clipboard images with PNG storage
 - **Usage Statistics** -- Dashboard with category breakdown, daily activity, and most-used entries
+- **Clipboard Templates** -- Reusable text snippets with `{{placeholder}}` syntax and fill-in dialog
 - **Lightweight** -- ~5MB binary, minimal CPU/memory usage thanks to Rust + native WebView
 
 ## Screenshots
@@ -86,6 +87,7 @@ The built binary will be in `src-tauri/target/release/bundle/`.
 10. Tag entries with custom labels for easy organization
 11. Copy images -- they'll appear in the clipboard history too
 12. Click the bar chart icon to view usage statistics
+13. Click the document icon to manage and use clipboard templates
 
 ## Project Structure
 
@@ -118,7 +120,8 @@ smart-clipboard/
 - [x] **i18n**: Multi-language support (English, Chinese)
 - [x] **Theming**: Appearance mode switching (System/Light/Dark) and 6 color themes
 - [x] **Phase 2 -- Smart Enhancements**: Sensitive content detection, content transforms, tag management, image support, usage stats
-- [ ] **Phase 3 -- Sync & Advanced**: LAN sync, E2E encrypted cloud sync, clipboard templates, plugin system
+- [x] **Clipboard Templates**: Parameterized reusable text snippets with placeholder fill dialog
+- [ ] **Phase 3 -- Sync & Advanced**: LAN sync, E2E encrypted cloud sync, plugin system
 
 ## Contributing
 

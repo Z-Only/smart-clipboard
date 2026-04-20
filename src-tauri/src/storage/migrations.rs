@@ -90,5 +90,24 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         ",
     )?;
 
+    // Template management table
+    conn.execute_batch(
+        "
+        CREATE TABLE IF NOT EXISTS templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            content TEXT NOT NULL,
+            category TEXT NOT NULL DEFAULT 'general',
+            is_favorite INTEGER NOT NULL DEFAULT 0,
+            use_count INTEGER NOT NULL DEFAULT 0,
+            created_at DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
+            updated_at DATETIME NOT NULL DEFAULT (datetime('now', 'localtime'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_templates_category ON templates(category);
+        CREATE INDEX IF NOT EXISTS idx_templates_name ON templates(name);
+        ",
+    )?;
+
     Ok(())
 }

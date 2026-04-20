@@ -4,6 +4,7 @@ pub mod commands;
 pub mod config;
 pub mod hotkey;
 pub mod storage;
+pub mod templates;
 pub mod tray;
 
 use std::path::PathBuf;
@@ -51,6 +52,14 @@ pub fn run() {
             commands::remove_tag_from_entry,
             commands::get_entry_tags,
             commands::get_entries_by_tag,
+            templates::commands::create_template,
+            templates::commands::update_template,
+            templates::commands::delete_template,
+            templates::commands::get_templates,
+            templates::commands::get_template,
+            templates::commands::use_template,
+            templates::commands::get_template_categories,
+            templates::commands::get_template_placeholders,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

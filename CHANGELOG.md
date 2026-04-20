@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-04-20
+
+### Added
+
+- **Clipboard templates**: Reusable text snippets with parameterized `{{placeholder}}` syntax — create, edit, delete, and organize templates by category
+- **Template fill dialog**: When using a template with placeholders, a dialog prompts for each value with a live preview of the rendered result
+- **Template engine**: Rust-based placeholder extraction and rendering with support for duplicate placeholders and special characters
+- **Template management UI**: Dedicated panel accessible from the top bar with category filtering, search, and inline actions (use, edit, delete)
+- **Template i18n**: Full English and Chinese support for all template-related UI
+
 ## [0.4.0] - 2026-04-20
 
 ### Added

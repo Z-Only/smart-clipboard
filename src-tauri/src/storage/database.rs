@@ -5,7 +5,7 @@ use chrono::{Local, NaiveDateTime};
 use rusqlite::{params, Connection, Result};
 
 use super::migrations;
-use super::models::{CategoryCount, ClipboardEntry, DayCount, SearchQuery, SearchResult, Statistics, Tag};
+use super::models::{CategoryCount, ClipboardEntry, DayCount, SearchQuery, SearchResult, Statistics, Tag, Template};
 
 pub struct Database {
     conn: Mutex<Connection>,
@@ -329,6 +329,109 @@ impl Database {
             .collect();
         Ok(entries)
     }
+
+    // --- Template methods ---
+
+    pub fn create_template(&self, name: &str, content: &str, category: &str) -> Result<Template> {
+        let conn = self.conn.lock().unwrap();
+        let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        conn.execute(
+            "INSERT INTO templates (name, content, category, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![name, content, category, now, now],
+        )?;
+        let id = conn.last_insert_rowid();
+        Ok(Template {
+            id: Some(id),
+            name: name.to_string(),
+            content: content.to_string(),
+            category: category.to_string(),
+            is_favorite: false,
+            use_count: 0,
+            created_at: now.clone(),
+            updated_at: now,
+        })
+    }
+
+    pub fn update_template(&self, id: i64, name: &str, content: &str, category: &str) -> Result<Template> {
+        let conn = self.conn.lock().unwrap();
+        let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        let rows = conn.execute(
+            "UPDATE templates SET name = ?1, content = ?2, category = ?3, updated_at = ?4 WHERE id = ?5",
+            params![name, content, category, now, id],
+        )?;
+        if rows == 0 {
+            return Err(rusqlite::Error::QueryReturnedNoRows);
+        }
+        // Read back to get all fields
+        let mut stmt = conn.prepare(
+            "SELECT id, name, content, category, is_favorite, use_count, created_at, updated_at FROM templates WHERE id = ?1",
+        )?;
+        stmt.query_row(params![id], |row| row_to_template(row))
+    }
+
+    pub fn delete_template(&self, id: i64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM templates WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn get_templates(&self, category: Option<&str>) -> Result<Vec<Template>> {
+        let conn = self.conn.lock().unwrap();
+        if let Some(cat) = category {
+            let mut stmt = conn.prepare(
+                "SELECT id, name, content, category, is_favorite, use_count, created_at, updated_at FROM templates WHERE category = ?1 ORDER BY updated_at DESC",
+            )?;
+            let templates = stmt
+                .query_map(params![cat], |row| row_to_template(row))?
+                .filter_map(|r| r.ok())
+                .collect();
+            Ok(templates)
+        } else {
+            let mut stmt = conn.prepare(
+                "SELECT id, name, content, category, is_favorite, use_count, created_at, updated_at FROM templates ORDER BY updated_at DESC",
+            )?;
+            let templates = stmt
+                .query_map([], |row| row_to_template(row))?
+                .filter_map(|r| r.ok())
+                .collect();
+            Ok(templates)
+        }
+    }
+
+    pub fn get_template_by_id(&self, id: i64) -> Result<Option<Template>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, name, content, category, is_favorite, use_count, created_at, updated_at FROM templates WHERE id = ?1",
+        )?;
+        let mut rows = stmt.query(params![id])?;
+        if let Some(row) = rows.next()? {
+            Ok(Some(row_to_template(row)?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn increment_template_use_count(&self, id: i64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        conn.execute(
+            "UPDATE templates SET use_count = use_count + 1, updated_at = ?1 WHERE id = ?2",
+            params![now, id],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_template_categories_list(&self) -> Result<Vec<String>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT DISTINCT category FROM templates ORDER BY category",
+        )?;
+        let categories = stmt
+            .query_map([], |row| row.get(0))?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(categories)
+    }
 }
 
 fn search_fts(conn: &Connection, keyword: &str, query: &SearchQuery) -> Result<SearchResult> {
@@ -415,6 +518,19 @@ fn get_entries_inner(conn: &Connection, query: &SearchQuery) -> Result<SearchRes
     Ok(SearchResult {
         entries,
         total_count,
+    })
+}
+
+fn row_to_template(row: &rusqlite::Row) -> Result<Template> {
+    Ok(Template {
+        id: Some(row.get(0)?),
+        name: row.get(1)?,
+        content: row.get(2)?,
+        category: row.get(3)?,
+        is_favorite: row.get::<_, i32>(4)? != 0,
+        use_count: row.get(5)?,
+        created_at: row.get(6)?,
+        updated_at: row.get(7)?,
     })
 }
 
@@ -917,5 +1033,164 @@ mod tests {
         // Entry should have no tags
         let tags = db.get_entry_tags(entry_id).unwrap();
         assert!(tags.is_empty());
+    }
+
+    // --- Template management tests ---
+
+    #[test]
+    fn test_create_template() {
+        let db = Database::new(":memory:").unwrap();
+        let tpl = db.create_template("greeting", "Hello {{name}}!", "general").unwrap();
+        assert!(tpl.id.is_some());
+        assert_eq!(tpl.name, "greeting");
+        assert_eq!(tpl.content, "Hello {{name}}!");
+        assert_eq!(tpl.category, "general");
+        assert_eq!(tpl.use_count, 0);
+        assert!(!tpl.is_favorite);
+    }
+
+    #[test]
+    fn test_create_duplicate_template_name_fails() {
+        let db = Database::new(":memory:").unwrap();
+        db.create_template("greeting", "Hello!", "general").unwrap();
+        let result = db.create_template("greeting", "Hi!", "general");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_template_by_id() {
+        let db = Database::new(":memory:").unwrap();
+        let tpl = db.create_template("test", "content", "general").unwrap();
+        let id = tpl.id.unwrap();
+
+        let found = db.get_template_by_id(id).unwrap();
+        assert!(found.is_some());
+        let found = found.unwrap();
+        assert_eq!(found.name, "test");
+        assert_eq!(found.content, "content");
+    }
+
+    #[test]
+    fn test_get_template_by_id_not_found() {
+        let db = Database::new(":memory:").unwrap();
+        let found = db.get_template_by_id(9999).unwrap();
+        assert!(found.is_none());
+    }
+
+    #[test]
+    fn test_update_template() {
+        let db = Database::new(":memory:").unwrap();
+        let tpl = db.create_template("old_name", "old content", "general").unwrap();
+        let id = tpl.id.unwrap();
+
+        let updated = db.update_template(id, "new_name", "new content", "work").unwrap();
+        assert_eq!(updated.name, "new_name");
+        assert_eq!(updated.content, "new content");
+        assert_eq!(updated.category, "work");
+    }
+
+    #[test]
+    fn test_update_template_not_found() {
+        let db = Database::new(":memory:").unwrap();
+        let result = db.update_template(9999, "name", "content", "general");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_delete_template() {
+        let db = Database::new(":memory:").unwrap();
+        let tpl = db.create_template("to_delete", "content", "general").unwrap();
+        let id = tpl.id.unwrap();
+
+        db.delete_template(id).unwrap();
+        let found = db.get_template_by_id(id).unwrap();
+        assert!(found.is_none());
+    }
+
+    #[test]
+    fn test_get_templates_all() {
+        let db = Database::new(":memory:").unwrap();
+        db.create_template("tpl1", "content1", "general").unwrap();
+        db.create_template("tpl2", "content2", "work").unwrap();
+        db.create_template("tpl3", "content3", "general").unwrap();
+
+        let all = db.get_templates(None).unwrap();
+        assert_eq!(all.len(), 3);
+    }
+
+    #[test]
+    fn test_get_templates_by_category() {
+        let db = Database::new(":memory:").unwrap();
+        db.create_template("tpl1", "content1", "general").unwrap();
+        db.create_template("tpl2", "content2", "work").unwrap();
+        db.create_template("tpl3", "content3", "general").unwrap();
+
+        let general = db.get_templates(Some("general")).unwrap();
+        assert_eq!(general.len(), 2);
+        for t in &general {
+            assert_eq!(t.category, "general");
+        }
+
+        let work = db.get_templates(Some("work")).unwrap();
+        assert_eq!(work.len(), 1);
+        assert_eq!(work[0].name, "tpl2");
+    }
+
+    #[test]
+    fn test_get_templates_empty_category() {
+        let db = Database::new(":memory:").unwrap();
+        db.create_template("tpl1", "content1", "general").unwrap();
+
+        let empty = db.get_templates(Some("nonexistent")).unwrap();
+        assert!(empty.is_empty());
+    }
+
+    #[test]
+    fn test_increment_template_use_count() {
+        let db = Database::new(":memory:").unwrap();
+        let tpl = db.create_template("counter", "content", "general").unwrap();
+        let id = tpl.id.unwrap();
+        assert_eq!(tpl.use_count, 0);
+
+        db.increment_template_use_count(id).unwrap();
+        db.increment_template_use_count(id).unwrap();
+        db.increment_template_use_count(id).unwrap();
+
+        let updated = db.get_template_by_id(id).unwrap().unwrap();
+        assert_eq!(updated.use_count, 3);
+    }
+
+    #[test]
+    fn test_get_template_categories_list() {
+        let db = Database::new(":memory:").unwrap();
+        db.create_template("tpl1", "c", "work").unwrap();
+        db.create_template("tpl2", "c", "general").unwrap();
+        db.create_template("tpl3", "c", "email").unwrap();
+        db.create_template("tpl4", "c", "work").unwrap();
+
+        let categories = db.get_template_categories_list().unwrap();
+        assert_eq!(categories, vec!["email", "general", "work"]);
+    }
+
+    #[test]
+    fn test_get_template_categories_list_empty() {
+        let db = Database::new(":memory:").unwrap();
+        let categories = db.get_template_categories_list().unwrap();
+        assert!(categories.is_empty());
+    }
+
+    #[test]
+    fn test_templates_ordered_by_updated_at_desc() {
+        let db = Database::new(":memory:").unwrap();
+        let t1 = db.create_template("first", "c1", "general").unwrap();
+        let _t2 = db.create_template("second", "c2", "general").unwrap();
+        // Update first template to make its updated_at more recent
+        db.increment_template_use_count(t1.id.unwrap()).unwrap();
+
+        let all = db.get_templates(None).unwrap();
+        assert_eq!(all.len(), 2);
+        // The first template was updated most recently
+        assert_eq!(all[0].name, "first");
+        assert_eq!(all[1].name, "second");
     }
 }

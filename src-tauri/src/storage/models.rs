@@ -2,6 +2,18 @@ use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Template {
+    pub id: Option<i64>,
+    pub name: String,
+    pub content: String,
+    pub category: String,
+    pub is_favorite: bool,
+    pub use_count: i64,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tag {
     pub id: Option<i64>,
     pub name: String,

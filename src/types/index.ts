@@ -23,10 +23,22 @@ export interface SearchResult {
   total_count: number;
 }
 
+export interface Template {
+  id: number | null;
+  name: string;
+  content: string;
+  category: string;
+  is_favorite: boolean;
+  use_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export type CategoryType =
   | "all"
   | "favorites"
   | "tags"
+  | "templates"
   | "image"
   | "url"
   | "email"
@@ -49,6 +61,7 @@ export const CATEGORIES: CategoryItem[] = [
   { key: "all", labelKey: "categories.all", icon: "📋" },
   { key: "favorites", labelKey: "categories.favorites", icon: "⭐" },
   { key: "tags", labelKey: "categories.tags", icon: "🏷️" },
+  { key: "templates", labelKey: "categories.templates", icon: "📄" },
   { key: "image", labelKey: "categories.image", icon: "📷" },
   { key: "url", labelKey: "categories.url", icon: "🔗" },
   { key: "email", labelKey: "categories.email", icon: "📧" },
