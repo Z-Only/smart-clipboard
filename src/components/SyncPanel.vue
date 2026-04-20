@@ -12,10 +12,24 @@
         </div>
         <div class="flex items-center gap-2">
           <button
-            class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            class="inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="isLoading"
             @click="refresh"
           >
-            {{ $t('sync.actions.refresh') }}
+            <svg
+              v-if="isLoading"
+              class="h-4 w-4 animate-spin"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
+            {{ isLoading ? $t('sync.actions.refreshing') : $t('sync.actions.refresh') }}
           </button>
           <button class="text-muted-foreground hover:text-foreground" @click="close">
             <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
@@ -73,7 +87,13 @@
             <div class="grid grid-cols-2 gap-3">
               <div class="rounded-xl border border-border bg-background p-3">
                 <p class="text-xs text-muted-foreground">{{ $t('sync.panel.status') }}</p>
-                <p class="mt-1 text-sm font-semibold">{{ currentStatusText }}</p>
+                <div class="mt-1 flex items-center gap-2">
+                  <span
+                    class="inline-block h-2 w-2 rounded-full"
+                    :class="statusDotClass"
+                  />
+                  <p class="text-sm font-semibold">{{ currentStatusText }}</p>
+                </div>
               </div>
               <div class="rounded-xl border border-border bg-background p-3">
                 <p class="text-xs text-muted-foreground">{{ $t('sync.panel.pairedDevices') }}</p>
@@ -89,8 +109,26 @@
               </div>
             </div>
 
-            <div v-if="error" class="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-              {{ error }}
+            <div v-if="error" class="flex items-start justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              <div class="flex items-start gap-2">
+                <svg class="mt-0.5 h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                  <path d="M12 9v4" />
+                  <path d="M12 17h.01" />
+                </svg>
+                <span>{{ error }}</span>
+              </div>
+              <button
+                class="shrink-0 text-destructive/70 hover:text-destructive"
+                @click="clearError"
+              >
+                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
             </div>
 
             <div class="flex justify-end gap-2">
@@ -126,7 +164,7 @@
                 @toggle-sync="handleToggleSync"
                 @unpair="handleUnpair"
               />
-              <div v-if="!pairedDevices.length" class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              <div v-if="!pairedDevices.length && !isLoading" class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
                 {{ $t('sync.empty.paired') }}
               </div>
             </div>
@@ -137,7 +175,14 @@
               <h3 class="text-sm font-semibold">{{ $t('sync.panel.discoveredDevices') }}</h3>
               <span class="text-xs text-muted-foreground">{{ discoveredDevices.length }}</span>
             </div>
-            <div class="space-y-3">
+            <div v-if="isLoading" class="flex flex-col items-center justify-center gap-3 py-12">
+              <svg class="h-8 w-8 animate-spin text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+              <p class="text-sm text-muted-foreground">{{ $t('sync.loading') }}</p>
+            </div>
+            <div v-else class="space-y-3">
               <DeviceCard
                 v-for="device in discoveredDevices"
                 :key="`discovered-${device.id}`"
@@ -153,14 +198,22 @@
         </section>
       </div>
     </div>
+
+    <PairConfirmDialog
+      :is-open="!!pairingDevice"
+      :device="pairingDevice"
+      @confirm="confirmPair"
+      @cancel="cancelPair"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, watch } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import DeviceCard from "@/components/DeviceCard.vue";
+import PairConfirmDialog from "@/components/PairConfirmDialog.vue";
 import { useSyncStore } from "@/stores/syncStore";
 import type { SyncDevice, SyncStatus } from "@/types";
 
@@ -176,6 +229,7 @@ const {
   status,
   pairedDevices,
   discoveredDevices,
+  isLoading,
   isSaving,
   error,
   activePairedCount,
@@ -187,11 +241,27 @@ const form = reactive({
   port: 8484,
 });
 
+const pairingDevice = ref<SyncDevice | null>(null);
+
 function getStatusText(value: SyncStatus) {
   return t(`sync.statusValues.${value}`);
 }
 
 const currentStatusText = computed(() => getStatusText(status.value));
+
+const statusDotClass = computed(() => {
+  const s = status.value;
+  if (s === "online" || s === "connected") {
+    return "bg-emerald-500";
+  }
+  if (s === "discovering" || s === "connecting" || s === "pairing") {
+    return "bg-amber-500 animate-pulse";
+  }
+  if (s === "error") {
+    return "bg-destructive";
+  }
+  return "bg-muted-foreground";
+});
 
 watch(
   () => props.isOpen,
@@ -226,8 +296,18 @@ async function save() {
   syncFormFromStore();
 }
 
-async function handlePair(device: SyncDevice) {
-  await syncStore.pairDevice(device.id);
+function handlePair(device: SyncDevice) {
+  pairingDevice.value = device;
+}
+
+async function confirmPair() {
+  if (!pairingDevice.value) return;
+  await syncStore.pairDevice(pairingDevice.value.id);
+  pairingDevice.value = null;
+}
+
+function cancelPair() {
+  pairingDevice.value = null;
 }
 
 async function handleUnpair(device: SyncDevice) {
@@ -236,6 +316,10 @@ async function handleUnpair(device: SyncDevice) {
 
 async function handleToggleSync(device: SyncDevice, nextEnabled: boolean) {
   await syncStore.toggleDeviceSync(device.id, nextEnabled);
+}
+
+function clearError() {
+  syncStore.clearError();
 }
 
 function close() {

@@ -38,10 +38,11 @@ Device A                              Device B
 - **mDNS discovery**: Automatic LAN device discovery via `_smartclip._tcp.local.`
 - **WebSocket transport**: Auto-connect, ping/pong heartbeats, reconnect backoff
 - **Sync UI**: Settings panel with device management, pairing, and per-device controls
+- **Pairing confirmation dialog**: Confirmation dialog before accepting pairing requests
+- **Loading & error states**: Enhanced SyncPanel UI with loading indicators, refresh button, and dismissible error banners
 
 ### Not yet implemented
 
-- Mutual approval pairing flow UI (currently auto-accepts known devices)
 - Image content sync (text-only for now; images skipped unless `sync_images` enabled)
 - Advanced conflict resolution (currently both sides keep their version)
 

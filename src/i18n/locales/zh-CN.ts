@@ -150,12 +150,14 @@ export default {
     },
     actions: {
       refresh: "刷新",
+      refreshing: "刷新中...",
       save: "保存",
       saving: "保存中...",
       close: "关闭",
       pair: "配对",
       unpair: "取消配对",
     },
+    loading: "加载同步数据中...",
     statusValues: {
       idle: "空闲",
       discovering: "发现中",
@@ -182,6 +184,14 @@ export default {
       syncOn: "此设备已启用同步",
       syncOff: "此设备已停用同步",
       availableToPair: "可发起配对",
+    },
+    pairDialog: {
+      title: "确认配对设备？",
+      message: "即将与以下设备配对：",
+      fingerprint: "设备指纹",
+      confirm: "确认配对",
+      cancel: "取消",
+      warning: "配对前请确认您信任此设备。",
     },
   },
   statistics: {

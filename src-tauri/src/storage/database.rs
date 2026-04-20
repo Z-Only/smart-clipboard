@@ -752,6 +752,7 @@ mod tests {
             created_at: now,
             updated_at: now,
             expires_at: None,
+            source_device: None,
         }
     }
 
@@ -1082,6 +1083,7 @@ mod tests {
             created_at: now,
             updated_at: now,
             expires_at: None,
+            source_device: None,
         };
         let id = db.insert_entry(&entry).unwrap();
 

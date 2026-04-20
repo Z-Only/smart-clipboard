@@ -1,6 +1,7 @@
 # Changelog
 
 ## [0.6.0] - 2026-04-20
+- **Phase 3 UI polish & validation**: Added pairing confirmation dialog, SyncPanel loading/refreshing states, enhanced error banner with dismiss, status dot indicator, and i18n additions for sync UI.
 - Added Phase 3 end-to-end encryption and secure pairing for LAN sync, including X25519 key exchange, HKDF-SHA256 shared secret derivation, AES-256-GCM encrypted messaging, key fingerprint verification, and persistent key storage.
 - Added Phase 3 WebSocket transport skeleton with backend server/client handshake, protocol message framing, heartbeat ping/pong, reconnect backoff, and paired-device runtime connection states.
 - Updated SyncPanel device status rendering to show more realistic transport states such as connecting, connected, disabled, and reconnecting-related activity.

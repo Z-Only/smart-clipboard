@@ -150,12 +150,14 @@ export default {
     },
     actions: {
       refresh: "Refresh",
+      refreshing: "Refreshing...",
       save: "Save",
       saving: "Saving...",
       close: "Close",
       pair: "Pair",
       unpair: "Unpair",
     },
+    loading: "Loading sync data...",
     statusValues: {
       idle: "Idle",
       discovering: "Discovering",
@@ -182,6 +184,14 @@ export default {
       syncOn: "Sync enabled for this device",
       syncOff: "Sync disabled for this device",
       availableToPair: "Available to pair",
+    },
+    pairDialog: {
+      title: "Pair with device?",
+      message: "You are about to pair with the following device:",
+      fingerprint: "Device fingerprint",
+      confirm: "Confirm Pair",
+      cancel: "Cancel",
+      warning: "Make sure you trust this device before pairing.",
     },
   },
   statistics: {

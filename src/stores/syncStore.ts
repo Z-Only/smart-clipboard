@@ -162,6 +162,10 @@ export const useSyncStore = defineStore("sync", () => {
     }
   }
 
+  function clearError() {
+    error.value = null;
+  }
+
   return {
     enabled,
     deviceName,
@@ -178,5 +182,6 @@ export const useSyncStore = defineStore("sync", () => {
     pairDevice,
     unpairDevice,
     toggleDeviceSync,
+    clearError,
   };
 });
