@@ -16,6 +16,7 @@ pub mod crypto;
 pub mod mdns;
 pub mod protocol;
 pub mod server;
+pub mod webdav;
 
 const DISCOVERY_STALE_AFTER_SECS: i64 = 20;
 const DEFAULT_SERVICE_TYPE: &str = "_smartclip._tcp.local.";
