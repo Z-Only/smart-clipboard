@@ -71,3 +71,37 @@ pub struct SearchQuery {
     pub limit: i64,
     pub offset: i64,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiscoveredDevice {
+    pub id: String,
+    pub name: String,
+    pub host: String,
+    pub port: u16,
+    pub version: String,
+    pub last_seen_at: NaiveDateTime,
+    pub is_paired: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PairedDevice {
+    pub id: String,
+    pub name: String,
+    pub host: String,
+    pub port: i64,
+    pub public_key: Option<Vec<u8>>,
+    pub shared_secret: Option<Vec<u8>>,
+    pub last_seen_at: Option<NaiveDateTime>,
+    pub is_active: bool,
+    pub paired_at: NaiveDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SyncStatus {
+    pub enabled: bool,
+    pub state: String,
+    pub paired_count: i64,
+    pub online_count: i64,
+    pub last_sync_at: Option<String>,
+    pub message: String,
+}

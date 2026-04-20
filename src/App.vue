@@ -33,6 +33,18 @@
       </button>
       <button
         class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        :title="$t('sync.title')"
+        @click="showSync = true"
+      >
+        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 17l-4-4 4-4" />
+          <path d="M16 7l4 4-4 4" />
+          <path d="M14 4l-4 16" />
+        </svg>
+      </button>
+      <button
+        class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
         :title="$t('app.settings')"
         @click="showSettings = true"
       >
@@ -67,6 +79,9 @@
       <span class="opacity-60">Cmd+Shift+V</span>
     </div>
 
+    <!-- Sync panel -->
+    <SyncPanel :is-open="showSync" @close="showSync = false" />
+
     <!-- Settings panel -->
     <SettingsPanel :is-open="showSettings" @close="showSettings = false" />
 
@@ -89,6 +104,7 @@ import ClipboardList from "@/components/ClipboardList.vue";
 import SettingsPanel from "@/components/SettingsPanel.vue";
 import StatisticsPanel from "@/components/StatisticsPanel.vue";
 import TemplateList from "@/components/TemplateList.vue";
+import SyncPanel from "@/components/SyncPanel.vue";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import { useClipboard } from "@/composables/useClipboard";
 import { useTheme } from "@/composables/useTheme";
@@ -101,6 +117,7 @@ const searchBarRef = ref<InstanceType<typeof SearchBar> | null>(null);
 const showSettings = ref(false);
 const showStatistics = ref(false);
 const showTemplates = ref(false);
+const showSync = ref(false);
 
 // Listen for clipboard changes from backend
 useClipboard();

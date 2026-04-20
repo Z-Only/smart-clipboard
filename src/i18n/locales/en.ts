@@ -135,6 +135,52 @@ export default {
     copyToClipboard: "Copy to Clipboard",
     copied: "Copied!",
   },
+  sync: {
+    title: "Sync",
+    subtitle: "Manage LAN sync devices and connection settings",
+    button: "Sync",
+    panel: {
+      enabled: "Sync enabled",
+      deviceName: "Device name",
+      port: "Port",
+      pairedDevices: "Paired devices",
+      discoveredDevices: "Discovered devices",
+      onlineDevices: "Online devices",
+      status: "Status",
+    },
+    actions: {
+      refresh: "Refresh",
+      save: "Save",
+      saving: "Saving...",
+      close: "Close",
+      pair: "Pair",
+      unpair: "Unpair",
+    },
+    statusValues: {
+      idle: "Idle",
+      discovering: "Discovering",
+      online: "Online",
+      offline: "Offline",
+      pairing: "Pairing",
+      error: "Error",
+      unknown: "Unknown",
+    },
+    hints: {
+      enabled: "Allow this device to discover and sync with nearby devices on your network.",
+    },
+    placeholders: {
+      deviceName: "My MacBook",
+    },
+    empty: {
+      paired: "No paired devices yet.",
+      discovered: "No devices discovered on the current network.",
+    },
+    device: {
+      syncOn: "Sync enabled for this device",
+      syncOff: "Sync disabled for this device",
+      availableToPair: "Available to pair",
+    },
+  },
   statistics: {
     title: "Statistics",
     totalEntries: "Total Entries",

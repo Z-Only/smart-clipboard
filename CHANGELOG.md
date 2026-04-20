@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.0] - 2026-04-20
+
+### Added
+- Added a Phase 3 LAN Sync MVP management experience with a dedicated Sync panel in the desktop UI.
+- Added sync configuration, discovered-device list, paired-device list, and per-device enable/disable controls.
+- Added backend sync scaffolding with persisted sync config, paired devices storage, and Tauri sync commands.
+
+### Changed
+- Updated the app version to 0.6.0 for the Phase 3 partial delivery.
+- Clarified that this release ships the management and persistence layer first, while transport and encryption remain for follow-up work.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).

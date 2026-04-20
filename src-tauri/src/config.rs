@@ -1,3 +1,4 @@
+use crate::sync::SyncConfig;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -11,6 +12,8 @@ pub struct AppConfig {
     pub monitor_interval_ms: u64,
     pub autostart_enabled: bool,
     pub sensitive_expiry_minutes: u64,
+    #[serde(default)]
+    pub sync: SyncConfig,
 }
 
 impl Default for AppConfig {
@@ -22,6 +25,7 @@ impl Default for AppConfig {
             monitor_interval_ms: 500,
             autostart_enabled: false,
             sensitive_expiry_minutes: 5,
+            sync: SyncConfig::default(),
         }
     }
 }

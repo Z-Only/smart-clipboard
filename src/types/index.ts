@@ -73,3 +73,39 @@ export const CATEGORIES: CategoryItem[] = [
   { key: "address", labelKey: "categories.address", icon: "📍" },
   { key: "text", labelKey: "categories.text", icon: "📝" },
 ];
+
+
+export type SyncStatus = "idle" | "discovering" | "online" | "offline" | "pairing" | "error" | "unknown";
+
+export interface SyncDevice {
+  id: string;
+  name: string;
+  deviceName: string;
+  address: string | null;
+  ip: string | null;
+  port: number | null;
+  status: SyncStatus;
+  syncEnabled: boolean;
+  enabled: boolean;
+  lastSeenAt: string | null;
+  pairedAt: string | null;
+  fingerprint: string | null;
+}
+
+export interface SyncConfig {
+  enabled: boolean;
+  deviceName: string;
+  port: number;
+}
+
+export interface UpdateSyncConfigPayload {
+  enabled: boolean;
+  deviceName: string;
+  port: number;
+}
+
+export interface SyncStatusResponse extends SyncConfig {
+  status: SyncStatus;
+  pairedDevices: SyncDevice[];
+  discoveredDevices: SyncDevice[];
+}

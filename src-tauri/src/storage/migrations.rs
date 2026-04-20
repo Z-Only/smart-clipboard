@@ -90,6 +90,35 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         ",
     )?;
 
+    // Sync management tables
+    conn.execute_batch(
+        "
+        CREATE TABLE IF NOT EXISTS paired_devices (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            host TEXT NOT NULL DEFAULT '127.0.0.1',
+            port INTEGER NOT NULL DEFAULT 23456,
+            public_key BLOB,
+            shared_secret BLOB,
+            last_seen_at DATETIME,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            paired_at DATETIME NOT NULL DEFAULT (datetime('now', 'localtime'))
+        );
+
+        CREATE TABLE IF NOT EXISTS sync_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entry_hash TEXT NOT NULL,
+            device_id TEXT NOT NULL,
+            direction TEXT NOT NULL,
+            synced_at DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
+            FOREIGN KEY (device_id) REFERENCES paired_devices(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_sync_log_hash ON sync_log(entry_hash);
+        CREATE INDEX IF NOT EXISTS idx_sync_log_device ON sync_log(device_id);
+        ",
+    )?;
+
     // Template management table
     conn.execute_batch(
         "

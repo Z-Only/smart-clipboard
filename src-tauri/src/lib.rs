@@ -4,6 +4,7 @@ pub mod commands;
 pub mod config;
 pub mod hotkey;
 pub mod storage;
+pub mod sync;
 pub mod templates;
 pub mod tray;
 
@@ -20,6 +21,7 @@ use analyzer::{classify, detect_sensitive};
 use clipboard::ClipboardMonitor;
 use config::ConfigManager;
 use storage::{ClipboardEntry, Database};
+use sync::SyncManager;
 
 /// Managed state holding the app data directory path.
 pub struct AppDataDir(pub PathBuf);
@@ -52,6 +54,14 @@ pub fn run() {
             commands::remove_tag_from_entry,
             commands::get_entry_tags,
             commands::get_entries_by_tag,
+            commands::get_sync_status,
+            commands::get_sync_config,
+            commands::update_sync_config,
+            commands::get_discovered_devices,
+            commands::get_paired_devices,
+            commands::pair_device,
+            commands::unpair_device,
+            commands::toggle_device_sync,
             templates::commands::create_template,
             templates::commands::update_template,
             templates::commands::delete_template,
@@ -90,6 +100,9 @@ pub fn run() {
                 Database::new(&db_path.to_string_lossy()).expect("Failed to initialize database"),
             );
             app.manage(db.clone());
+
+            let sync_manager = Arc::new(SyncManager::new(db.clone(), config_manager.clone()));
+            app.manage(sync_manager.clone());
 
             // Setup hotkey
             if let Err(e) = hotkey::setup_hotkey(app.handle()) {

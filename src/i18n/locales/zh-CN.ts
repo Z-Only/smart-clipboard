@@ -135,6 +135,52 @@ export default {
     copyToClipboard: "复制到剪贴板",
     copied: "已复制！",
   },
+  sync: {
+    title: "同步",
+    subtitle: "管理局域网同步设备与连接设置",
+    button: "同步",
+    panel: {
+      enabled: "已启用同步",
+      deviceName: "设备名称",
+      port: "端口",
+      pairedDevices: "已配对设备",
+      discoveredDevices: "已发现设备",
+      onlineDevices: "在线设备",
+      status: "状态",
+    },
+    actions: {
+      refresh: "刷新",
+      save: "保存",
+      saving: "保存中...",
+      close: "关闭",
+      pair: "配对",
+      unpair: "取消配对",
+    },
+    statusValues: {
+      idle: "空闲",
+      discovering: "发现中",
+      online: "在线",
+      offline: "离线",
+      pairing: "配对中",
+      error: "异常",
+      unknown: "未知",
+    },
+    hints: {
+      enabled: "允许此设备在当前局域网中发现附近设备并进行同步。",
+    },
+    placeholders: {
+      deviceName: "我的 MacBook",
+    },
+    empty: {
+      paired: "暂无已配对设备。",
+      discovered: "当前网络下未发现可用设备。",
+    },
+    device: {
+      syncOn: "此设备已启用同步",
+      syncOff: "此设备已停用同步",
+      availableToPair: "可发起配对",
+    },
+  },
   statistics: {
     title: "统计",
     totalEntries: "总记录数",

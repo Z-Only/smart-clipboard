@@ -5,6 +5,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use tauri::State;
 
 use crate::config::{AppConfig, ConfigManager};
+use crate::sync::{SyncConfig, SyncManager};
 use crate::storage::{Database, SearchQuery, SearchResult, Statistics, Tag};
 use crate::AppDataDir;
 
@@ -513,4 +514,66 @@ pub mod transform {
             assert_eq!(apply_transform("", "html_unescape").unwrap(), "");
         }
     }
+}
+
+
+#[tauri::command]
+pub async fn get_sync_status(
+    sync_manager: State<'_, Arc<SyncManager>>,
+) -> Result<crate::storage::SyncStatus, String> {
+    sync_manager.get_status()
+}
+
+#[tauri::command]
+pub async fn get_sync_config(
+    sync_manager: State<'_, Arc<SyncManager>>,
+) -> Result<SyncConfig, String> {
+    Ok(sync_manager.get_config())
+}
+
+#[tauri::command]
+pub async fn update_sync_config(
+    sync_manager: State<'_, Arc<SyncManager>>,
+    new_config: SyncConfig,
+) -> Result<(), String> {
+    sync_manager.update_config(new_config)
+}
+
+#[tauri::command]
+pub async fn get_discovered_devices(
+    sync_manager: State<'_, Arc<SyncManager>>,
+) -> Result<Vec<crate::storage::DiscoveredDevice>, String> {
+    sync_manager.get_discovered_devices()
+}
+
+#[tauri::command]
+pub async fn get_paired_devices(
+    sync_manager: State<'_, Arc<SyncManager>>,
+) -> Result<Vec<crate::storage::PairedDevice>, String> {
+    sync_manager.get_paired_devices()
+}
+
+#[tauri::command]
+pub async fn pair_device(
+    sync_manager: State<'_, Arc<SyncManager>>,
+    device_id: String,
+) -> Result<(), String> {
+    sync_manager.pair_device(&device_id)
+}
+
+#[tauri::command]
+pub async fn unpair_device(
+    sync_manager: State<'_, Arc<SyncManager>>,
+    device_id: String,
+) -> Result<(), String> {
+    sync_manager.unpair_device(&device_id)
+}
+
+#[tauri::command]
+pub async fn toggle_device_sync(
+    sync_manager: State<'_, Arc<SyncManager>>,
+    device_id: String,
+    enabled: bool,
+) -> Result<(), String> {
+    sync_manager.toggle_device_sync(&device_id, enabled)
 }

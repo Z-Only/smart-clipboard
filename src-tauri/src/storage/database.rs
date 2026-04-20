@@ -5,7 +5,7 @@ use chrono::{Local, NaiveDateTime};
 use rusqlite::{params, Connection, Result};
 
 use super::migrations;
-use super::models::{CategoryCount, ClipboardEntry, DayCount, SearchQuery, SearchResult, Statistics, Tag, Template};
+use super::models::{CategoryCount, ClipboardEntry, DayCount, PairedDevice, SearchQuery, SearchResult, Statistics, Tag, Template};
 
 pub struct Database {
     conn: Mutex<Connection>,
@@ -241,6 +241,74 @@ impl Database {
             most_used,
             storage_size_bytes: 0, // Will be set by the command
         })
+    }
+
+    pub fn get_paired_devices(&self) -> Result<Vec<PairedDevice>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, name, host, port, public_key, shared_secret, last_seen_at, is_active, paired_at FROM paired_devices ORDER BY last_seen_at DESC, paired_at DESC",
+        )?;
+        let devices = stmt
+            .query_map([], |row| {
+                Ok(PairedDevice {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    host: row.get(2)?,
+                    port: row.get(3)?,
+                    public_key: row.get(4)?,
+                    shared_secret: row.get(5)?,
+                    last_seen_at: row.get::<_, Option<String>>(6)?.map(|v| parse_datetime(&v)).transpose()?,
+                    is_active: row.get::<_, i32>(7)? != 0,
+                    paired_at: parse_datetime(&row.get::<_, String>(8)?)?,
+                })
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(devices)
+    }
+
+    pub fn upsert_paired_device(&self, device: &PairedDevice) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO paired_devices (id, name, host, port, public_key, shared_secret, last_seen_at, is_active, paired_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+             ON CONFLICT(id) DO UPDATE SET
+               name = excluded.name,
+               host = excluded.host,
+               port = excluded.port,
+               public_key = excluded.public_key,
+               shared_secret = excluded.shared_secret,
+               last_seen_at = excluded.last_seen_at,
+               is_active = excluded.is_active",
+            params![
+                device.id,
+                device.name,
+                device.host,
+                device.port,
+                device.public_key,
+                device.shared_secret,
+                device.last_seen_at.map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string()),
+                device.is_active as i32,
+                device.paired_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn unpair_device(&self, device_id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM paired_devices WHERE id = ?1", params![device_id])?;
+        Ok(())
+    }
+
+    pub fn set_paired_device_active(&self, device_id: &str, enabled: bool) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let now = Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string();
+        conn.execute(
+            "UPDATE paired_devices SET is_active = ?1, last_seen_at = ?2 WHERE id = ?3",
+            params![enabled as i32, now, device_id],
+        )?;
+        Ok(())
     }
 
     // --- Tag management methods ---
@@ -518,6 +586,12 @@ fn get_entries_inner(conn: &Connection, query: &SearchQuery) -> Result<SearchRes
     Ok(SearchResult {
         entries,
         total_count,
+    })
+}
+
+fn parse_datetime(s: &str) -> Result<NaiveDateTime> {
+    NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S").map_err(|e| {
+        rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
     })
 }
 

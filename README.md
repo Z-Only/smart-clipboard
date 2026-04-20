@@ -4,6 +4,28 @@
 
 A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + **Vue 3** + **Rust**. It runs in the background, automatically captures and classifies clipboard content, and provides instant search and retrieval.
 
+## Phase 3 Progress
+
+This repository now includes a **Phase 3 LAN Sync MVP**. In this release, the project provides the management layer for local-network sync, including:
+
+- Sync settings panel in the desktop UI
+- Editable device name and sync port
+- Discovered device list (MVP scaffolding)
+- Pair / unpair device workflow
+- Per-device sync enable toggle
+- Persistent paired device storage and sync config
+
+### Current MVP scope
+
+This is a **partial Phase 3 delivery**. It intentionally focuses on the product surface and persistence layer first. The following items are **not fully implemented yet** in this release:
+
+- Real mDNS device discovery
+- Live WebSocket transport between devices
+- End-to-end encryption key exchange and payload encryption
+- Cross-device clipboard propagation
+
+This makes the release safe for incremental rollout while keeping the design direction intact.
+
 ## Features
 
 - **Clipboard History** -- Automatically captures all copied text with deduplication
