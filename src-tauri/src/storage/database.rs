@@ -4,7 +4,7 @@ use chrono::{Local, NaiveDateTime};
 use rusqlite::{params, Connection, Result};
 
 use super::migrations;
-use super::models::{ClipboardEntry, SearchQuery, SearchResult};
+use super::models::{ClipboardEntry, SearchQuery, SearchResult, Tag};
 
 pub struct Database {
     conn: Mutex<Connection>,
@@ -161,6 +161,93 @@ impl Database {
         } else {
             Ok(None)
         }
+    }
+
+    // --- Tag management methods ---
+
+    pub fn create_tag(&self, name: &str) -> Result<Tag> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("INSERT INTO tags (name) VALUES (?1)", params![name])?;
+        let id = conn.last_insert_rowid();
+        Ok(Tag {
+            id: Some(id),
+            name: name.to_string(),
+        })
+    }
+
+    pub fn delete_tag(&self, id: i64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM tags WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn get_all_tags(&self) -> Result<Vec<Tag>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT id, name FROM tags ORDER BY name")?;
+        let tags = stmt
+            .query_map([], |row| {
+                Ok(Tag {
+                    id: Some(row.get(0)?),
+                    name: row.get(1)?,
+                })
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(tags)
+    }
+
+    pub fn add_tag_to_entry(&self, entry_id: i64, tag_id: i64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT OR IGNORE INTO entry_tags (entry_id, tag_id) VALUES (?1, ?2)",
+            params![entry_id, tag_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn remove_tag_from_entry(&self, entry_id: i64, tag_id: i64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "DELETE FROM entry_tags WHERE entry_id = ?1 AND tag_id = ?2",
+            params![entry_id, tag_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_entry_tags(&self, entry_id: i64) -> Result<Vec<Tag>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT t.id, t.name FROM tags t
+             INNER JOIN entry_tags et ON t.id = et.tag_id
+             WHERE et.entry_id = ?1
+             ORDER BY t.name",
+        )?;
+        let tags = stmt
+            .query_map(params![entry_id], |row| {
+                Ok(Tag {
+                    id: Some(row.get(0)?),
+                    name: row.get(1)?,
+                })
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(tags)
+    }
+
+    pub fn get_entries_by_tag(&self, tag_id: i64) -> Result<Vec<ClipboardEntry>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT e.id, e.content, e.content_type, e.category, e.hash, e.source_app, e.is_favorite, e.is_sensitive, e.use_count, e.created_at, e.updated_at, e.expires_at
+             FROM clipboard_entries e
+             INNER JOIN entry_tags et ON e.id = et.entry_id
+             WHERE et.tag_id = ?1
+             ORDER BY e.created_at DESC",
+        )?;
+        let entries = stmt
+            .query_map(params![tag_id], |row| row_to_entry(row))?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(entries)
     }
 }
 
@@ -460,5 +547,155 @@ mod tests {
         let deleted = db.delete_oldest_beyond_limit(5).unwrap();
         assert_eq!(deleted, 5);
         assert_eq!(db.get_entry_count().unwrap(), 5);
+    }
+
+    // --- Tag management tests ---
+
+    #[test]
+    fn test_create_tag() {
+        let db = Database::new(":memory:").unwrap();
+        let tag = db.create_tag("work").unwrap();
+        assert!(tag.id.is_some());
+        assert_eq!(tag.name, "work");
+    }
+
+    #[test]
+    fn test_create_duplicate_tag_fails() {
+        let db = Database::new(":memory:").unwrap();
+        db.create_tag("work").unwrap();
+        let result = db.create_tag("work");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_all_tags() {
+        let db = Database::new(":memory:").unwrap();
+        db.create_tag("work").unwrap();
+        db.create_tag("personal").unwrap();
+        db.create_tag("code").unwrap();
+
+        let tags = db.get_all_tags().unwrap();
+        assert_eq!(tags.len(), 3);
+        // Tags are ordered by name
+        assert_eq!(tags[0].name, "code");
+        assert_eq!(tags[1].name, "personal");
+        assert_eq!(tags[2].name, "work");
+    }
+
+    #[test]
+    fn test_delete_tag() {
+        let db = Database::new(":memory:").unwrap();
+        let tag = db.create_tag("to_delete").unwrap();
+        let id = tag.id.unwrap();
+
+        db.delete_tag(id).unwrap();
+        let tags = db.get_all_tags().unwrap();
+        assert!(tags.is_empty());
+    }
+
+    #[test]
+    fn test_add_and_get_entry_tags() {
+        let db = Database::new(":memory:").unwrap();
+        let entry_id = db.insert_entry(&make_entry("tagged content", "text")).unwrap();
+        let tag1 = db.create_tag("tag1").unwrap();
+        let tag2 = db.create_tag("tag2").unwrap();
+
+        db.add_tag_to_entry(entry_id, tag1.id.unwrap()).unwrap();
+        db.add_tag_to_entry(entry_id, tag2.id.unwrap()).unwrap();
+
+        let tags = db.get_entry_tags(entry_id).unwrap();
+        assert_eq!(tags.len(), 2);
+        let names: Vec<&str> = tags.iter().map(|t| t.name.as_str()).collect();
+        assert!(names.contains(&"tag1"));
+        assert!(names.contains(&"tag2"));
+    }
+
+    #[test]
+    fn test_add_tag_to_entry_idempotent() {
+        let db = Database::new(":memory:").unwrap();
+        let entry_id = db.insert_entry(&make_entry("tagged content", "text")).unwrap();
+        let tag = db.create_tag("tag1").unwrap();
+        let tag_id = tag.id.unwrap();
+
+        db.add_tag_to_entry(entry_id, tag_id).unwrap();
+        // Adding again should not fail (INSERT OR IGNORE)
+        db.add_tag_to_entry(entry_id, tag_id).unwrap();
+
+        let tags = db.get_entry_tags(entry_id).unwrap();
+        assert_eq!(tags.len(), 1);
+    }
+
+    #[test]
+    fn test_remove_tag_from_entry() {
+        let db = Database::new(":memory:").unwrap();
+        let entry_id = db.insert_entry(&make_entry("tagged content", "text")).unwrap();
+        let tag = db.create_tag("removable").unwrap();
+        let tag_id = tag.id.unwrap();
+
+        db.add_tag_to_entry(entry_id, tag_id).unwrap();
+        assert_eq!(db.get_entry_tags(entry_id).unwrap().len(), 1);
+
+        db.remove_tag_from_entry(entry_id, tag_id).unwrap();
+        assert_eq!(db.get_entry_tags(entry_id).unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_get_entries_by_tag() {
+        let db = Database::new(":memory:").unwrap();
+        let id1 = db.insert_entry(&make_entry("entry one", "text")).unwrap();
+        let id2 = db.insert_entry(&make_entry("entry two", "text")).unwrap();
+        let _id3 = db.insert_entry(&make_entry("entry three", "text")).unwrap();
+
+        let tag = db.create_tag("shared").unwrap();
+        let tag_id = tag.id.unwrap();
+
+        db.add_tag_to_entry(id1, tag_id).unwrap();
+        db.add_tag_to_entry(id2, tag_id).unwrap();
+
+        let entries = db.get_entries_by_tag(tag_id).unwrap();
+        assert_eq!(entries.len(), 2);
+        let ids: Vec<i64> = entries.iter().map(|e| e.id.unwrap()).collect();
+        assert!(ids.contains(&id1));
+        assert!(ids.contains(&id2));
+    }
+
+    #[test]
+    fn test_delete_entry_cascades_tag_associations() {
+        let db = Database::new(":memory:").unwrap();
+        let entry_id = db.insert_entry(&make_entry("will be deleted", "text")).unwrap();
+        let tag = db.create_tag("cascade_test").unwrap();
+        let tag_id = tag.id.unwrap();
+
+        db.add_tag_to_entry(entry_id, tag_id).unwrap();
+        assert_eq!(db.get_entry_tags(entry_id).unwrap().len(), 1);
+
+        // Delete the entry - cascade should remove from entry_tags
+        db.delete_entry(entry_id).unwrap();
+
+        // The tag itself should still exist
+        let tags = db.get_all_tags().unwrap();
+        assert_eq!(tags.len(), 1);
+
+        // But no entries should be associated with the tag
+        let entries = db.get_entries_by_tag(tag_id).unwrap();
+        assert!(entries.is_empty());
+    }
+
+    #[test]
+    fn test_delete_tag_cascades_associations() {
+        let db = Database::new(":memory:").unwrap();
+        let entry_id = db.insert_entry(&make_entry("tagged content", "text")).unwrap();
+        let tag = db.create_tag("will_be_deleted").unwrap();
+        let tag_id = tag.id.unwrap();
+
+        db.add_tag_to_entry(entry_id, tag_id).unwrap();
+        assert_eq!(db.get_entry_tags(entry_id).unwrap().len(), 1);
+
+        // Delete the tag - cascade should remove from entry_tags
+        db.delete_tag(tag_id).unwrap();
+
+        // Entry should have no tags
+        let tags = db.get_entry_tags(entry_id).unwrap();
+        assert!(tags.is_empty());
     }
 }

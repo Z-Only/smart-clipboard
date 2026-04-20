@@ -33,6 +33,15 @@
       <div class="text-sm leading-snug break-all line-clamp-3" :class="isCodeLike ? 'font-mono text-xs' : ''">
         {{ truncatedContent }}
       </div>
+      <div v-if="entryTags.length > 0" class="flex flex-wrap gap-1 mt-1.5">
+        <span
+          v-for="tag in entryTags"
+          :key="tag.id"
+          class="inline-flex items-center px-1.5 py-0 text-[10px] rounded-full bg-primary/15 text-primary border border-primary/20"
+        >
+          {{ tag.name }}
+        </span>
+      </div>
     </div>
     <div class="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
       <button
@@ -49,6 +58,7 @@
         </svg>
       </button>
       <TransformMenu :content="entry.content" :category="entry.category" />
+      <TagPicker :entry-id="entry.id" @tags-changed="onTagsChanged" />
       <button
         class="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
         @click.stop="$emit('delete', entry.id)"
@@ -65,11 +75,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { invoke } from "@tauri-apps/api/core";
 import { Badge } from "@/components/ui/badge";
 import TransformMenu from "@/components/TransformMenu.vue";
-import type { ClipboardEntry } from "@/types";
+import TagPicker from "@/components/TagPicker.vue";
+import type { ClipboardEntry, Tag } from "@/types";
 
 const { t } = useI18n();
 
@@ -83,6 +95,27 @@ defineEmits<{
   toggleFavorite: [id: number];
   delete: [id: number];
 }>();
+
+const entryTags = ref<Tag[]>([]);
+
+async function loadEntryTags() {
+  try {
+    entryTags.value = await invoke<Tag[]>("get_entry_tags", { entryId: props.entry.id });
+  } catch (e) {
+    // silently ignore - tags are optional display
+  }
+}
+
+function onTagsChanged(tags: Tag[]) {
+  entryTags.value = tags;
+}
+
+// Load tags when entry changes
+watch(
+  () => props.entry.id,
+  () => loadEntryTags(),
+  { immediate: true }
+);
 
 const categoryLabel = computed(() => {
   const key = `entry.categoryLabels.${props.entry.category}`;

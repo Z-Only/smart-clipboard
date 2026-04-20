@@ -38,6 +38,13 @@ pub fn run() {
             commands::get_autostart_enabled,
             commands::set_autostart_enabled,
             commands::transform_content,
+            commands::create_tag,
+            commands::delete_tag,
+            commands::get_all_tags,
+            commands::add_tag_to_entry,
+            commands::remove_tag_from_entry,
+            commands::get_entry_tags,
+            commands::get_entries_by_tag,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

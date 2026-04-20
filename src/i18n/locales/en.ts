@@ -18,6 +18,7 @@ export default {
     color: "Colors",
     phone: "Phone",
     address: "Address",
+    tags: "Tags",
     text: "Text",
   },
   entry: {
@@ -31,6 +32,7 @@ export default {
       code: "Code",
       phone: "Phone",
       address: "Addr",
+      tags: "Tags",
       text: "Text",
     },
     sensitive: "Sensitive",
@@ -98,5 +100,12 @@ export default {
     htmlEscape: "HTML Escape",
     htmlUnescape: "HTML Unescape",
     copied: "Transformed & copied!",
+  },
+  tags: {
+    addTag: "Add tag",
+    createTag: "Create tag...",
+    noTags: "No tags yet",
+    deleteTag: "Delete tag",
+    filterByTag: "Filter by tag",
   },
 };

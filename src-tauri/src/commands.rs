@@ -4,7 +4,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use tauri::State;
 
 use crate::config::{AppConfig, ConfigManager};
-use crate::storage::{Database, SearchQuery, SearchResult};
+use crate::storage::{Database, SearchQuery, SearchResult, Tag};
 
 #[tauri::command]
 pub async fn get_entries(
@@ -96,6 +96,59 @@ pub async fn set_autostart_enabled(app: tauri::AppHandle, enabled: bool) -> Resu
     } else {
         app.autolaunch().disable().map_err(|e| e.to_string())
     }
+}
+
+// --- Tag management commands ---
+
+#[tauri::command]
+pub async fn create_tag(db: State<'_, Arc<Database>>, name: String) -> Result<Tag, String> {
+    db.create_tag(&name).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_tag(db: State<'_, Arc<Database>>, id: i64) -> Result<(), String> {
+    db.delete_tag(id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_all_tags(db: State<'_, Arc<Database>>) -> Result<Vec<Tag>, String> {
+    db.get_all_tags().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn add_tag_to_entry(
+    db: State<'_, Arc<Database>>,
+    entry_id: i64,
+    tag_id: i64,
+) -> Result<(), String> {
+    db.add_tag_to_entry(entry_id, tag_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn remove_tag_from_entry(
+    db: State<'_, Arc<Database>>,
+    entry_id: i64,
+    tag_id: i64,
+) -> Result<(), String> {
+    db.remove_tag_from_entry(entry_id, tag_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_entry_tags(
+    db: State<'_, Arc<Database>>,
+    entry_id: i64,
+) -> Result<Vec<Tag>, String> {
+    db.get_entry_tags(entry_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_entries_by_tag(
+    db: State<'_, Arc<Database>>,
+    tag_id: i64,
+) -> Result<Vec<crate::storage::ClipboardEntry>, String> {
+    db.get_entries_by_tag(tag_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

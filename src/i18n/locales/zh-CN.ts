@@ -18,6 +18,7 @@ export default {
     color: "颜色",
     phone: "电话",
     address: "地址",
+    tags: "标签",
     text: "文本",
   },
   entry: {
@@ -31,6 +32,7 @@ export default {
       code: "代码",
       phone: "电话",
       address: "地址",
+      tags: "标签",
       text: "文本",
     },
     sensitive: "敏感",
@@ -98,5 +100,12 @@ export default {
     htmlEscape: "HTML 转义",
     htmlUnescape: "HTML 反转义",
     copied: "已转换并复制！",
+  },
+  tags: {
+    addTag: "添加标签",
+    createTag: "创建标签...",
+    noTags: "暂无标签",
+    deleteTag: "删除标签",
+    filterByTag: "按标签筛选",
   },
 };

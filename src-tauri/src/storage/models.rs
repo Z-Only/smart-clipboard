@@ -2,6 +2,12 @@ use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Tag {
+    pub id: Option<i64>,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClipboardEntry {
     pub id: Option<i64>,
     pub content: String,

@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import type { ClipboardEntry, SearchResult, CategoryType } from "@/types";
+import type { ClipboardEntry, SearchResult, CategoryType, Tag } from "@/types";
 
 export const useClipboardStore = defineStore("clipboard", () => {
   const entries = ref<ClipboardEntry[]>([]);
@@ -11,6 +11,8 @@ export const useClipboardStore = defineStore("clipboard", () => {
   const isLoading = ref(false);
   const currentPage = ref(0);
   const pageSize = 50;
+  const selectedTagId = ref<number | null>(null);
+  const allTags = ref<Tag[]>([]);
 
   const hasMore = computed(
     () => entries.value.length < totalCount.value
@@ -24,9 +26,19 @@ export const useClipboardStore = defineStore("clipboard", () => {
 
     isLoading.value = true;
     try {
+      // Handle tag-based filtering
+      if (selectedCategory.value === "tags" && selectedTagId.value !== null) {
+        const tagEntries = await invoke<ClipboardEntry[]>("get_entries_by_tag", {
+          tagId: selectedTagId.value,
+        });
+        entries.value = tagEntries;
+        totalCount.value = tagEntries.length;
+        return;
+      }
+
       const offset = currentPage.value * pageSize;
       const category =
-        selectedCategory.value === "all" || selectedCategory.value === "favorites"
+        selectedCategory.value === "all" || selectedCategory.value === "favorites" || selectedCategory.value === "tags"
           ? null
           : selectedCategory.value;
 
@@ -118,6 +130,26 @@ export const useClipboardStore = defineStore("clipboard", () => {
     totalCount.value++;
   }
 
+  // --- Tag management ---
+
+  async function fetchAllTags() {
+    try {
+      allTags.value = await invoke<Tag[]>("get_all_tags");
+    } catch (e) {
+      console.error("Failed to fetch tags:", e);
+    }
+  }
+
+  function selectTag(tagId: number) {
+    selectedTagId.value = tagId;
+    selectedCategory.value = "tags";
+    fetchEntries(true);
+  }
+
+  function clearTagFilter() {
+    selectedTagId.value = null;
+  }
+
   return {
     entries,
     totalCount,
@@ -125,6 +157,8 @@ export const useClipboardStore = defineStore("clipboard", () => {
     searchKeyword,
     isLoading,
     hasMore,
+    selectedTagId,
+    allTags,
     fetchEntries,
     loadMore,
     setCategory,
@@ -133,5 +167,8 @@ export const useClipboardStore = defineStore("clipboard", () => {
     toggleFavorite,
     pasteEntry,
     onClipboardChanged,
+    fetchAllTags,
+    selectTag,
+    clearTagFilter,
   };
 });

@@ -71,5 +71,24 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         )?;
     }
 
+    // Enable foreign keys
+    conn.execute_batch("PRAGMA foreign_keys = ON;")?;
+
+    // Tag management tables
+    conn.execute_batch(
+        "
+        CREATE TABLE IF NOT EXISTS tags (
+            id   INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+        );
+
+        CREATE TABLE IF NOT EXISTS entry_tags (
+            entry_id INTEGER NOT NULL REFERENCES clipboard_entries(id) ON DELETE CASCADE,
+            tag_id   INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+            PRIMARY KEY (entry_id, tag_id)
+        );
+        ",
+    )?;
+
     Ok(())
 }
