@@ -4,8 +4,22 @@
 - Added Phase 3 end-to-end encryption and secure pairing for LAN sync, including X25519 key exchange, HKDF-SHA256 shared secret derivation, AES-256-GCM encrypted messaging, key fingerprint verification, and persistent key storage.
 - Added Phase 3 WebSocket transport skeleton with backend server/client handshake, protocol message framing, heartbeat ping/pong, reconnect backoff, and paired-device runtime connection states.
 - Updated SyncPanel device status rendering to show more realistic transport states such as connecting, connected, disabled, and reconnecting-related activity.
+- **Added Phase 3 clipboard sync business flow** — new clipboard entries are now automatically synced to paired devices over encrypted WebSocket connections.
 
 ### Added
+
+#### Clipboard Sync Flow (new)
+- Added `ClipboardSync` protocol message and `SyncEntryPayload` for real clipboard entry synchronization between devices.
+- Added `source_device` column to `clipboard_entries` table to track sync origin and prevent loop syncing.
+- Added `sync_log` database methods (`insert_sync_log`, `has_sync_log`, `has_received_entry`) for deduplication and audit.
+- Added `broadcast_entry()` in SyncManager — new local clipboard entries are broadcast to all connected paired devices via a `tokio::broadcast` channel.
+- Added `handle_incoming_sync()` in SyncManager — incoming entries are deduplicated (by hash + sync_log), stored with `source_device` metadata, and trigger frontend refresh via `clipboard-changed` event.
+- Added sync filtering based on configuration: `enabled`, `auto_sync`, `sync_images`, `sync_sensitive`, and 1MB payload size limit.
+- Added loop sync prevention: entries with `source_device` set are never re-broadcast.
+- Added outgoing broadcast support in both WebSocket server and client connections via `tokio::select!`.
+- Hooked clipboard monitor into sync pipeline — after local DB insert, entries are automatically broadcast to paired devices.
+
+#### Previous Phase 3 additions
 - Added X25519 key pair generation with persistent storage in app config for device identity.
 - Added HKDF-SHA256 shared secret derivation from Diffie-Hellman key exchange during device pairing.
 - Added AES-256-GCM encryption and decryption for all sync protocol messages between paired devices.
@@ -23,7 +37,7 @@
 ### Changed
 - Updated the app version to 0.6.0 for the Phase 3 partial delivery.
 - Replaced demo discovered devices with real mDNS discovery results while keeping the existing Sync panel UI contract stable.
-- Updated Phase 3 scope: this release now ships real LAN discovery, WebSocket transport, and end-to-end encryption. Actual clipboard payload sync across devices remains for follow-up work.
+- Phase 3 now ships a complete clipboard sync flow: LAN discovery → pairing → encrypted WebSocket transport → real-time clipboard entry synchronization with dedup and loop prevention.
 
 All notable changes to this project will be documented in this file.
 

@@ -4,39 +4,46 @@
 
 A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + **Vue 3** + **Rust**. It runs in the background, automatically captures and classifies clipboard content, and provides instant search and retrieval.
 
-## Phase 3 Progress
+## Phase 3 Progress — LAN Clipboard Sync
 
-This repository now includes a **Phase 3 LAN Sync** implementation with end-to-end encryption. In this release, the project provides:
+This repository now includes a **Phase 3 LAN Sync** implementation with **real-time clipboard synchronization** between paired devices. New clipboard entries are automatically encrypted and sent to all connected peers.
 
-- Sync settings panel in the desktop UI
-- Editable device name and sync port
-- Real mDNS / DNS-SD discovered device list with automatic refresh and deduplication
-- Pair / unpair device workflow with X25519 key exchange
-- Per-device sync enable toggle
-- Persistent paired device storage with encrypted key material
-- **End-to-end encryption**: X25519 Diffie-Hellman key exchange, HKDF-SHA256 shared secret derivation, AES-256-GCM encrypted messaging
-- **Key fingerprint verification**: Human-readable fingerprint for pairing confirmation
-- **WebSocket transport**: Auto-connect, ping/pong heartbeats, reconnect backoff, live connection states
+### Sync Architecture
 
-### Current scope
+```
+Device A                              Device B
+┌─────────────────┐                  ┌─────────────────┐
+│ ClipboardMonitor│                  │ ClipboardMonitor│
+│       ↓         │                  │       ↓         │
+│   DB Insert     │                  │   DB Insert     │
+│       ↓         │                  │       ↓         │
+│ broadcast_entry │                  │ broadcast_entry │
+│       ↓         │                  │       ↓         │
+│ SyncManager     │◄── WebSocket ──►│ SyncManager     │
+│  ├─ Encrypt     │   (AES-256-GCM) │  ├─ Decrypt     │
+│  ├─ Send        │                  │  ├─ Dedup       │
+│  └─ sync_log    │                  │  ├─ Store       │
+│                 │                  │  └─ sync_log    │
+└─────────────────┘                  └─────────────────┘
+```
 
-This is a **Phase 3 delivery** covering LAN discovery, transport, and encryption. The following items are **not yet implemented** in this release:
+### What's included
 
-- Actual clipboard payload delivery across devices
-- Mutual approval pairing flow UI
-- Sync conflict handling
+- **Real-time clipboard sync**: New text entries are automatically sent to paired devices
+- **Sync filtering**: Configurable rules for `auto_sync`, `sync_images`, `sync_sensitive`, and 1MB payload limit
+- **Loop prevention**: Entries received from other devices are never re-broadcast
+- **Deduplication**: Content hash + sync_log double-check prevents duplicate entries
+- **Source tracking**: Synced entries are tagged with `source_device` for origin tracking
+- **End-to-end encryption**: X25519 key exchange + AES-256-GCM per-message encryption
+- **mDNS discovery**: Automatic LAN device discovery via `_smartclip._tcp.local.`
+- **WebSocket transport**: Auto-connect, ping/pong heartbeats, reconnect backoff
+- **Sync UI**: Settings panel with device management, pairing, and per-device controls
 
-### Newly completed
+### Not yet implemented
 
-- X25519 key pair generation with persistent storage in app config
-- HKDF-SHA256 shared secret derivation during device pairing
-- AES-256-GCM encryption/decryption for all sync protocol messages
-- Human-readable key fingerprint generation for pairing verification
-- `KeyVerification` protocol message type for mutual confirmation
-- Database migration adding `fingerprint` column to paired devices
-- 7 unit tests for crypto module (key derivation, encryption, fingerprints, error cases)
-- Real mDNS / DNS-SD service advertisement using `_smartclip._tcp.local.`
-- Phase 3 WebSocket transport with auto-connect, heartbeats, and reconnect backoff
+- Mutual approval pairing flow UI (currently auto-accepts known devices)
+- Image content sync (text-only for now; images skipped unless `sync_images` enabled)
+- Advanced conflict resolution (currently both sides keep their version)
 
 ## Features
 
