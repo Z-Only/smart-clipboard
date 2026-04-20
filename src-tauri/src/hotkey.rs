@@ -4,14 +4,12 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 pub fn setup_hotkey(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let shortcut: Shortcut = "CommandOrControl+Shift+V".parse()?;
 
-    app.global_shortcut().on_shortcut(
-        shortcut,
-        move |app_handle, _shortcut, event| {
+    app.global_shortcut()
+        .on_shortcut(shortcut, move |app_handle, _shortcut, event| {
             if event.state == ShortcutState::Pressed {
                 toggle_window(app_handle);
             }
-        },
-    )?;
+        })?;
 
     Ok(())
 }

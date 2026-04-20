@@ -145,7 +145,10 @@ mod tests {
     #[test]
     fn test_render_value_with_special_characters() {
         let mut values = HashMap::new();
-        values.insert("content".to_string(), "<b>bold</b> & \"quoted\"".to_string());
+        values.insert(
+            "content".to_string(),
+            "<b>bold</b> & \"quoted\"".to_string(),
+        );
         let result = render("Output: {{content}}", &values);
         assert_eq!(result, "Output: <b>bold</b> & \"quoted\"");
     }

@@ -154,7 +154,8 @@ async fn handle_connection(
                 | SyncMessage::HelloAck { .. }
                 | SyncMessage::PairRequest { .. }
                 | SyncMessage::PairResponse { .. }
-                | SyncMessage::EncryptedPayload { .. } => {}
+                | SyncMessage::EncryptedPayload { .. }
+                | SyncMessage::ClipboardSync { .. } => {}
             },
             Message::Close(_) => break,
             Message::Ping(payload) => {

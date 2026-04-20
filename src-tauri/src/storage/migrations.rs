@@ -142,6 +142,21 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         conn.execute_batch("ALTER TABLE paired_devices ADD COLUMN fingerprint TEXT;")?;
     }
 
+    // Add source_device column for sync origin tracking
+    let entry_columns: Vec<String> = {
+        let mut stmt = conn.prepare("PRAGMA table_info(clipboard_entries)")?;
+        let columns = stmt.query_map([], |row| row.get::<_, String>(1))?
+            .filter_map(|r| r.ok())
+            .collect();
+        columns
+    };
+
+    if !entry_columns.iter().any(|c| c == "source_device") {
+        conn.execute_batch(
+            "ALTER TABLE clipboard_entries ADD COLUMN source_device TEXT;"
+        )?;
+    }
+
     // Template management table
     conn.execute_batch(
         "

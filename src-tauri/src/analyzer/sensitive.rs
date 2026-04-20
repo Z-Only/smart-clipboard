@@ -69,9 +69,7 @@ mod tests {
 
     #[test]
     fn test_aws_key_in_text() {
-        assert!(detect_sensitive(
-            "aws_access_key_id = AKIAIOSFODNN7EXAMPLE"
-        ));
+        assert!(detect_sensitive("aws_access_key_id = AKIAIOSFODNN7EXAMPLE"));
     }
 
     // --- Token tests ---
@@ -85,9 +83,7 @@ mod tests {
 
     #[test]
     fn test_auth_token_equals() {
-        assert!(detect_sensitive(
-            "auth=abcdefghijklmnopqrstuvwxyz"
-        ));
+        assert!(detect_sensitive("auth=abcdefghijklmnopqrstuvwxyz"));
     }
 
     #[test]
@@ -121,7 +117,8 @@ mod tests {
 
     #[test]
     fn test_private_key_in_block() {
-        let pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA...\n-----END RSA PRIVATE KEY-----";
+        let pem =
+            "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA...\n-----END RSA PRIVATE KEY-----";
         assert!(detect_sensitive(pem));
     }
 
@@ -172,9 +169,7 @@ mod tests {
 
     #[test]
     fn test_mysql_url() {
-        assert!(detect_sensitive(
-            "mysql://root:pass@127.0.0.1:3306/testdb"
-        ));
+        assert!(detect_sensitive("mysql://root:pass@127.0.0.1:3306/testdb"));
     }
 
     #[test]
@@ -186,7 +181,9 @@ mod tests {
 
     #[test]
     fn test_redis_url() {
-        assert!(detect_sensitive("redis://default:password@redis.example.com:6379"));
+        assert!(detect_sensitive(
+            "redis://default:password@redis.example.com:6379"
+        ));
     }
 
     // --- Negative tests (should NOT be detected as sensitive) ---
@@ -203,7 +200,9 @@ mod tests {
 
     #[test]
     fn test_code_not_sensitive() {
-        assert!(!detect_sensitive("fn main() {\n    println!(\"hello\");\n}"));
+        assert!(!detect_sensitive(
+            "fn main() {\n    println!(\"hello\");\n}"
+        ));
     }
 
     #[test]

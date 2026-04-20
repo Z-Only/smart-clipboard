@@ -2,6 +2,20 @@ use serde::{Deserialize, Serialize};
 
 use super::crypto::EncryptedPayload;
 
+/// Payload for clipboard entry synchronization.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncEntryPayload {
+    pub content: String,
+    pub content_type: String,
+    pub category: String,
+    pub hash: String,
+    pub source_app: Option<String>,
+    pub is_sensitive: bool,
+    pub source_device: String,
+    pub created_at: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EncryptedMessage {
@@ -69,6 +83,11 @@ pub enum SyncMessage {
     },
     ClipboardSyncPlaceholder {
         entry_hash: String,
+        timestamp: i64,
+    },
+    ClipboardSync {
+        entry: SyncEntryPayload,
+        sender_device_id: String,
         timestamp: i64,
     },
     EncryptedPayload {

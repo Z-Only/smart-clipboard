@@ -186,7 +186,7 @@ async fn connect_device_loop(
                                     SyncMessage::KeyVerification { fingerprint, device_id, verified } => {
                                         log::info!("Received key verification from {device_id}: fingerprint={fingerprint}, verified={verified}");
                                     }
-                                    SyncMessage::SyncAck { .. } | SyncMessage::Hello { .. } | SyncMessage::HelloAck { .. } | SyncMessage::PairRequest { .. } | SyncMessage::PairResponse { .. } | SyncMessage::EncryptedPayload { .. } => {}
+                                    SyncMessage::SyncAck { .. } | SyncMessage::Hello { .. } | SyncMessage::HelloAck { .. } | SyncMessage::PairRequest { .. } | SyncMessage::PairResponse { .. } | SyncMessage::EncryptedPayload { .. } | SyncMessage::ClipboardSync { .. } => {}
                                 },
                                 Some(Ok(Message::Ping(payload))) => {
                                     write.send(Message::Pong(payload)).await.map_err(|e| e.to_string())?;

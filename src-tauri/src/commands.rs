@@ -5,8 +5,8 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use tauri::State;
 
 use crate::config::{AppConfig, ConfigManager};
-use crate::sync::{SyncConfig, SyncManager};
 use crate::storage::{Database, SearchQuery, SearchResult, Statistics, Tag};
+use crate::sync::{SyncConfig, SyncManager};
 use crate::AppDataDir;
 
 #[tauri::command]
@@ -67,9 +67,7 @@ pub async fn get_statistics(
 
     // Compute storage size from the DB file
     let db_path = app_data_dir.0.join("clipboard.db");
-    stats.storage_size_bytes = std::fs::metadata(&db_path)
-        .map(|m| m.len())
-        .unwrap_or(0);
+    stats.storage_size_bytes = std::fs::metadata(&db_path).map(|m| m.len()).unwrap_or(0);
 
     Ok(stats)
 }
@@ -81,8 +79,7 @@ pub async fn paste_entry(db: State<'_, Arc<Database>>, id: i64) -> Result<(), St
         .map_err(|e| e.to_string())?
         .ok_or_else(|| "Entry not found".to_string())?;
 
-    let mut clipboard =
-        arboard::Clipboard::new().map_err(|e| format!("Clipboard error: {}", e))?;
+    let mut clipboard = arboard::Clipboard::new().map_err(|e| format!("Clipboard error: {}", e))?;
 
     if entry.content_type == "image" {
         // Load image from file and set to clipboard
@@ -325,19 +322,34 @@ pub mod transform {
 
         #[test]
         fn test_uppercase() {
-            assert_eq!(apply_transform("hello world", "uppercase").unwrap(), "HELLO WORLD");
+            assert_eq!(
+                apply_transform("hello world", "uppercase").unwrap(),
+                "HELLO WORLD"
+            );
         }
 
         #[test]
         fn test_lowercase() {
-            assert_eq!(apply_transform("HELLO WORLD", "lowercase").unwrap(), "hello world");
+            assert_eq!(
+                apply_transform("HELLO WORLD", "lowercase").unwrap(),
+                "hello world"
+            );
         }
 
         #[test]
         fn test_title_case() {
-            assert_eq!(apply_transform("hello world", "title_case").unwrap(), "Hello World");
-            assert_eq!(apply_transform("HELLO WORLD", "title_case").unwrap(), "Hello World");
-            assert_eq!(apply_transform("hELLO wORLD", "title_case").unwrap(), "Hello World");
+            assert_eq!(
+                apply_transform("hello world", "title_case").unwrap(),
+                "Hello World"
+            );
+            assert_eq!(
+                apply_transform("HELLO WORLD", "title_case").unwrap(),
+                "Hello World"
+            );
+            assert_eq!(
+                apply_transform("hELLO wORLD", "title_case").unwrap(),
+                "Hello World"
+            );
         }
 
         #[test]
@@ -470,7 +482,11 @@ pub mod transform {
         #[test]
         fn test_html_unescape() {
             assert_eq!(
-                apply_transform("&lt;div class=&quot;test&quot;&gt;a &amp; b&lt;/div&gt;", "html_unescape").unwrap(),
+                apply_transform(
+                    "&lt;div class=&quot;test&quot;&gt;a &amp; b&lt;/div&gt;",
+                    "html_unescape"
+                )
+                .unwrap(),
                 "<div class=\"test\">a & b</div>"
             );
             assert_eq!(
@@ -515,7 +531,6 @@ pub mod transform {
         }
     }
 }
-
 
 #[tauri::command]
 pub async fn get_sync_status(

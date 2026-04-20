@@ -36,3 +36,7 @@ mdns-sd = "0.11"
 
 tokio-tungstenite = "0.26"
 futures-util = "0.3"
+aes-gcm = "0.10"
+hkdf = "0.12"
+rand = "0.8"
+x25519-dalek = { version = "2", features = ["static_secrets"] }

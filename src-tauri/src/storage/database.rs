@@ -33,8 +33,8 @@ impl Database {
     pub fn insert_entry(&self, entry: &ClipboardEntry) -> Result<i64> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO clipboard_entries (content, content_type, category, hash, source_app, is_favorite, is_sensitive, use_count, created_at, updated_at, expires_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            "INSERT INTO clipboard_entries (content, content_type, category, hash, source_app, is_favorite, is_sensitive, use_count, created_at, updated_at, expires_at, source_device)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 entry.content,
                 entry.content_type,
@@ -47,6 +47,7 @@ impl Database {
                 entry.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 entry.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 entry.expires_at.map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string()),
+                entry.source_device,
             ],
         )?;
         Ok(conn.last_insert_rowid())
@@ -55,7 +56,7 @@ impl Database {
     pub fn find_by_hash(&self, hash: &str) -> Result<Option<ClipboardEntry>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, content, content_type, category, hash, source_app, is_favorite, is_sensitive, use_count, created_at, updated_at, expires_at
+            "SELECT id, content, content_type, category, hash, source_app, is_favorite, is_sensitive, use_count, created_at, updated_at, expires_at, source_device
              FROM clipboard_entries WHERE hash = ?1",
         )?;
         let mut rows = stmt.query(params![hash])?;
@@ -174,7 +175,7 @@ impl Database {
     pub fn get_entry_by_id(&self, id: i64) -> Result<Option<ClipboardEntry>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, content, content_type, category, hash, source_app, is_favorite, is_sensitive, use_count, created_at, updated_at, expires_at
+            "SELECT id, content, content_type, category, hash, source_app, is_favorite, is_sensitive, use_count, created_at, updated_at, expires_at, source_device
              FROM clipboard_entries WHERE id = ?1",
         )?;
         let mut rows = stmt.query(params![id])?;
@@ -231,7 +232,7 @@ impl Database {
 
         // Most used entries (top 10)
         let mut most_stmt = conn.prepare(
-            "SELECT id, content, content_type, category, hash, source_app, is_favorite, is_sensitive, use_count, created_at, updated_at, expires_at FROM clipboard_entries ORDER BY use_count DESC LIMIT 10",
+            "SELECT id, content, content_type, category, hash, source_app, is_favorite, is_sensitive, use_count, created_at, updated_at, expires_at, source_device FROM clipboard_entries ORDER BY use_count DESC LIMIT 10",
         )?;
         let most_used: Vec<ClipboardEntry> = most_stmt
             .query_map([], |row| row_to_entry(row))?
@@ -369,6 +370,36 @@ impl Database {
             params![enabled as i32, now, device_id],
         )?;
         Ok(())
+    }
+
+    pub fn insert_sync_log(&self, entry_hash: &str, device_id: &str, direction: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let now = Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string();
+        conn.execute(
+            "INSERT INTO sync_log (entry_hash, device_id, direction, synced_at) VALUES (?1, ?2, ?3, ?4)",
+            params![entry_hash, device_id, direction, now],
+        )?;
+        Ok(())
+    }
+
+    pub fn has_sync_log(&self, entry_hash: &str, device_id: &str, direction: &str) -> Result<bool> {
+        let conn = self.conn.lock().unwrap();
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM sync_log WHERE entry_hash = ?1 AND device_id = ?2 AND direction = ?3",
+            params![entry_hash, device_id, direction],
+            |row| row.get(0),
+        )?;
+        Ok(count > 0)
+    }
+
+    pub fn has_received_entry(&self, entry_hash: &str) -> Result<bool> {
+        let conn = self.conn.lock().unwrap();
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM sync_log WHERE entry_hash = ?1 AND direction = 'received'",
+            params![entry_hash],
+            |row| row.get(0),
+        )?;
+        Ok(count > 0)
     }
 
     // --- Tag management methods ---
@@ -620,7 +651,7 @@ fn search_fts(conn: &Connection, keyword: &str, query: &SearchQuery) -> Result<S
 
 fn get_entries_inner(conn: &Connection, query: &SearchQuery) -> Result<SearchResult> {
     let mut sql = String::from(
-        "SELECT id, content, content_type, category, hash, source_app, is_favorite, is_sensitive, use_count, created_at, updated_at, expires_at
+        "SELECT id, content, content_type, category, hash, source_app, is_favorite, is_sensitive, use_count, created_at, updated_at, expires_at, source_device
          FROM clipboard_entries WHERE 1=1",
     );
     let mut count_sql = String::from("SELECT COUNT(*) FROM clipboard_entries WHERE 1=1");
@@ -676,6 +707,7 @@ fn row_to_entry(row: &rusqlite::Row) -> Result<ClipboardEntry> {
     let created_str: String = row.get(9)?;
     let updated_str: String = row.get(10)?;
     let expires_str: Option<String> = row.get(11)?;
+    let source_device: Option<String> = row.get(12).ok().flatten();
 
     let parse_dt = |s: &str| -> NaiveDateTime {
         NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
@@ -695,6 +727,7 @@ fn row_to_entry(row: &rusqlite::Row) -> Result<ClipboardEntry> {
         created_at: parse_dt(&created_str),
         updated_at: parse_dt(&updated_str),
         expires_at: expires_str.as_deref().map(parse_dt),
+        source_device,
     })
 }
 

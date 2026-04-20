@@ -231,6 +231,7 @@ pub fn run() {
                         created_at: now,
                         updated_at: now,
                         expires_at,
+                        source_device: None,
                     };
 
                     match db_for_rx.insert_entry(&entry) {

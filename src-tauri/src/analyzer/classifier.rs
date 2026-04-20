@@ -100,7 +100,10 @@ mod tests {
 
     #[test]
     fn test_url() {
-        assert_eq!(classify("https://github.com/tauri-apps/tauri"), Category::Url);
+        assert_eq!(
+            classify("https://github.com/tauri-apps/tauri"),
+            Category::Url
+        );
         assert_eq!(classify("http://localhost:3000/api"), Category::Url);
     }
 
@@ -141,10 +144,7 @@ mod tests {
 
     #[test]
     fn test_xml() {
-        assert_eq!(
-            classify("<?xml version=\"1.0\"?><root/>"),
-            Category::Xml
-        );
+        assert_eq!(classify("<?xml version=\"1.0\"?><root/>"), Category::Xml);
         assert_eq!(classify("<div class=\"test\">hello</div>"), Category::Xml);
     }
 
@@ -166,10 +166,7 @@ mod tests {
 
     #[test]
     fn test_code_python() {
-        assert_eq!(
-            classify("def hello():\n    return 42"),
-            Category::Code
-        );
+        assert_eq!(classify("def hello():\n    return 42"), Category::Code);
     }
 
     #[test]
@@ -193,10 +190,7 @@ mod tests {
 
     #[test]
     fn test_address_cn() {
-        assert_eq!(
-            classify("浙江省杭州市西湖区文三路"),
-            Category::Address
-        );
+        assert_eq!(classify("浙江省杭州市西湖区文三路"), Category::Address);
     }
 
     #[test]

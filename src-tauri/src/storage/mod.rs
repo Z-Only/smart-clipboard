@@ -4,5 +4,6 @@ pub mod models;
 
 pub use database::Database;
 pub use models::{
-    CategoryCount, ClipboardEntry, DayCount, DiscoveredDevice, PairedDevice, SearchQuery, SearchResult, Statistics, SyncStatus, Tag, Template,
+    CategoryCount, ClipboardEntry, DayCount, DiscoveredDevice, PairedDevice, SearchQuery,
+    SearchResult, Statistics, SyncLogEntry, SyncStatus, Tag, Template,
 };

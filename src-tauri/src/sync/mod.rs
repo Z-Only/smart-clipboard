@@ -22,6 +22,7 @@ const DEFAULT_SERVICE_TYPE: &str = "_smartclip._tcp.local.";
 const HEARTBEAT_INTERVAL_SECS: u64 = 30;
 const HEARTBEAT_TIMEOUT_SECS: i64 = 65;
 const RECONNECT_BACKOFF_SECS: [u64; 6] = [1, 2, 4, 8, 16, 30];
+const MAX_SYNC_PAYLOAD_BYTES: usize = 1_048_576; // 1 MB
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -175,6 +176,44 @@ impl SyncManager {
 
     pub fn is_sync_enabled(&self) -> bool {
         self.config.get().sync.enabled
+    }
+
+    /// Check if an entry should be synced based on current config filters.
+    pub fn should_sync_entry(&self, entry: &crate::storage::ClipboardEntry) -> bool {
+        let config = self.get_config();
+        if !config.enabled || !config.auto_sync {
+            return false;
+        }
+        if entry.source_device.is_some() {
+            return false;
+        }
+        if entry.content_type == "image" && !config.sync_images {
+            return false;
+        }
+        if entry.is_sensitive && !config.sync_sensitive {
+            return false;
+        }
+        if entry.content.len() > MAX_SYNC_PAYLOAD_BYTES {
+            return false;
+        }
+        true
+    }
+
+    /// Convert a local ClipboardEntry into a SyncEntryPayload for transmission.
+    pub fn entry_to_sync_payload(
+        &self,
+        entry: &crate::storage::ClipboardEntry,
+    ) -> protocol::SyncEntryPayload {
+        protocol::SyncEntryPayload {
+            content: entry.content.clone(),
+            content_type: entry.content_type.clone(),
+            category: entry.category.clone(),
+            hash: entry.hash.clone(),
+            source_app: entry.source_app.clone(),
+            is_sensitive: entry.is_sensitive,
+            source_device: self.local_device.device_id.clone(),
+            created_at: entry.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+        }
     }
 
     pub fn update_config(&self, sync_config: SyncConfig) -> Result<(), String> {

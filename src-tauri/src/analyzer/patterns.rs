@@ -17,12 +17,10 @@ static RGB_COLOR_RE: LazyLock<Regex> =
 static UNIX_PATH_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(?:/|~/)(?:[a-zA-Z0-9._\-]+/)*[a-zA-Z0-9._\-]+/?$").unwrap());
 
-static WIN_PATH_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"^[A-Z]:\\(?:[^\s\\/:*?"<>|]+\\)*[^\s\\/:*?"<>|]+$"#).unwrap()
-});
+static WIN_PATH_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"^[A-Z]:\\(?:[^\s\\/:*?"<>|]+\\)*[^\s\\/:*?"<>|]+$"#).unwrap());
 
-static PHONE_CN_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^1[3-9]\d{9}$").unwrap());
+static PHONE_CN_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^1[3-9]\d{9}$").unwrap());
 
 static PHONE_US_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}$").unwrap()
@@ -96,7 +94,9 @@ pub fn is_address(text: &str) -> bool {
     let en_count = en_keywords.iter().filter(|k| lower.contains(**k)).count();
 
     // Chinese address patterns
-    let cn_keywords = ["省", "市", "区", "县", "街", "路", "号", "楼", "室", "镇", "村"];
+    let cn_keywords = [
+        "省", "市", "区", "县", "街", "路", "号", "楼", "室", "镇", "村",
+    ];
     let cn_count = cn_keywords.iter().filter(|k| lower.contains(**k)).count();
 
     en_count >= 2 || cn_count >= 2

@@ -55,6 +55,7 @@ pub struct ClipboardEntry {
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
     pub expires_at: Option<NaiveDateTime>,
+    pub source_device: Option<String>,  // device_id of origin, None = local
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -104,6 +105,7 @@ pub struct PairedDevice {
     pub port: i64,
     pub status: String,
     pub public_key: Option<Vec<u8>>,
+    pub local_public_key: Option<Vec<u8>>,
     pub shared_secret: Option<Vec<u8>>,
     pub last_seen_at: Option<NaiveDateTime>,
     pub is_active: bool,
@@ -122,4 +124,13 @@ pub struct SyncStatus {
     pub online_count: i64,
     pub last_sync_at: Option<String>,
     pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SyncLogEntry {
+    pub id: Option<i64>,
+    pub entry_hash: String,
+    pub device_id: String,
+    pub direction: String,
+    pub synced_at: NaiveDateTime,
 }

@@ -67,8 +67,7 @@ pub async fn use_template(
     let rendered = engine::render(&template.content, &values);
 
     // Copy rendered text to clipboard
-    let mut clipboard =
-        arboard::Clipboard::new().map_err(|e| format!("Clipboard error: {}", e))?;
+    let mut clipboard = arboard::Clipboard::new().map_err(|e| format!("Clipboard error: {}", e))?;
     clipboard
         .set_text(&rendered)
         .map_err(|e| format!("Clipboard error: {}", e))?;
@@ -81,11 +80,8 @@ pub async fn use_template(
 }
 
 #[tauri::command]
-pub async fn get_template_categories(
-    db: State<'_, Arc<Database>>,
-) -> Result<Vec<String>, String> {
-    db.get_template_categories_list()
-        .map_err(|e| e.to_string())
+pub async fn get_template_categories(db: State<'_, Arc<Database>>) -> Result<Vec<String>, String> {
+    db.get_template_categories_list().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
