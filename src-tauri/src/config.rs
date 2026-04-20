@@ -1,3 +1,4 @@
+use crate::sync::webdav::WebDavConfig;
 use crate::sync::SyncConfig;
 use serde_json::Value;
 use std::path::PathBuf;
@@ -16,6 +17,8 @@ pub struct AppConfig {
     #[serde(default)]
     pub sync: SyncConfig,
     pub sync_metadata: Option<Value>,
+    #[serde(default)]
+    pub webdav: WebDavConfig,
 }
 
 impl Default for AppConfig {
@@ -29,6 +32,7 @@ impl Default for AppConfig {
             sensitive_expiry_minutes: 5,
             sync: SyncConfig::default(),
             sync_metadata: None,
+            webdav: WebDavConfig::default(),
         }
     }
 }

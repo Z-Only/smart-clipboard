@@ -6,6 +6,7 @@ use tauri::State;
 
 use crate::config::{AppConfig, ConfigManager};
 use crate::storage::{Database, SearchQuery, SearchResult, Statistics, Tag};
+use crate::sync::webdav::{WebDavConfig, WebDavSyncManager, WebDavSyncStatus};
 use crate::sync::{SyncConfig, SyncManager};
 use crate::AppDataDir;
 
@@ -591,4 +592,69 @@ pub async fn toggle_device_sync(
     enabled: bool,
 ) -> Result<(), String> {
     sync_manager.toggle_device_sync(&device_id, enabled)
+}
+
+// --- WebDAV cloud sync commands ---
+
+#[tauri::command]
+pub async fn webdav_connect(
+    webdav_manager: State<'_, Arc<WebDavSyncManager>>,
+    server_url: String,
+    username: String,
+    password: String,
+    sync_password: String,
+) -> Result<(), String> {
+    webdav_manager
+        .connect(&server_url, &username, &password, &sync_password)
+        .await
+}
+
+#[tauri::command]
+pub async fn webdav_disconnect(
+    webdav_manager: State<'_, Arc<WebDavSyncManager>>,
+) -> Result<(), String> {
+    webdav_manager.disconnect().await;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn webdav_get_status(
+    webdav_manager: State<'_, Arc<WebDavSyncManager>>,
+) -> Result<WebDavSyncStatus, String> {
+    Ok(webdav_manager.get_status().await)
+}
+
+#[tauri::command]
+pub async fn webdav_get_config(
+    config_manager: State<'_, Arc<ConfigManager>>,
+) -> Result<WebDavConfig, String> {
+    Ok(config_manager.get().webdav)
+}
+
+#[tauri::command]
+pub async fn webdav_update_config(
+    config_manager: State<'_, Arc<ConfigManager>>,
+    webdav_manager: State<'_, Arc<WebDavSyncManager>>,
+    new_config: WebDavConfig,
+) -> Result<(), String> {
+    let mut app_config = config_manager.get();
+    app_config.webdav = new_config.clone();
+    config_manager.update(app_config)?;
+    webdav_manager.update_config(new_config).await;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn webdav_trigger_sync(
+    webdav_manager: State<'_, Arc<WebDavSyncManager>>,
+) -> Result<u32, String> {
+    webdav_manager.trigger_sync().await
+}
+
+#[tauri::command]
+pub async fn webdav_remove_device(
+    webdav_manager: State<'_, Arc<WebDavSyncManager>>,
+    device_id: String,
+) -> Result<(), String> {
+    webdav_manager.remove_device(&device_id).await
 }

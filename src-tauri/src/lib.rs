@@ -21,6 +21,7 @@ use analyzer::{classify, detect_sensitive};
 use clipboard::ClipboardMonitor;
 use config::ConfigManager;
 use storage::{ClipboardEntry, Database};
+use sync::webdav::WebDavSyncManager;
 use sync::SyncManager;
 
 /// Managed state holding the app data directory path.
@@ -70,6 +71,13 @@ pub fn run() {
             templates::commands::use_template,
             templates::commands::get_template_categories,
             templates::commands::get_template_placeholders,
+            commands::webdav_connect,
+            commands::webdav_disconnect,
+            commands::webdav_get_status,
+            commands::webdav_get_config,
+            commands::webdav_update_config,
+            commands::webdav_trigger_sync,
+            commands::webdav_remove_device,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
@@ -104,6 +112,19 @@ pub fn run() {
             let sync_manager = SyncManager::new(db.clone(), config_manager.clone());
             sync_manager.set_app_handle(app.handle().clone());
             app.manage(sync_manager.clone());
+
+            // Initialize WebDAV sync manager
+            let webdav_config = config.webdav.clone();
+            let local_info = sync_manager.local_device_info();
+            let webdav_manager = WebDavSyncManager::new(
+                db.clone(),
+                webdav_config,
+                &local_info.device_id,
+                &local_info.device_name,
+                &local_info.public_key,
+            );
+            webdav_manager.set_app_handle(app.handle().clone());
+            app.manage(webdav_manager.clone());
 
             // Setup hotkey
             if let Err(e) = hotkey::setup_hotkey(app.handle()) {
@@ -141,6 +162,7 @@ pub fn run() {
             let config_for_rx = config_manager.clone();
             let images_dir_for_rx = images_dir.clone();
             let sync_for_rx = sync_manager.clone();
+            let webdav_for_rx = webdav_manager.clone();
 
             tauri::async_runtime::spawn(async move {
                 while let Some(change) = rx.recv().await {
@@ -243,6 +265,14 @@ pub fn run() {
                             let _ = app_handle.emit("clipboard-changed", &stored_entry);
                             // Broadcast to paired devices via sync pipeline
                             sync_for_rx.broadcast_entry(&stored_entry);
+                            // Push to WebDAV cloud sync
+                            let webdav = webdav_for_rx.clone();
+                            let entry_for_webdav = stored_entry.clone();
+                            tauri::async_runtime::spawn(async move {
+                                if let Err(e) = webdav.push_entry(&entry_for_webdav).await {
+                                    log::error!("WebDAV push error: {}", e);
+                                }
+                            });
                         }
                         Err(e) => {
                             log::error!("Failed to insert clipboard entry: {}", e);
