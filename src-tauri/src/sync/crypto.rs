@@ -1,5 +1,6 @@
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
+use argon2::{Argon2, Params, Version, Algorithm};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use hkdf::Hkdf;
 use rand::rngs::OsRng;
@@ -11,6 +12,11 @@ use x25519_dalek::{PublicKey, StaticSecret};
 const KEY_LEN: usize = 32;
 const NONCE_LEN: usize = 12;
 const HKDF_INFO: &[u8] = b"smart-clipboard-phase3-sync-v1";
+const ARGON2_SALT_LEN: usize = 16;
+const ARGON2_MEMORY_KIB: u32 = 65536;
+const ARGON2_ITERATIONS: u32 = 3;
+const ARGON2_PARALLELISM: u32 = 4;
+const FILE_VERSION: [u8; 4] = [0x53, 0x43, 0x01, 0x00]; // "SC" + version 1.0
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -33,6 +39,29 @@ pub fn generate_keypair() -> DeviceKeyPair {
         private_key: private.to_bytes().to_vec(),
         public_key: public.as_bytes().to_vec(),
     }
+}
+
+pub fn generate_salt() -> Vec<u8> {
+    let mut salt = vec![0u8; ARGON2_SALT_LEN];
+    OsRng.fill_bytes(&mut salt);
+    salt
+}
+
+pub fn derive_key_from_password(password: &str, salt: &[u8]) -> Result<Vec<u8>, String> {
+    let params = Params::new(
+        ARGON2_MEMORY_KIB,
+        ARGON2_ITERATIONS,
+        ARGON2_PARALLELISM,
+        Some(KEY_LEN),
+    )
+    .map_err(|e| format!("Invalid Argon2 params: {e}"))?;
+
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+    let mut key = vec![0u8; KEY_LEN];
+    argon2
+        .hash_password_into(password.as_bytes(), salt, &mut key)
+        .map_err(|e| format!("Argon2 key derivation failed: {e}"))?;
+    Ok(key)
 }
 
 pub fn derive_shared_secret(private_key: &[u8], peer_public_key: &[u8]) -> Result<Vec<u8>, String> {
@@ -116,6 +145,67 @@ pub fn compute_fingerprint(shared_secret: &[u8]) -> String {
         .map(|b| format!("{:02X}", b))
         .collect::<Vec<_>>()
         .join(":")
+}
+
+// Encrypt data into a self-contained file format:
+// [4 bytes version][16 bytes salt][12 bytes nonce][ciphertext+tag]
+pub fn encrypt_file(plaintext: &[u8], master_key: &[u8], salt: &[u8]) -> Result<Vec<u8>, String> {
+    let key: [u8; KEY_LEN] = master_key
+        .try_into()
+        .map_err(|_| format!("Invalid AES-256 key length: {}", master_key.len()))?;
+    let cipher = Aes256Gcm::new_from_slice(&key).map_err(|e| e.to_string())?;
+
+    let mut nonce = [0u8; NONCE_LEN];
+    OsRng.fill_bytes(&mut nonce);
+    let ciphertext = cipher
+        .encrypt(Nonce::from_slice(&nonce), plaintext)
+        .map_err(|e| format!("AES-256-GCM encryption failed: {e}"))?;
+
+    let salt_padded = if salt.len() >= ARGON2_SALT_LEN {
+        salt[..ARGON2_SALT_LEN].to_vec()
+    } else {
+        let mut padded = vec![0u8; ARGON2_SALT_LEN];
+        padded[..salt.len()].copy_from_slice(salt);
+        padded
+    };
+
+    let mut output = Vec::with_capacity(4 + ARGON2_SALT_LEN + NONCE_LEN + ciphertext.len());
+    output.extend_from_slice(&FILE_VERSION);
+    output.extend_from_slice(&salt_padded);
+    output.extend_from_slice(&nonce);
+    output.extend_from_slice(&ciphertext);
+    Ok(output)
+}
+
+// Decrypt a file produced by encrypt_file.
+// Returns (plaintext, salt).
+pub fn decrypt_file(file_bytes: &[u8], master_key: &[u8]) -> Result<(Vec<u8>, Vec<u8>), String> {
+    let header_len = 4 + ARGON2_SALT_LEN + NONCE_LEN;
+    if file_bytes.len() < header_len + 16 {
+        return Err("File too short to contain valid encrypted data".to_string());
+    }
+
+    let version = &file_bytes[..4];
+    if version != FILE_VERSION {
+        return Err(format!(
+            "Unsupported file version: {:02x}{:02x}{:02x}{:02x}",
+            version[0], version[1], version[2], version[3]
+        ));
+    }
+
+    let salt = file_bytes[4..4 + ARGON2_SALT_LEN].to_vec();
+    let nonce = &file_bytes[4 + ARGON2_SALT_LEN..header_len];
+    let ciphertext = &file_bytes[header_len..];
+
+    let key: [u8; KEY_LEN] = master_key
+        .try_into()
+        .map_err(|_| format!("Invalid AES-256 key length: {}", master_key.len()))?;
+    let cipher = Aes256Gcm::new_from_slice(&key).map_err(|e| e.to_string())?;
+    let plaintext = cipher
+        .decrypt(Nonce::from_slice(nonce), ciphertext)
+        .map_err(|_| "Decryption failed — wrong password or corrupted data".to_string())?;
+
+    Ok((plaintext, salt))
 }
 
 #[cfg(test)]
@@ -207,5 +297,81 @@ mod tests {
         
         // Long public key should fail
         assert!(derive_shared_secret(&valid_key, &long_key).is_err());
+    }
+
+    #[test]
+    fn test_generate_salt_length() {
+        let salt = generate_salt();
+        assert_eq!(salt.len(), 16);
+    }
+
+    #[test]
+    fn test_generate_salt_randomness() {
+        let salt1 = generate_salt();
+        let salt2 = generate_salt();
+        assert_ne!(salt1, salt2);
+    }
+
+    #[test]
+    fn test_derive_key_from_password_deterministic() {
+        let salt = vec![42u8; 16];
+        let key1 = derive_key_from_password("my-secret", &salt).unwrap();
+        let key2 = derive_key_from_password("my-secret", &salt).unwrap();
+        assert_eq!(key1, key2);
+        assert_eq!(key1.len(), 32);
+    }
+
+    #[test]
+    fn test_derive_key_from_password_different_passwords() {
+        let salt = vec![42u8; 16];
+        let key1 = derive_key_from_password("password-a", &salt).unwrap();
+        let key2 = derive_key_from_password("password-b", &salt).unwrap();
+        assert_ne!(key1, key2);
+    }
+
+    #[test]
+    fn test_derive_key_from_password_different_salts() {
+        let salt1 = vec![1u8; 16];
+        let salt2 = vec![2u8; 16];
+        let key1 = derive_key_from_password("same-password", &salt1).unwrap();
+        let key2 = derive_key_from_password("same-password", &salt2).unwrap();
+        assert_ne!(key1, key2);
+    }
+
+    #[test]
+    fn test_encrypt_decrypt_file_roundtrip() {
+        let salt = generate_salt();
+        let key = derive_key_from_password("test-password", &salt).unwrap();
+        let plaintext = b"hello world clipboard data";
+        let encrypted = encrypt_file(plaintext, &key, &salt).unwrap();
+        let (decrypted, recovered_salt) = decrypt_file(&encrypted, &key).unwrap();
+        assert_eq!(decrypted, plaintext);
+        assert_eq!(recovered_salt, salt);
+    }
+
+    #[test]
+    fn test_encrypt_file_wrong_key_fails() {
+        let salt = generate_salt();
+        let key1 = derive_key_from_password("correct-password", &salt).unwrap();
+        let key2 = derive_key_from_password("wrong-password", &salt).unwrap();
+        let encrypted = encrypt_file(b"secret", &key1, &salt).unwrap();
+        let result = decrypt_file(&encrypted, &key2);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decrypt_file_too_short() {
+        let result = decrypt_file(&[0u8; 10], &[0u8; 32]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("too short"));
+    }
+
+    #[test]
+    fn test_decrypt_file_wrong_version() {
+        let mut bad_file = vec![0xFF, 0xFF, 0xFF, 0xFF];
+        bad_file.extend_from_slice(&[0u8; 16 + 12 + 32]);
+        let result = decrypt_file(&bad_file, &[0u8; 32]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unsupported file version"));
     }
 }
