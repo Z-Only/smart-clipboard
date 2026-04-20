@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use log::{info, warn};
+use log::info;
 use reqwest::{Client, StatusCode};
 
 use super::rate_limiter::TokenBucketLimiter;

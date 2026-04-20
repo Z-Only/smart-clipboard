@@ -67,6 +67,16 @@ impl Database {
         }
     }
 
+    pub fn get_all_hashes(&self) -> Result<std::collections::HashSet<String>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT hash FROM clipboard_entries")?;
+        let hashes = stmt
+            .query_map([], |row| row.get::<_, String>(0))?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(hashes)
+    }
+
     pub fn update_use_count(&self, hash: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         let now = Local::now().naive_local();

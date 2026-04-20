@@ -50,7 +50,7 @@ impl TokenBucketLimiter {
     pub async fn acquire(&self, count: u32) -> f64 {
         let mut total_waited = 0.0;
         loop {
-            {
+            let wait_ms = {
                 let mut state = self.state.lock().unwrap();
                 self.refill(&mut state);
                 let needed = f64::from(count);
@@ -60,11 +60,11 @@ impl TokenBucketLimiter {
                 }
                 let deficit = needed - state.tokens;
                 let wait_secs = deficit / self.refill_rate_per_sec;
-                let wait_ms = (wait_secs * 1000.0).ceil().max(100.0) as u64;
-                drop(state);
-                tokio::time::sleep(std::time::Duration::from_millis(wait_ms)).await;
-                total_waited += wait_ms as f64 / 1000.0;
-            }
+                (wait_secs * 1000.0).ceil().max(100.0) as u64
+            };
+            // MutexGuard is dropped here before the await
+            tokio::time::sleep(std::time::Duration::from_millis(wait_ms)).await;
+            total_waited += wait_ms as f64 / 1000.0;
         }
     }
 
