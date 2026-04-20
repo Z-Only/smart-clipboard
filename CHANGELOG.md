@@ -1,10 +1,19 @@
 # Changelog
 
 ## [0.6.0] - 2026-04-20
+- Added Phase 3 end-to-end encryption and secure pairing for LAN sync, including X25519 key exchange, HKDF-SHA256 shared secret derivation, AES-256-GCM encrypted messaging, key fingerprint verification, and persistent key storage.
 - Added Phase 3 WebSocket transport skeleton with backend server/client handshake, protocol message framing, heartbeat ping/pong, reconnect backoff, and paired-device runtime connection states.
 - Updated SyncPanel device status rendering to show more realistic transport states such as connecting, connected, disabled, and reconnecting-related activity.
 
 ### Added
+- Added X25519 key pair generation with persistent storage in app config for device identity.
+- Added HKDF-SHA256 shared secret derivation from Diffie-Hellman key exchange during device pairing.
+- Added AES-256-GCM encryption and decryption for all sync protocol messages between paired devices.
+- Added human-readable key fingerprint generation (SHA-256, 8-byte hex format) for pairing verification UI.
+- Added `KeyVerification` protocol message type for mutual pairing confirmation flow.
+- Added `fingerprint` column to `paired_devices` database table with automatic migration.
+- Added automatic fingerprint computation and persistence during the pairing secret establishment flow.
+- Added 7 unit tests for crypto module covering key derivation, encryption roundtrip, fingerprint format, and error cases.
 - Added a Phase 3 LAN Sync MVP management experience with a dedicated Sync panel in the desktop UI.
 - Added sync configuration, discovered-device list, paired-device list, and per-device enable/disable controls.
 - Added backend sync scaffolding with persisted sync config, paired devices storage, and Tauri sync commands.
@@ -14,7 +23,7 @@
 ### Changed
 - Updated the app version to 0.6.0 for the Phase 3 partial delivery.
 - Replaced demo discovered devices with real mDNS discovery results while keeping the existing Sync panel UI contract stable.
-- Clarified that this release now ships real LAN discovery, while transport and encryption remain for follow-up work.
+- Updated Phase 3 scope: this release now ships real LAN discovery, WebSocket transport, and end-to-end encryption. Actual clipboard payload sync across devices remains for follow-up work.
 
 All notable changes to this project will be documented in this file.
 

@@ -6,33 +6,37 @@ A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + *
 
 ## Phase 3 Progress
 
-This repository now includes a **Phase 3 LAN Sync MVP**. In this release, the project provides the management layer for local-network sync, including:
+This repository now includes a **Phase 3 LAN Sync** implementation with end-to-end encryption. In this release, the project provides:
 
 - Sync settings panel in the desktop UI
 - Editable device name and sync port
 - Real mDNS / DNS-SD discovered device list with automatic refresh and deduplication
-- Pair / unpair device workflow
+- Pair / unpair device workflow with X25519 key exchange
 - Per-device sync enable toggle
-- Persistent paired device storage and sync config
+- Persistent paired device storage with encrypted key material
+- **End-to-end encryption**: X25519 Diffie-Hellman key exchange, HKDF-SHA256 shared secret derivation, AES-256-GCM encrypted messaging
+- **Key fingerprint verification**: Human-readable fingerprint for pairing confirmation
+- **WebSocket transport**: Auto-connect, ping/pong heartbeats, reconnect backoff, live connection states
 
-### Current MVP scope
+### Current scope
 
-This is a **partial Phase 3 delivery**. The current release now includes the LAN transport skeleton, but the encrypted sync business flow is still intentionally incomplete. The following items are **not fully implemented yet** in this release:
+This is a **Phase 3 delivery** covering LAN discovery, transport, and encryption. The following items are **not yet implemented** in this release:
 
-- End-to-end encryption key exchange and payload encryption
 - Actual clipboard payload delivery across devices
-- Mutual approval pairing flow and sync conflict handling
+- Mutual approval pairing flow UI
+- Sync conflict handling
 
-This makes the release safe for incremental rollout while keeping the design direction intact.
+### Newly completed
 
-### Newly completed in this session
-
+- X25519 key pair generation with persistent storage in app config
+- HKDF-SHA256 shared secret derivation during device pairing
+- AES-256-GCM encryption/decryption for all sync protocol messages
+- Human-readable key fingerprint generation for pairing verification
+- `KeyVerification` protocol message type for mutual confirmation
+- Database migration adding `fingerprint` column to paired devices
+- 7 unit tests for crypto module (key derivation, encryption, fingerprints, error cases)
 - Real mDNS / DNS-SD service advertisement using `_smartclip._tcp.local.`
-- Real LAN device discovery in the Tauri sync backend
-- Phase 3 WebSocket transport skeleton with auto-connect, ping/pong heartbeats, reconnect backoff, and paired-device live connection states
-- Periodic online/offline state refresh via last-seen timestamps
-- Device deduplication by advertised `device_id`
-- Backend response shaping to stay compatible with the existing SyncPanel / DeviceCard UI
+- Phase 3 WebSocket transport with auto-connect, heartbeats, and reconnect backoff
 
 ## Features
 

@@ -99,6 +99,7 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
             host TEXT NOT NULL DEFAULT '127.0.0.1',
             port INTEGER NOT NULL DEFAULT 23456,
             public_key BLOB,
+            local_public_key BLOB,
             shared_secret BLOB,
             last_seen_at DATETIME,
             is_active INTEGER NOT NULL DEFAULT 1,
@@ -118,6 +119,28 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         CREATE INDEX IF NOT EXISTS idx_sync_log_device ON sync_log(device_id);
         ",
     )?;
+
+    let paired_columns: Vec<String> = {
+        let mut stmt = conn.prepare("PRAGMA table_info(paired_devices)")?;
+        let columns = stmt.query_map([], |row| row.get::<_, String>(1))?
+            .filter_map(|r| r.ok())
+            .collect();
+        columns
+    };
+
+    if !paired_columns
+        .iter()
+        .any(|column| column == "local_public_key")
+    {
+        conn.execute_batch("ALTER TABLE paired_devices ADD COLUMN local_public_key BLOB;")?;
+    }
+
+    if !paired_columns
+        .iter()
+        .any(|column| column == "fingerprint")
+    {
+        conn.execute_batch("ALTER TABLE paired_devices ADD COLUMN fingerprint TEXT;")?;
+    }
 
     // Template management table
     conn.execute_batch(

@@ -69,19 +69,43 @@ async fn connect_device_loop(
                 ));
 
                 let (mut write, mut read) = ws_stream.split();
-                let hello = SyncMessage::Hello {
+                let pair_request = SyncMessage::PairRequest {
                     device_id: local.device_id.clone(),
                     device_name: local.device_name.clone(),
                     protocol_version: 1,
                     port: local.port,
+                    public_key: sync_manager.local_public_key_base64(),
                 };
                 write
-                    .send(Message::Text(hello.to_text()?.into()))
+                    .send(Message::Text(pair_request.to_text()?.into()))
                     .await
                     .map_err(|e| e.to_string())?;
 
                 match read.next().await {
                     Some(Ok(Message::Text(text))) => match SyncMessage::from_text(text.as_str())? {
+                        SyncMessage::PairResponse {
+                            accepted,
+                            reason,
+                            public_key,
+                            ..
+                        } => {
+                            if !accepted {
+                                sync_manager.mark_error(
+                                    &device.id,
+                                    reason.unwrap_or_else(|| "Pair request rejected".to_string()),
+                                );
+                                return Ok(());
+                            }
+                            let public_key = public_key
+                                .ok_or_else(|| "Pair response missing public key".to_string())?;
+                            sync_manager.ensure_pairing_secret(
+                                &device.id,
+                                Some(device.name.clone()),
+                                Some(device.host.clone()),
+                                Some(device.port as u16),
+                                &public_key,
+                            )?;
+                        }
                         SyncMessage::HelloAck {
                             accepted, reason, ..
                         } => {
@@ -92,7 +116,6 @@ async fn connect_device_loop(
                                 );
                                 return Ok(());
                             }
-                            sync_manager.mark_connected(&device.id, Some("client".to_string()));
                         }
                         other => {
                             sync_manager.mark_error(
@@ -117,6 +140,24 @@ async fn connect_device_loop(
                     }
                 }
 
+                let hello = SyncMessage::Hello {
+                    device_id: local.device_id.clone(),
+                    device_name: local.device_name.clone(),
+                    protocol_version: 1,
+                    port: local.port,
+                };
+                let encrypted_hello = sync_manager.encrypt_protocol_message(&device.id, &hello)?;
+                write
+                    .send(Message::Text(encrypted_hello.to_text()?.into()))
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                let initial_payload = sync_manager.build_encrypted_placeholder(&device.id)?;
+                write
+                    .send(Message::Text(initial_payload.to_text()?.into()))
+                    .await
+                    .map_err(|e| e.to_string())?;
+
                 let mut heartbeat = tokio::time::interval(heartbeat_interval());
                 loop {
                     tokio::select! {
@@ -128,9 +169,10 @@ async fn connect_device_loop(
                         }
                         maybe_msg = read.next() => {
                             match maybe_msg {
-                                Some(Ok(Message::Text(text))) => match SyncMessage::from_text(text.as_str())? {
+                                Some(Ok(Message::Text(text))) => match sync_manager.decrypt_protocol_message(&device.id, SyncMessage::from_text(text.as_str())?)? {
                                     SyncMessage::Ping { ts } => {
-                                        write.send(Message::Text(SyncMessage::Pong { ts }.to_text()?.into())).await.map_err(|e| e.to_string())?;
+                                        let encrypted = sync_manager.encrypt_protocol_message(&device.id, &SyncMessage::Pong { ts })?;
+                                        write.send(Message::Text(encrypted.to_text()?.into())).await.map_err(|e| e.to_string())?;
                                     }
                                     SyncMessage::Pong { .. } => sync_manager.mark_pong(&device.id),
                                     SyncMessage::Disconnect { reason } => {
@@ -138,9 +180,13 @@ async fn connect_device_loop(
                                         break;
                                     }
                                     SyncMessage::ClipboardSyncPlaceholder { entry_hash, .. } => {
-                                        write.send(Message::Text(SyncMessage::SyncAck { entry_hash, accepted: true }.to_text()?.into())).await.map_err(|e| e.to_string())?;
+                                        let ack = sync_manager.encrypt_protocol_message(&device.id, &SyncMessage::SyncAck { entry_hash, accepted: true })?;
+                                        write.send(Message::Text(ack.to_text()?.into())).await.map_err(|e| e.to_string())?;
                                     }
-                                    SyncMessage::SyncAck { .. } | SyncMessage::Hello { .. } | SyncMessage::HelloAck { .. } => {}
+                                    SyncMessage::KeyVerification { fingerprint, device_id, verified } => {
+                                        log::info!("Received key verification from {device_id}: fingerprint={fingerprint}, verified={verified}");
+                                    }
+                                    SyncMessage::SyncAck { .. } | SyncMessage::Hello { .. } | SyncMessage::HelloAck { .. } | SyncMessage::PairRequest { .. } | SyncMessage::PairResponse { .. } | SyncMessage::EncryptedPayload { .. } => {}
                                 },
                                 Some(Ok(Message::Ping(payload))) => {
                                     write.send(Message::Pong(payload)).await.map_err(|e| e.to_string())?;

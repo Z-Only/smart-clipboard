@@ -251,7 +251,7 @@ impl Database {
     pub fn get_paired_devices(&self) -> Result<Vec<PairedDevice>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, name, host, port, public_key, shared_secret, last_seen_at, is_active, paired_at FROM paired_devices ORDER BY last_seen_at DESC, paired_at DESC",
+            "SELECT id, name, host, port, public_key, local_public_key, shared_secret, last_seen_at, is_active, paired_at, fingerprint FROM paired_devices ORDER BY last_seen_at DESC, paired_at DESC",
         )?;
         let devices = stmt
             .query_map([], |row| {
@@ -265,16 +265,17 @@ impl Database {
                     port: row.get(3)?,
                     status: "unknown".to_string(),
                     public_key: row.get(4)?,
-                    shared_secret: row.get(5)?,
+                    local_public_key: row.get(5)?,
+                    shared_secret: row.get(6)?,
                     last_seen_at: row
-                        .get::<_, Option<String>>(6)?
+                        .get::<_, Option<String>>(7)?
                         .map(|v| parse_datetime(&v))
                         .transpose()?,
-                    is_active: row.get::<_, i32>(7)? != 0,
-                    enabled: row.get::<_, i32>(7)? != 0,
-                    sync_enabled: row.get::<_, i32>(7)? != 0,
-                    paired_at: parse_datetime(&row.get::<_, String>(8)?)?,
-                    fingerprint: None,
+                    is_active: row.get::<_, i32>(8)? != 0,
+                    enabled: row.get::<_, i32>(8)? != 0,
+                    sync_enabled: row.get::<_, i32>(8)? != 0,
+                    paired_at: parse_datetime(&row.get::<_, String>(9)?)?,
+                    fingerprint: row.get(10)?,
                 })
             })?
             .filter_map(|r| r.ok())
@@ -285,29 +286,67 @@ impl Database {
     pub fn upsert_paired_device(&self, device: &PairedDevice) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO paired_devices (id, name, host, port, public_key, shared_secret, last_seen_at, is_active, paired_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+            "INSERT INTO paired_devices (id, name, host, port, public_key, local_public_key, shared_secret, last_seen_at, is_active, paired_at, fingerprint)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
              ON CONFLICT(id) DO UPDATE SET
                name = excluded.name,
                host = excluded.host,
                port = excluded.port,
                public_key = excluded.public_key,
+               local_public_key = excluded.local_public_key,
                shared_secret = excluded.shared_secret,
                last_seen_at = excluded.last_seen_at,
-               is_active = excluded.is_active",
+               is_active = excluded.is_active,
+               fingerprint = excluded.fingerprint",
             params![
                 device.id,
                 device.name,
                 device.host,
                 device.port,
                 device.public_key,
+                device.local_public_key,
                 device.shared_secret,
                 device.last_seen_at.map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string()),
                 device.is_active as i32,
                 device.paired_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+                device.fingerprint,
             ],
         )?;
         Ok(())
+    }
+
+    pub fn find_paired_device(&self, device_id: &str) -> Result<Option<PairedDevice>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, name, host, port, public_key, local_public_key, shared_secret, last_seen_at, is_active, paired_at, fingerprint FROM paired_devices WHERE id = ?1 LIMIT 1",
+        )?;
+        let mut rows = stmt.query(params![device_id])?;
+        if let Some(row) = rows.next()? {
+            Ok(Some(PairedDevice {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                device_name: row.get(1)?,
+                host: row.get(2)?,
+                address: row.get(2)?,
+                ip: row.get(2)?,
+                port: row.get(3)?,
+                status: "unknown".to_string(),
+                public_key: row.get(4)?,
+                local_public_key: row.get(5)?,
+                shared_secret: row.get(6)?,
+                last_seen_at: row
+                    .get::<_, Option<String>>(7)?
+                    .map(|v| parse_datetime(&v))
+                    .transpose()?,
+                is_active: row.get::<_, i32>(8)? != 0,
+                enabled: row.get::<_, i32>(8)? != 0,
+                sync_enabled: row.get::<_, i32>(8)? != 0,
+                paired_at: parse_datetime(&row.get::<_, String>(9)?)?,
+                fingerprint: row.get(10)?,
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn unpair_device(&self, device_id: &str) -> Result<()> {

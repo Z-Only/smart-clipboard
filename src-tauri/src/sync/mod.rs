@@ -9,8 +9,10 @@ use tokio::sync::RwLock;
 
 use crate::config::{AppConfig, ConfigManager};
 use crate::storage::{Database, DiscoveredDevice, PairedDevice, SyncStatus};
+use serde_json::json;
 
 pub mod client;
+pub mod crypto;
 pub mod mdns;
 pub mod protocol;
 pub mod server;
@@ -92,6 +94,7 @@ pub struct LocalDeviceInfo {
     pub device_id: String,
     pub device_name: String,
     pub port: u16,
+    pub public_key: Vec<u8>,
 }
 
 pub struct SyncManager {
@@ -101,6 +104,7 @@ pub struct SyncManager {
     runtime_status: RwLock<SyncRuntimeStatus>,
     connection_states: RwLock<HashMap<String, DeviceConnectionState>>,
     local_device: LocalDeviceInfo,
+    local_private_key: Vec<u8>,
 }
 
 impl SyncManager {
@@ -114,6 +118,8 @@ impl SyncManager {
             port: sync_config.port,
             enabled: sync_config.enabled,
         });
+
+        let keypair = Self::load_or_create_local_keypair(config.as_ref());
 
         let runtime_status = SyncRuntimeStatus {
             enabled: sync_config.enabled,
@@ -144,7 +150,9 @@ impl SyncManager {
                 device_id,
                 device_name: sync_config.device_name.clone(),
                 port: sync_config.port,
+                public_key: keypair.public_key.clone(),
             },
+            local_private_key: keypair.private_key,
         });
 
         manager.start_transport_tasks();
@@ -161,6 +169,7 @@ impl SyncManager {
             device_id: self.local_device.device_id.clone(),
             device_name: cfg.device_name,
             port: cfg.port,
+            public_key: self.local_device.public_key.clone(),
         }
     }
 
@@ -300,6 +309,7 @@ impl SyncManager {
                 port: device.port,
                 status: "connecting".to_string(),
                 public_key: None,
+                local_public_key: Some(self.local_device.public_key.clone()),
                 shared_secret: None,
                 last_seen_at: Some(device.last_seen_at),
                 is_active: true,
@@ -642,9 +652,151 @@ impl SyncManager {
 
     fn find_paired_device(&self, device_id: &str) -> Result<Option<PairedDevice>, String> {
         self.db
-            .get_paired_devices()
+            .find_paired_device(device_id)
             .map_err(|e| e.to_string())
-            .map(|devices| devices.into_iter().find(|device| device.id == device_id))
+    }
+
+    pub fn local_public_key_base64(&self) -> String {
+        crypto::encode_key_material(&self.local_device.public_key)
+    }
+
+    pub fn ensure_pairing_secret(
+        &self,
+        remote_device_id: &str,
+        remote_device_name: Option<String>,
+        remote_host: Option<String>,
+        remote_port: Option<u16>,
+        remote_public_key_b64: &str,
+    ) -> Result<PairedDevice, String> {
+        let remote_public_key = crypto::decode_key_material(remote_public_key_b64)?;
+        let shared_secret =
+            crypto::derive_shared_secret(&self.local_private_key, &remote_public_key)?;
+        let mut device = self
+            .find_paired_device(remote_device_id)?
+            .unwrap_or(PairedDevice {
+                id: remote_device_id.to_string(),
+                name: remote_device_name
+                    .clone()
+                    .unwrap_or_else(|| remote_device_id.to_string()),
+                device_name: remote_device_name
+                    .clone()
+                    .unwrap_or_else(|| remote_device_id.to_string()),
+                host: remote_host.clone().unwrap_or_else(|| "127.0.0.1".to_string()),
+                address: remote_host.clone().unwrap_or_else(|| "127.0.0.1".to_string()),
+                ip: remote_host.clone().unwrap_or_else(|| "127.0.0.1".to_string()),
+                port: i64::from(remote_port.unwrap_or(23456)),
+                status: "connecting".to_string(),
+                public_key: None,
+                local_public_key: None,
+                shared_secret: None,
+                last_seen_at: Some(Local::now().naive_local()),
+                is_active: true,
+                enabled: true,
+                sync_enabled: true,
+                paired_at: Local::now().naive_local(),
+                fingerprint: None,
+            });
+        if let Some(name) = remote_device_name {
+            device.name = name.clone();
+            device.device_name = name;
+        }
+        if let Some(host) = remote_host.clone() {
+            device.host = host.clone();
+            device.address = host.clone();
+            device.ip = host;
+        }
+        if let Some(port) = remote_port {
+            device.port = i64::from(port);
+        }
+        device.public_key = Some(remote_public_key);
+        device.local_public_key = Some(self.local_device.public_key.clone());
+        device.shared_secret = Some(shared_secret);
+        device.fingerprint = Some(crypto::compute_fingerprint(device.shared_secret.as_ref().unwrap()));
+        device.last_seen_at = Some(Local::now().naive_local());
+        self.db
+            .upsert_paired_device(&device)
+            .map_err(|e| e.to_string())?;
+        Ok(device)
+    }
+
+    pub fn encrypt_protocol_message(
+        &self,
+        device_id: &str,
+        message: &protocol::SyncMessage,
+    ) -> Result<protocol::SyncMessage, String> {
+        let device = self
+            .find_paired_device(device_id)?
+            .ok_or_else(|| format!("Paired device not found: {device_id}"))?;
+        let secret = device
+            .shared_secret
+            .ok_or_else(|| format!("Shared secret is not established for device: {device_id}"))?;
+        let plaintext = message.to_text()?;
+        let encrypted = crypto::encrypt(plaintext.as_bytes(), &secret)?;
+        Ok(protocol::SyncMessage::EncryptedPayload {
+            message: encrypted.into(),
+        })
+    }
+
+    pub fn decrypt_protocol_message(
+        &self,
+        device_id: &str,
+        message: protocol::SyncMessage,
+    ) -> Result<protocol::SyncMessage, String> {
+        match message {
+            protocol::SyncMessage::EncryptedPayload { message } => {
+                let device = self
+                    .find_paired_device(device_id)?
+                    .ok_or_else(|| format!("Paired device not found: {device_id}"))?;
+                let secret = device.shared_secret.ok_or_else(|| {
+                    format!("Shared secret is not established for device: {device_id}")
+                })?;
+                let plaintext = crypto::decrypt(&message.into(), &secret)?;
+                let text = String::from_utf8(plaintext)
+                    .map_err(|e| format!("Decrypted payload was not valid UTF-8: {e}"))?;
+                protocol::SyncMessage::from_text(&text)
+            }
+            other => Ok(other),
+        }
+    }
+
+    pub fn build_encrypted_placeholder(
+        &self,
+        device_id: &str,
+    ) -> Result<protocol::SyncMessage, String> {
+        let payload = protocol::SyncMessage::ClipboardSyncPlaceholder {
+            entry_hash: format!("phase3-placeholder-{}", now_string()),
+            timestamp: Local::now().timestamp_millis(),
+        };
+        self.encrypt_protocol_message(device_id, &payload)
+    }
+
+    fn load_or_create_local_keypair(config: &ConfigManager) -> crypto::DeviceKeyPair {
+        let mut app_config = config.get();
+        let mut metadata = app_config
+            .sync_metadata
+            .clone()
+            .unwrap_or_else(|| json!({}));
+
+        let private_existing = metadata.get("sync_private_key").and_then(|v| v.as_str());
+        let public_existing = metadata.get("sync_public_key").and_then(|v| v.as_str());
+        if let (Some(private_key), Some(public_key)) = (private_existing, public_existing) {
+            if let (Ok(private_key), Ok(public_key)) = (
+                crypto::decode_key_material(private_key),
+                crypto::decode_key_material(public_key),
+            ) {
+                return crypto::DeviceKeyPair {
+                    private_key,
+                    public_key,
+                };
+            }
+        }
+
+        let keypair = crypto::generate_keypair();
+        metadata["sync_private_key"] = json!(crypto::encode_key_material(&keypair.private_key));
+        metadata["sync_public_key"] = json!(crypto::encode_key_material(&keypair.public_key));
+        app_config.sync_metadata = Some(metadata);
+        let _ = config.update(app_config);
+        keypair
     }
 }
 
