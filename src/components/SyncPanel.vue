@@ -9,6 +9,22 @@
         <div>
           <h2 class="text-lg font-semibold">{{ $t('sync.title') }}</h2>
           <p class="text-sm text-muted-foreground">{{ $t('sync.subtitle') }}</p>
+          <div class="mt-2 flex gap-1 rounded-lg bg-muted p-1">
+            <button
+              class="rounded-md px-3 py-1 text-sm font-medium transition-colors"
+              :class="activeTab === 'lan' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+              @click="activeTab = 'lan'"
+            >
+              {{ $t('sync.tab.lan') }}
+            </button>
+            <button
+              class="rounded-md px-3 py-1 text-sm font-medium transition-colors"
+              :class="activeTab === 'webdav' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+              @click="activeTab = 'webdav'"
+            >
+              {{ $t('sync.tab.webdav') }}
+            </button>
+          </div>
         </div>
         <div class="flex items-center gap-2">
           <button
@@ -40,7 +56,13 @@
         </div>
       </div>
 
-      <div class="grid max-h-[80vh] gap-0 overflow-y-auto lg:grid-cols-[320px_minmax(0,1fr)]">
+      <!-- WebDAV Tab -->
+      <div v-if="activeTab === 'webdav'" class="max-h-[80vh] overflow-y-auto p-5">
+        <WebDavPanel :is-active="activeTab === 'webdav' && isOpen" />
+      </div>
+
+      <!-- LAN Tab -->
+      <div v-else class="grid max-h-[80vh] gap-0 overflow-y-auto lg:grid-cols-[320px_minmax(0,1fr)]">
         <section class="border-b border-border p-5 lg:border-b-0 lg:border-r">
           <div class="space-y-5">
             <div class="rounded-xl bg-accent/40 p-4">
@@ -199,6 +221,8 @@
       </div>
     </div>
 
+      </div>
+
     <PairConfirmDialog
       :is-open="!!pairingDevice"
       :device="pairingDevice"
@@ -214,6 +238,7 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import DeviceCard from "@/components/DeviceCard.vue";
 import PairConfirmDialog from "@/components/PairConfirmDialog.vue";
+import WebDavPanel from "@/components/WebDavPanel.vue";
 import { useSyncStore } from "@/stores/syncStore";
 import type { SyncDevice, SyncStatus } from "@/types";
 
@@ -241,6 +266,7 @@ const form = reactive({
   port: 8484,
 });
 
+const activeTab = ref<"lan" | "webdav">("lan");
 const pairingDevice = ref<SyncDevice | null>(null);
 
 function getStatusText(value: SyncStatus) {
