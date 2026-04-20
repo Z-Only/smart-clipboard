@@ -13,6 +13,16 @@
         <Badge variant="secondary" class="text-[10px] px-1.5 py-0 shrink-0">
           {{ categoryLabel }}
         </Badge>
+        <Badge v-if="entry.is_sensitive" variant="destructive" class="text-[10px] px-1.5 py-0 shrink-0 flex items-center gap-0.5">
+          <svg class="h-2.5 w-2.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          {{ t('entry.sensitive') }}
+        </Badge>
+        <span v-if="expiryText" class="text-[10px] text-destructive/80 shrink-0">
+          {{ expiryText }}
+        </span>
         <span class="text-xs text-muted-foreground truncate">
           {{ relativeTime }}
         </span>
@@ -88,6 +98,16 @@ const truncatedContent = computed(() => {
     return content.slice(0, 200) + "...";
   }
   return content;
+});
+
+const expiryText = computed(() => {
+  if (!props.entry.expires_at) return null;
+  const now = new Date();
+  const expiresAt = new Date(props.entry.expires_at);
+  const diffMs = expiresAt.getTime() - now.getTime();
+  if (diffMs <= 0) return null;
+  const diffMin = Math.ceil(diffMs / 60000);
+  return t("entry.expiresIn", { n: diffMin });
 });
 
 const relativeTime = computed(() => {

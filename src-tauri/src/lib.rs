@@ -8,12 +8,12 @@ pub mod tray;
 
 use std::sync::Arc;
 
-use chrono::Local;
+use chrono::{Duration, Local};
 use sha2::{Digest, Sha256};
 use tauri::{Emitter, Manager};
 use tokio::sync::mpsc;
 
-use analyzer::classify;
+use analyzer::{classify, detect_sensitive};
 use clipboard::ClipboardMonitor;
 use config::ConfigManager;
 use storage::{ClipboardEntry, Database};
@@ -94,6 +94,7 @@ pub fn run() {
             // Process incoming clipboard changes
             let db_for_rx = db.clone();
             let app_handle = app.handle().clone();
+            let config_for_rx = config_manager.clone();
 
             tauri::async_runtime::spawn(async move {
                 while let Some(change) = rx.recv().await {
@@ -116,6 +117,19 @@ pub fn run() {
                     let category = classify(&change.content);
                     let now = Local::now().naive_local();
 
+                    // Detect sensitive content
+                    let is_sensitive = detect_sensitive(&change.content);
+                    let expires_at = if is_sensitive {
+                        let expiry_minutes = config_for_rx.get().sensitive_expiry_minutes;
+                        if expiry_minutes > 0 {
+                            Some(now + Duration::minutes(expiry_minutes as i64))
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    };
+
                     let entry = ClipboardEntry {
                         id: None,
                         content: change.content,
@@ -124,11 +138,11 @@ pub fn run() {
                         hash,
                         source_app: change.source_app,
                         is_favorite: false,
-                        is_sensitive: false,
+                        is_sensitive,
                         use_count: 1,
                         created_at: now,
                         updated_at: now,
-                        expires_at: None,
+                        expires_at,
                     };
 
                     match db_for_rx.insert_entry(&entry) {

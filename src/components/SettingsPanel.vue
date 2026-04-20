@@ -37,6 +37,13 @@
           <span class="text-xs text-muted-foreground">{{ $t('settings.monitorIntervalHint') }}</span>
         </div>
 
+        <!-- Sensitive expiry -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium">{{ $t('settings.sensitiveExpiry') }}</label>
+          <Input v-model="form.sensitive_expiry_minutes" type="number" min="0" max="1440" class="h-8" />
+          <span class="text-xs text-muted-foreground">{{ $t('settings.sensitiveExpiryHint') }}</span>
+        </div>
+
         <!-- Excluded apps -->
         <div class="flex flex-col gap-1.5">
           <label class="text-sm font-medium">{{ $t('settings.excludedApps') }}</label>
@@ -158,6 +165,7 @@ interface AppConfig {
   excluded_apps: string[];
   monitor_interval_ms: number;
   autostart_enabled: boolean;
+  sensitive_expiry_minutes: number;
 }
 
 const props = defineProps<{ isOpen: boolean }>();
@@ -187,6 +195,7 @@ const form = reactive<AppConfig>({
   excluded_apps: [],
   monitor_interval_ms: 500,
   autostart_enabled: false,
+  sensitive_expiry_minutes: 5,
 });
 
 const autostart = ref(false);
@@ -235,6 +244,7 @@ function resetDefaults() {
   form.excluded_apps = [];
   form.monitor_interval_ms = 500;
   form.autostart_enabled = false;
+  form.sensitive_expiry_minutes = 5;
 }
 
 async function toggleAutostart() {
