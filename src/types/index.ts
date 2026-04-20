@@ -118,3 +118,38 @@ export interface SyncStatusResponse extends SyncConfig {
   pairedDevices: SyncDevice[];
   discoveredDevices: SyncDevice[];
 }
+
+// --- WebDAV Cloud Sync Types ---
+
+export interface WebDavConfig {
+  enabled: boolean;
+  serverUrl: string;
+  username: string;
+  password: string;
+  syncPassword: string;
+  pollIntervalSecs: number;
+  syncImages: boolean;
+  syncSensitive: boolean;
+  rateLimitCapacity: number;
+  rateLimitRefillMinutes: number;
+  remotePath: string;
+  maxCloudEntries: number;
+}
+
+export interface RegisteredDevice {
+  deviceId: string;
+  deviceName: string;
+  publicKey: string;
+  registeredAt: string;
+  lastSyncAt: string | null;
+}
+
+export interface WebDavSyncStatus {
+  status: string;
+  lastSyncAt: string | null;
+  cloudEntryCount: number;
+  registeredDevices: RegisteredDevice[];
+  rateLimitAvailable: number;
+  rateLimitCapacity: number;
+  error: string | null;
+}
