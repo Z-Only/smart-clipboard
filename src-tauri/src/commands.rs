@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::sync::Arc;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
@@ -5,6 +6,7 @@ use tauri::State;
 
 use crate::config::{AppConfig, ConfigManager};
 use crate::storage::{Database, SearchQuery, SearchResult, Tag};
+use crate::AppDataDir;
 
 #[tauri::command]
 pub async fn get_entries(
@@ -36,8 +38,13 @@ pub async fn search_entries(
 }
 
 #[tauri::command]
-pub async fn delete_entry(db: State<'_, Arc<Database>>, id: i64) -> Result<(), String> {
-    db.delete_entry(id).map_err(|e| e.to_string())
+pub async fn delete_entry(
+    db: State<'_, Arc<Database>>,
+    app_data_dir: State<'_, Arc<AppDataDir>>,
+    id: i64,
+) -> Result<(), String> {
+    db.delete_entry_with_cleanup(id, &app_data_dir.0)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -59,9 +66,26 @@ pub async fn paste_entry(db: State<'_, Arc<Database>>, id: i64) -> Result<(), St
 
     let mut clipboard =
         arboard::Clipboard::new().map_err(|e| format!("Clipboard error: {}", e))?;
-    clipboard
-        .set_text(&entry.content)
-        .map_err(|e| format!("Clipboard error: {}", e))?;
+
+    if entry.content_type == "image" {
+        // Load image from file and set to clipboard
+        let img = image::open(&entry.content)
+            .map_err(|e| format!("Failed to open image: {}", e))?
+            .to_rgba8();
+        let (w, h) = img.dimensions();
+        let arboard_img = arboard::ImageData {
+            bytes: Cow::from(img.into_raw()),
+            width: w as usize,
+            height: h as usize,
+        };
+        clipboard
+            .set_image(arboard_img)
+            .map_err(|e| format!("Clipboard error: {}", e))?;
+    } else {
+        clipboard
+            .set_text(&entry.content)
+            .map_err(|e| format!("Clipboard error: {}", e))?;
+    }
 
     db.update_use_count(&entry.hash)
         .map_err(|e| e.to_string())?;

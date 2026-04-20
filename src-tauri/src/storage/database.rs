@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::sync::Mutex;
 
 use chrono::{Local, NaiveDateTime};
@@ -105,6 +106,24 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         conn.execute("DELETE FROM clipboard_entries WHERE id = ?1", params![id])?;
         Ok(())
+    }
+
+    /// Delete an entry and clean up associated image file if it's an image entry.
+    pub fn delete_entry_with_cleanup(&self, id: i64, _app_data_dir: &Path) -> Result<()> {
+        // First, get the entry to check if it's an image
+        if let Some(entry) = self.get_entry_by_id(id)? {
+            if entry.content_type == "image" {
+                // The content field holds the image file path
+                let image_path = Path::new(&entry.content);
+                if image_path.exists() {
+                    if let Err(e) = std::fs::remove_file(image_path) {
+                        log::warn!("Failed to delete image file {:?}: {}", image_path, e);
+                    }
+                }
+            }
+        }
+        // Delete from database
+        self.delete_entry(id)
     }
 
     pub fn toggle_favorite(&self, id: i64) -> Result<bool> {
@@ -679,6 +698,63 @@ mod tests {
         // But no entries should be associated with the tag
         let entries = db.get_entries_by_tag(tag_id).unwrap();
         assert!(entries.is_empty());
+    }
+
+    #[test]
+    fn test_delete_image_entry_with_cleanup() {
+        let db = Database::new(":memory:").unwrap();
+        let now = Local::now().naive_local();
+
+        // Create a temporary image file
+        let tmp_dir = std::env::temp_dir().join("smart_clipboard_test");
+        std::fs::create_dir_all(&tmp_dir).unwrap();
+        let img_path = tmp_dir.join("test_image.png");
+        std::fs::write(&img_path, b"fake png data").unwrap();
+        assert!(img_path.exists());
+
+        let hash = format!("{:x}", sha2::Sha256::digest(b"test image bytes"));
+        let entry = ClipboardEntry {
+            id: None,
+            content: img_path.to_string_lossy().to_string(),
+            content_type: "image".to_string(),
+            category: "image".to_string(),
+            hash,
+            source_app: None,
+            is_favorite: false,
+            is_sensitive: false,
+            use_count: 1,
+            created_at: now,
+            updated_at: now,
+            expires_at: None,
+        };
+        let id = db.insert_entry(&entry).unwrap();
+
+        // Delete with cleanup should remove the file
+        db.delete_entry_with_cleanup(id, &tmp_dir).unwrap();
+
+        // Entry should be gone from DB
+        let found = db.get_entry_by_id(id).unwrap();
+        assert!(found.is_none());
+
+        // Image file should be deleted
+        assert!(!img_path.exists());
+
+        // Clean up temp dir
+        std::fs::remove_dir_all(&tmp_dir).ok();
+    }
+
+    #[test]
+    fn test_delete_text_entry_with_cleanup_no_file_delete() {
+        let db = Database::new(":memory:").unwrap();
+        let entry = make_entry("just text", "text");
+        let id = db.insert_entry(&entry).unwrap();
+
+        // delete_entry_with_cleanup should work for text entries without touching files
+        let tmp_dir = std::env::temp_dir();
+        db.delete_entry_with_cleanup(id, &tmp_dir).unwrap();
+
+        let found = db.get_entry_by_id(id).unwrap();
+        assert!(found.is_none());
     }
 
     #[test]

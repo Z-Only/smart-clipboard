@@ -27,6 +27,7 @@ export type CategoryType =
   | "all"
   | "favorites"
   | "tags"
+  | "image"
   | "url"
   | "email"
   | "color"
@@ -48,6 +49,7 @@ export const CATEGORIES: CategoryItem[] = [
   { key: "all", labelKey: "categories.all", icon: "📋" },
   { key: "favorites", labelKey: "categories.favorites", icon: "⭐" },
   { key: "tags", labelKey: "categories.tags", icon: "🏷️" },
+  { key: "image", labelKey: "categories.image", icon: "📷" },
   { key: "url", labelKey: "categories.url", icon: "🔗" },
   { key: "email", labelKey: "categories.email", icon: "📧" },
   { key: "code", labelKey: "categories.code", icon: "💻" },

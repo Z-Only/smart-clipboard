@@ -30,7 +30,21 @@
           {{ entry.source_app }}
         </span>
       </div>
-      <div class="text-sm leading-snug break-all line-clamp-3" :class="isCodeLike ? 'font-mono text-xs' : ''">
+      <!-- Image preview for image entries -->
+      <div v-if="isImage" class="flex items-center gap-2">
+        <img
+          :src="imageAssetUrl"
+          alt="Clipboard image"
+          class="rounded border border-border object-cover"
+          style="max-height: 64px; max-width: 120px;"
+          loading="lazy"
+        />
+        <span class="text-xs text-muted-foreground">
+          {{ t('entry.categoryLabels.image') }}
+        </span>
+      </div>
+      <!-- Text preview for non-image entries -->
+      <div v-else class="text-sm leading-snug break-all line-clamp-3" :class="isCodeLike ? 'font-mono text-xs' : ''">
         {{ truncatedContent }}
       </div>
       <div v-if="entryTags.length > 0" class="flex flex-wrap gap-1 mt-1.5">
@@ -57,7 +71,7 @@
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
         </svg>
       </button>
-      <TransformMenu :content="entry.content" :category="entry.category" />
+      <TransformMenu v-if="!isImage" :content="entry.content" :category="entry.category" />
       <TagPicker :entry-id="entry.id" @tags-changed="onTagsChanged" />
       <button
         class="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
@@ -77,7 +91,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { Badge } from "@/components/ui/badge";
 import TransformMenu from "@/components/TransformMenu.vue";
 import TagPicker from "@/components/TagPicker.vue";
@@ -116,6 +130,13 @@ watch(
   () => loadEntryTags(),
   { immediate: true }
 );
+
+const isImage = computed(() => props.entry.content_type === "image");
+
+const imageAssetUrl = computed(() => {
+  if (!isImage.value) return "";
+  return convertFileSrc(props.entry.content);
+});
 
 const categoryLabel = computed(() => {
   const key = `entry.categoryLabels.${props.entry.category}`;
