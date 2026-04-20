@@ -37,6 +37,7 @@ pub fn run() {
             commands::update_config,
             commands::get_autostart_enabled,
             commands::set_autostart_enabled,
+            commands::transform_content,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

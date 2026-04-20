@@ -48,6 +48,7 @@
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
         </svg>
       </button>
+      <TransformMenu :content="entry.content" :category="entry.category" />
       <button
         class="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
         @click.stop="$emit('delete', entry.id)"
@@ -67,6 +68,7 @@
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { Badge } from "@/components/ui/badge";
+import TransformMenu from "@/components/TransformMenu.vue";
 import type { ClipboardEntry } from "@/types";
 
 const { t } = useI18n();
