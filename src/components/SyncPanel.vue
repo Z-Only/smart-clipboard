@@ -84,8 +84,8 @@
                 <p class="mt-1 text-sm font-semibold">{{ discoveredDevices.length }}</p>
               </div>
               <div class="rounded-xl border border-border bg-background p-3">
-                <p class="text-xs text-muted-foreground">{{ $t('sync.panel.onlineDevices') }}</p>
-                <p class="mt-1 text-sm font-semibold">{{ onlinePairedCount }}</p>
+                <p class="text-xs text-muted-foreground">{{ $t('sync.panel.activeDevices') }}</p>
+                <p class="mt-1 text-sm font-semibold">{{ activePairedCount }}</p>
               </div>
             </div>
 
@@ -162,7 +162,7 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import DeviceCard from "@/components/DeviceCard.vue";
 import { useSyncStore } from "@/stores/syncStore";
-import type { SyncDevice } from "@/types";
+import type { SyncDevice, SyncStatus } from "@/types";
 
 const props = defineProps<{ isOpen: boolean }>();
 const emit = defineEmits<{ close: [] }>();
@@ -178,7 +178,7 @@ const {
   discoveredDevices,
   isSaving,
   error,
-  onlinePairedCount,
+  activePairedCount,
 } = storeToRefs(syncStore);
 
 const form = reactive({
@@ -187,7 +187,11 @@ const form = reactive({
   port: 8484,
 });
 
-const currentStatusText = computed(() => t(`sync.statusValues.${status.value}`));
+function getStatusText(value: SyncStatus) {
+  return t(`sync.statusValues.${value}`);
+}
+
+const currentStatusText = computed(() => getStatusText(status.value));
 
 watch(
   () => props.isOpen,

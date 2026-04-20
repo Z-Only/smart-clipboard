@@ -9,6 +9,23 @@ import type {
   UpdateSyncConfigPayload,
 } from "@/types";
 
+function normalizeSyncStatus(status: unknown): SyncStatus {
+  switch (status) {
+    case "idle":
+    case "discovering":
+    case "connecting":
+    case "connected":
+    case "online":
+    case "offline":
+    case "disabled":
+    case "pairing":
+    case "error":
+      return status;
+    default:
+      return "unknown";
+  }
+}
+
 function normalizeDevice(device: Partial<SyncDevice> | null | undefined, fallbackId = "unknown"): SyncDevice {
   return {
     id: String(device?.id ?? fallbackId),
@@ -17,7 +34,7 @@ function normalizeDevice(device: Partial<SyncDevice> | null | undefined, fallbac
     address: device?.address ?? null,
     ip: device?.ip ?? null,
     port: typeof device?.port === "number" ? device.port : null,
-    status: (device?.status as SyncStatus | undefined) ?? "unknown",
+    status: normalizeSyncStatus(device?.status),
     syncEnabled: Boolean(device?.syncEnabled ?? device?.enabled ?? true),
     enabled: Boolean(device?.enabled ?? device?.syncEnabled ?? true),
     lastSeenAt: device?.lastSeenAt ?? null,
@@ -37,7 +54,7 @@ function normalizeStatus(payload: unknown): SyncStatusResponse {
     enabled: Boolean(data.enabled),
     deviceName: String(data.deviceName ?? ""),
     port: typeof data.port === "number" ? data.port : 8484,
-    status: (data.status as SyncStatus | undefined) ?? "unknown",
+    status: normalizeSyncStatus(data.status),
     pairedDevices: normalizeDevices(data.pairedDevices),
     discoveredDevices: normalizeDevices(data.discoveredDevices),
   };
@@ -54,7 +71,7 @@ export const useSyncStore = defineStore("sync", () => {
   const isSaving = ref(false);
   const error = ref<string | null>(null);
 
-  const onlinePairedCount = computed(() => pairedDevices.value.filter((device) => device.status === "online").length);
+  const activePairedCount = computed(() => pairedDevices.value.filter((device) => ["online", "connected"].includes(device.status)).length);
 
   async function refreshStatus() {
     const result = normalizeStatus(await invoke("get_sync_status"));
@@ -62,12 +79,8 @@ export const useSyncStore = defineStore("sync", () => {
     deviceName.value = result.deviceName;
     port.value = result.port;
     status.value = result.status;
-    if (result.pairedDevices.length) {
-      pairedDevices.value = result.pairedDevices;
-    }
-    if (result.discoveredDevices.length) {
-      discoveredDevices.value = result.discoveredDevices;
-    }
+    pairedDevices.value = result.pairedDevices;
+    discoveredDevices.value = result.discoveredDevices;
   }
 
   async function loadConfig() {
@@ -159,7 +172,7 @@ export const useSyncStore = defineStore("sync", () => {
     isLoading,
     isSaving,
     error,
-    onlinePairedCount,
+    activePairedCount,
     refreshAll,
     saveConfig,
     pairDevice,

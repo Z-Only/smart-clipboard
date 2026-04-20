@@ -74,8 +74,17 @@ export const CATEGORIES: CategoryItem[] = [
   { key: "text", labelKey: "categories.text", icon: "📝" },
 ];
 
-
-export type SyncStatus = "idle" | "discovering" | "online" | "offline" | "pairing" | "error" | "unknown";
+export type SyncStatus =
+  | "idle"
+  | "discovering"
+  | "connecting"
+  | "connected"
+  | "online"
+  | "offline"
+  | "disabled"
+  | "pairing"
+  | "error"
+  | "unknown";
 
 export interface SyncDevice {
   id: string;

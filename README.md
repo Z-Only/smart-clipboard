@@ -17,11 +17,11 @@ This repository now includes a **Phase 3 LAN Sync MVP**. In this release, the pr
 
 ### Current MVP scope
 
-This is a **partial Phase 3 delivery**. It intentionally focuses on the product surface and persistence layer first. The following items are **not fully implemented yet** in this release:
+This is a **partial Phase 3 delivery**. The current release now includes the LAN transport skeleton, but the encrypted sync business flow is still intentionally incomplete. The following items are **not fully implemented yet** in this release:
 
-- Live WebSocket transport between devices
 - End-to-end encryption key exchange and payload encryption
-- Cross-device clipboard propagation
+- Actual clipboard payload delivery across devices
+- Mutual approval pairing flow and sync conflict handling
 
 This makes the release safe for incremental rollout while keeping the design direction intact.
 
@@ -29,6 +29,7 @@ This makes the release safe for incremental rollout while keeping the design dir
 
 - Real mDNS / DNS-SD service advertisement using `_smartclip._tcp.local.`
 - Real LAN device discovery in the Tauri sync backend
+- Phase 3 WebSocket transport skeleton with auto-connect, ping/pong heartbeats, reconnect backoff, and paired-device live connection states
 - Periodic online/offline state refresh via last-seen timestamps
 - Device deduplication by advertised `device_id`
 - Backend response shaping to stay compatible with the existing SyncPanel / DeviceCard UI

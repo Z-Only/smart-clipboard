@@ -101,7 +101,7 @@ pub fn run() {
             );
             app.manage(db.clone());
 
-            let sync_manager = Arc::new(SyncManager::new(db.clone(), config_manager.clone()));
+            let sync_manager = SyncManager::new(db.clone(), config_manager.clone());
             app.manage(sync_manager.clone());
 
             // Setup hotkey

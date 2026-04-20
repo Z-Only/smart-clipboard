@@ -33,3 +33,6 @@ base64 = "0.22"
 image = "0.25"
 
 mdns-sd = "0.11"
+
+tokio-tungstenite = "0.26"
+futures-util = "0.3"

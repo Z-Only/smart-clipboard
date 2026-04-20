@@ -145,7 +145,7 @@ export default {
       port: "Port",
       pairedDevices: "Paired devices",
       discoveredDevices: "Discovered devices",
-      onlineDevices: "Online devices",
+      activeDevices: "Active devices",
       status: "Status",
     },
     actions: {
@@ -159,8 +159,11 @@ export default {
     statusValues: {
       idle: "Idle",
       discovering: "Discovering",
+      connecting: "Connecting",
+      connected: "Connected",
       online: "Online",
       offline: "Offline",
+      disabled: "Disabled",
       pairing: "Pairing",
       error: "Error",
       unknown: "Unknown",

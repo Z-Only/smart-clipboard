@@ -80,11 +80,14 @@ const statusText = computed(() => t(`sync.statusValues.${props.device.status ?? 
 const statusClass = computed(() => {
   switch (props.device.status) {
     case "online":
+    case "connected":
       return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
-    case "offline":
-      return "bg-muted text-muted-foreground";
+    case "connecting":
     case "pairing":
       return "bg-amber-500/10 text-amber-600 dark:text-amber-400";
+    case "offline":
+    case "disabled":
+      return "bg-muted text-muted-foreground";
     case "error":
       return "bg-destructive/10 text-destructive";
     default:
@@ -94,7 +97,10 @@ const statusClass = computed(() => {
 
 const subtitle = computed(() => {
   if (props.mode === "paired") {
-    return props.device.syncEnabled ? t("sync.device.syncOn") : t("sync.device.syncOff");
+    if (!props.device.syncEnabled || props.device.status === "disabled") {
+      return t("sync.device.syncOff");
+    }
+    return t("sync.device.syncOn");
   }
   return t("sync.device.availableToPair");
 });

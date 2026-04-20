@@ -1,17 +1,25 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::time::Duration;
 
 use chrono::{Local, NaiveDateTime};
+use log::warn;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
 use crate::config::{AppConfig, ConfigManager};
 use crate::storage::{Database, DiscoveredDevice, PairedDevice, SyncStatus};
 
+pub mod client;
 pub mod mdns;
+pub mod protocol;
+pub mod server;
 
 const DISCOVERY_STALE_AFTER_SECS: i64 = 20;
 const DEFAULT_SERVICE_TYPE: &str = "_smartclip._tcp.local.";
+const HEARTBEAT_INTERVAL_SECS: u64 = 30;
+const HEARTBEAT_TIMEOUT_SECS: i64 = 65;
+const RECONNECT_BACKOFF_SECS: [u64; 6] = [1, 2, 4, 8, 16, 30];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -51,20 +59,58 @@ pub struct SyncRuntimeStatus {
     pub message: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceConnectionState {
+    pub status: String,
+    pub last_event_at: String,
+    pub last_error: Option<String>,
+    pub connection_role: Option<String>,
+    pub connection_attempts: u32,
+    pub reconnect_scheduled_in_secs: Option<u64>,
+    pub last_ping_at: Option<String>,
+    pub last_pong_at: Option<String>,
+}
+
+impl Default for DeviceConnectionState {
+    fn default() -> Self {
+        Self {
+            status: "offline".to_string(),
+            last_event_at: Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+            last_error: None,
+            connection_role: None,
+            connection_attempts: 0,
+            reconnect_scheduled_in_secs: None,
+            last_ping_at: None,
+            last_pong_at: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct LocalDeviceInfo {
+    pub device_id: String,
+    pub device_name: String,
+    pub port: u16,
+}
+
 pub struct SyncManager {
     db: Arc<Database>,
     config: Arc<ConfigManager>,
     discovery: Arc<mdns::MdnsDiscoveryService>,
     runtime_status: RwLock<SyncRuntimeStatus>,
+    connection_states: RwLock<HashMap<String, DeviceConnectionState>>,
+    local_device: LocalDeviceInfo,
 }
 
 impl SyncManager {
-    pub fn new(db: Arc<Database>, config: Arc<ConfigManager>) -> Self {
+    pub fn new(db: Arc<Database>, config: Arc<ConfigManager>) -> Arc<Self> {
         let sync_config = config.get().sync;
+        let device_id = mdns::load_or_create_device_id(config.as_ref());
         let discovery = mdns::MdnsDiscoveryService::start(mdns::MdnsConfig {
             service_type: DEFAULT_SERVICE_TYPE.to_string(),
             device_name: sync_config.device_name.clone(),
-            device_id: mdns::load_or_create_device_id(config.as_ref()),
+            device_id: device_id.clone(),
             port: sync_config.port,
             enabled: sync_config.enabled,
         });
@@ -88,16 +134,38 @@ impl SyncManager {
             },
         };
 
-        Self {
+        let manager = Arc::new(Self {
             db,
             config,
             discovery,
             runtime_status: RwLock::new(runtime_status),
-        }
+            connection_states: RwLock::new(HashMap::new()),
+            local_device: LocalDeviceInfo {
+                device_id,
+                device_name: sync_config.device_name.clone(),
+                port: sync_config.port,
+            },
+        });
+
+        manager.start_transport_tasks();
+        manager
     }
 
     pub fn get_config(&self) -> SyncConfig {
         self.config.get().sync
+    }
+
+    pub fn local_device_info(&self) -> LocalDeviceInfo {
+        let cfg = self.config.get().sync;
+        LocalDeviceInfo {
+            device_id: self.local_device.device_id.clone(),
+            device_name: cfg.device_name,
+            port: cfg.port,
+        }
+    }
+
+    pub fn is_sync_enabled(&self) -> bool {
+        self.config.get().sync.enabled
     }
 
     pub fn update_config(&self, sync_config: SyncConfig) -> Result<(), String> {
@@ -108,7 +176,7 @@ impl SyncManager {
         self.discovery.update_config(mdns::MdnsConfig {
             service_type: DEFAULT_SERVICE_TYPE.to_string(),
             device_name: sync_config.device_name.clone(),
-            device_id: mdns::load_or_create_device_id(self.config.as_ref()),
+            device_id: self.local_device.device_id.clone(),
             port: sync_config.port,
             enabled: sync_config.enabled,
         });
@@ -122,10 +190,21 @@ impl SyncManager {
         }
         .to_string();
         status.message = if sync_config.enabled {
-            "LAN Sync discovery is active. Nearby devices will appear automatically when advertised via mDNS.".to_string()
+            "LAN Sync transport is active. Paired devices will connect automatically when reachable.".to_string()
         } else {
             "LAN Sync is disabled. Enable it to advertise and discover nearby devices.".to_string()
         };
+        drop(status);
+
+        if !sync_config.enabled {
+            let mut states = self.connection_states.blocking_write();
+            for state in states.values_mut() {
+                state.status = "disabled".to_string();
+                state.reconnect_scheduled_in_secs = None;
+                state.connection_role = None;
+                state.last_event_at = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+            }
+        }
         Ok(())
     }
 
@@ -163,7 +242,8 @@ impl SyncManager {
     }
 
     pub fn get_paired_devices(&self) -> Result<Vec<PairedDevice>, String> {
-        let devices = self.db.get_paired_devices().map_err(|e| e.to_string())?;
+        let mut devices = self.db.get_paired_devices().map_err(|e| e.to_string())?;
+        self.apply_runtime_device_states(&mut devices);
         let discovered = self.discovery.current_devices();
         let now = Local::now().naive_local();
         let online_count = discovered
@@ -178,7 +258,7 @@ impl SyncManager {
     }
 
     pub fn get_status(&self) -> Result<SyncStatus, String> {
-        let paired = self.db.get_paired_devices().map_err(|e| e.to_string())?;
+        let paired = self.get_paired_devices()?;
         let discovered = self.discovery.current_devices();
         let now = Local::now().naive_local();
         let online_count = discovered
@@ -211,14 +291,14 @@ impl SyncManager {
         let device_name = device.name.clone();
         self.db
             .upsert_paired_device(&PairedDevice {
-                id: device.id,
+                id: device.id.clone(),
                 name: device.name.clone(),
                 device_name: device.device_name,
                 host: device.host.clone(),
                 address: device.address,
                 ip: device.ip,
                 port: device.port,
-                status: sync_device_status(Some(device.last_seen_at)).to_string(),
+                status: "connecting".to_string(),
                 public_key: None,
                 shared_secret: None,
                 last_seen_at: Some(device.last_seen_at),
@@ -230,14 +310,16 @@ impl SyncManager {
             })
             .map_err(|e| e.to_string())?;
 
+        self.mark_connecting(device_id, Some("client".to_string()));
+
         let mut status = self.runtime_status.blocking_write();
         status.last_sync_at = Some(Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
         status.message = format!(
-            "Paired with {}. Phase 3 discovery is live; transport and encryption layers are still pending.",
+            "Paired with {}. Transport handshake will be attempted automatically.",
             device_name
         );
         drop(status);
-        let paired = self.db.get_paired_devices().map_err(|e| e.to_string())?;
+        let paired = self.get_paired_devices()?;
         self.refresh_status(&paired, None);
         Ok(())
     }
@@ -246,7 +328,8 @@ impl SyncManager {
         self.db
             .unpair_device(device_id)
             .map_err(|e| e.to_string())?;
-        let paired = self.db.get_paired_devices().map_err(|e| e.to_string())?;
+        self.connection_states.blocking_write().remove(device_id);
+        let paired = self.get_paired_devices()?;
         self.refresh_status(&paired, None);
         Ok(())
     }
@@ -255,16 +338,262 @@ impl SyncManager {
         self.db
             .set_paired_device_active(device_id, enabled)
             .map_err(|e| e.to_string())?;
-        let paired = self.db.get_paired_devices().map_err(|e| e.to_string())?;
+        let mut states = self.connection_states.blocking_write();
+        let state = states.entry(device_id.to_string()).or_default();
+        state.status = if enabled { "offline" } else { "disabled" }.to_string();
+        state.reconnect_scheduled_in_secs = None;
+        state.last_event_at = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        drop(states);
+        let paired = self.get_paired_devices()?;
         self.refresh_status(&paired, None);
         Ok(())
+    }
+
+    pub fn accept_incoming_connection(&self, device_id: &str) -> bool {
+        self.db
+            .get_paired_devices()
+            .map(|devices| {
+                devices
+                    .into_iter()
+                    .any(|d| d.id == device_id && d.is_active)
+            })
+            .unwrap_or(false)
+    }
+
+    pub fn handle_hello(&self, device_id: &str, device_name: Option<String>, port: Option<u16>) {
+        if let Ok(Some(mut device)) = self.find_paired_device(device_id) {
+            if let Some(name) = device_name {
+                device.name = name.clone();
+                device.device_name = name;
+            }
+            if let Some(port) = port {
+                device.port = i64::from(port);
+            }
+            device.last_seen_at = Some(Local::now().naive_local());
+            let _ = self.db.upsert_paired_device(&device);
+        }
+    }
+
+    pub fn mark_connecting(&self, device_id: &str, role: Option<String>) {
+        let mut states = self.connection_states.blocking_write();
+        let state = states.entry(device_id.to_string()).or_default();
+        state.status = "connecting".to_string();
+        state.connection_role = role;
+        state.connection_attempts = state.connection_attempts.saturating_add(1);
+        state.reconnect_scheduled_in_secs = None;
+        state.last_error = None;
+        state.last_event_at = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+    }
+
+    pub fn mark_connected(&self, device_id: &str, role: Option<String>) {
+        let mut states = self.connection_states.blocking_write();
+        let state = states.entry(device_id.to_string()).or_default();
+        state.status = "connected".to_string();
+        state.connection_role = role;
+        state.reconnect_scheduled_in_secs = None;
+        state.last_error = None;
+        state.last_event_at = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        if state.last_pong_at.is_none() {
+            state.last_pong_at = Some(state.last_event_at.clone());
+        }
+    }
+
+    pub fn mark_ping(&self, device_id: &str) {
+        let mut states = self.connection_states.blocking_write();
+        let state = states.entry(device_id.to_string()).or_default();
+        state.last_ping_at = Some(Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
+    }
+
+    pub fn mark_pong(&self, device_id: &str) {
+        let mut states = self.connection_states.blocking_write();
+        let state = states.entry(device_id.to_string()).or_default();
+        state.status = "connected".to_string();
+        state.last_pong_at = Some(Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
+        state.last_event_at = state.last_pong_at.clone().unwrap_or_default();
+        state.reconnect_scheduled_in_secs = None;
+        state.last_error = None;
+    }
+
+    pub fn mark_disconnected(&self, device_id: &str, reason: Option<String>) {
+        let mut states = self.connection_states.blocking_write();
+        let state = states.entry(device_id.to_string()).or_default();
+        state.status = "offline".to_string();
+        state.last_error = reason;
+        state.reconnect_scheduled_in_secs = None;
+        state.last_event_at = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+    }
+
+    pub fn mark_reconnect_scheduled(
+        &self,
+        device_id: &str,
+        delay_secs: u64,
+        reason: Option<String>,
+    ) {
+        let mut states = self.connection_states.blocking_write();
+        let state = states.entry(device_id.to_string()).or_default();
+        state.status = "reconnecting".to_string();
+        state.reconnect_scheduled_in_secs = Some(delay_secs);
+        state.last_error = reason;
+        state.last_event_at = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+    }
+
+    pub fn mark_error(&self, device_id: &str, error: String) {
+        let mut states = self.connection_states.blocking_write();
+        let state = states.entry(device_id.to_string()).or_default();
+        state.status = "error".to_string();
+        state.last_error = Some(error);
+        state.last_event_at = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+    }
+
+    pub fn touch_last_sync(&self, message: impl Into<String>) {
+        let mut status = self.runtime_status.blocking_write();
+        status.last_sync_at = Some(Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
+        status.message = message.into();
+    }
+
+    fn start_transport_tasks(self: &Arc<Self>) {
+        server::spawn(self.clone());
+        client::spawn(self.clone());
+        self.spawn_connection_watchdog();
+    }
+
+    fn spawn_connection_watchdog(self: &Arc<Self>) {
+        let manager = self.clone();
+        tauri::async_runtime::spawn(async move {
+            let mut ticker = tokio::time::interval(Duration::from_secs(10));
+            loop {
+                ticker.tick().await;
+                manager.reconcile_connection_states();
+            }
+        });
+    }
+
+    fn reconcile_connection_states(&self) {
+        let discovered = self.discovery.current_devices();
+        let discovered_map: HashMap<String, DiscoveredDevice> = discovered
+            .into_iter()
+            .map(|device| (device.id.clone(), device))
+            .collect();
+
+        let paired = match self.db.get_paired_devices() {
+            Ok(devices) => devices,
+            Err(err) => {
+                warn!("Failed to load paired devices during reconcile: {err}");
+                return;
+            }
+        };
+
+        let now = Local::now().naive_local();
+        let mut states = self.connection_states.blocking_write();
+        for device in &paired {
+            let state = states.entry(device.id.clone()).or_default();
+            if !self.is_sync_enabled() || !device.is_active {
+                state.status = "disabled".to_string();
+                state.reconnect_scheduled_in_secs = None;
+                continue;
+            }
+
+            let discovered_online = discovered_map
+                .get(&device.id)
+                .map(|d| {
+                    now.signed_duration_since(d.last_seen_at).num_seconds()
+                        <= DISCOVERY_STALE_AFTER_SECS
+                })
+                .unwrap_or(false);
+
+            let last_pong_recent = state
+                .last_pong_at
+                .as_ref()
+                .and_then(|v| NaiveDateTime::parse_from_str(v, "%Y-%m-%d %H:%M:%S").ok())
+                .map(|dt| now.signed_duration_since(dt).num_seconds() <= HEARTBEAT_TIMEOUT_SECS)
+                .unwrap_or(false);
+
+            if state.status == "connected" && !last_pong_recent {
+                state.status = if discovered_online {
+                    "online".to_string()
+                } else {
+                    "offline".to_string()
+                };
+            } else if state.status == "offline" && discovered_online {
+                state.status = "online".to_string();
+            } else if state.status == "disabled"
+                && discovered_online
+                && self.is_sync_enabled()
+                && device.is_active
+            {
+                state.status = "online".to_string();
+            }
+        }
+    }
+
+    fn apply_runtime_device_states(&self, devices: &mut [PairedDevice]) {
+        let discovered = self.discovery.current_devices();
+        let discovered_map: HashMap<String, DiscoveredDevice> = discovered
+            .into_iter()
+            .map(|device| (device.id.clone(), device))
+            .collect();
+        let states = self.connection_states.blocking_read().clone();
+        let sync_enabled = self.is_sync_enabled();
+        let now = Local::now().naive_local();
+
+        for device in devices.iter_mut() {
+            if let Some(discovered) = discovered_map.get(&device.id) {
+                device.host = discovered.host.clone();
+                device.address = discovered.address.clone();
+                device.ip = discovered.ip.clone();
+                device.port = discovered.port;
+                device.last_seen_at = Some(discovered.last_seen_at);
+            }
+
+            let discovered_online = device
+                .last_seen_at
+                .map(|last_seen| {
+                    now.signed_duration_since(last_seen).num_seconds() <= DISCOVERY_STALE_AFTER_SECS
+                })
+                .unwrap_or(false);
+
+            device.status = if !sync_enabled || !device.is_active {
+                "disabled".to_string()
+            } else if let Some(state) = states.get(&device.id) {
+                let mut status = state.status.clone();
+                if status == "offline" && discovered_online {
+                    status = "online".to_string();
+                }
+                status
+            } else if discovered_online {
+                "online".to_string()
+            } else {
+                "offline".to_string()
+            };
+
+            if let Some(state) = states.get(&device.id) {
+                let mut extras = Vec::new();
+                if let Some(role) = &state.connection_role {
+                    extras.push(format!("role={role}"));
+                }
+                if state.connection_attempts > 0 {
+                    extras.push(format!("attempts={}", state.connection_attempts));
+                }
+                if let Some(delay) = state.reconnect_scheduled_in_secs {
+                    extras.push(format!("retry={}s", delay));
+                }
+                if let Some(last_error) = &state.last_error {
+                    extras.push(format!("error={last_error}"));
+                }
+                device.fingerprint = if extras.is_empty() {
+                    None
+                } else {
+                    Some(extras.join(" | "))
+                };
+            }
+        }
     }
 
     fn refresh_status(&self, paired: &[PairedDevice], online_count: Option<usize>) {
         let sync_enabled = self.config.get().sync.enabled;
         let discovered = self.discovery.current_devices();
         let now = Local::now().naive_local();
-        let online_count = online_count.unwrap_or_else(|| {
+        let mdns_online_count = online_count.unwrap_or_else(|| {
             discovered
                 .iter()
                 .filter(|device| {
@@ -273,27 +602,49 @@ impl SyncManager {
                 })
                 .count()
         });
+        let connected_count = paired
+            .iter()
+            .filter(|device| matches!(device.status.as_str(), "connected" | "online"))
+            .count();
 
         let mut status = self.runtime_status.blocking_write();
         status.enabled = sync_enabled;
         status.paired_count = paired.len();
-        status.online_count = online_count;
+        status.online_count = connected_count;
         status.state = if !sync_enabled {
             "disabled".to_string()
-        } else if online_count > 0 {
+        } else if paired.iter().any(|device| device.status == "connecting") {
+            "connecting".to_string()
+        } else if connected_count > 0 {
+            "connected".to_string()
+        } else if mdns_online_count > 0 {
             "ready".to_string()
         } else {
             "idle".to_string()
         };
         status.message = if !sync_enabled {
             "LAN Sync is disabled. Enable it to advertise and discover nearby devices.".to_string()
-        } else if online_count > 0 {
-            format!("Discovered {} nearby device(s) via mDNS.", online_count)
+        } else if connected_count > 0 {
+            format!(
+                "{} paired device(s) currently connected over WebSocket.",
+                connected_count
+            )
+        } else if paired.iter().any(|device| device.status == "reconnecting") {
+            "Waiting for transport reconnection to complete…".to_string()
+        } else if paired.iter().any(|device| device.status == "connecting") {
+            "Attempting WebSocket transport handshake with paired devices…".to_string()
         } else if paired.is_empty() {
             "Scanning for nearby Smart Clipboard devices via mDNS…".to_string()
         } else {
-            "Waiting for paired devices to appear online on the local network.".to_string()
+            "Waiting for paired devices to become reachable on the local network.".to_string()
         };
+    }
+
+    fn find_paired_device(&self, device_id: &str) -> Result<Option<PairedDevice>, String> {
+        self.db
+            .get_paired_devices()
+            .map_err(|e| e.to_string())
+            .map(|devices| devices.into_iter().find(|device| device.id == device_id))
     }
 }
 
@@ -313,4 +664,16 @@ pub fn sync_device_status(last_seen_at: Option<NaiveDateTime>) -> &'static str {
         }
         None => "unknown",
     }
+}
+
+pub fn heartbeat_interval() -> Duration {
+    Duration::from_secs(HEARTBEAT_INTERVAL_SECS)
+}
+
+pub fn reconnect_backoff(attempt: usize) -> Duration {
+    Duration::from_secs(RECONNECT_BACKOFF_SECS[attempt.min(RECONNECT_BACKOFF_SECS.len() - 1)])
+}
+
+pub fn now_string() -> String {
+    Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
 }

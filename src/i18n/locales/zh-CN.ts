@@ -145,7 +145,7 @@ export default {
       port: "端口",
       pairedDevices: "已配对设备",
       discoveredDevices: "已发现设备",
-      onlineDevices: "在线设备",
+      activeDevices: "活跃设备",
       status: "状态",
     },
     actions: {
@@ -159,8 +159,11 @@ export default {
     statusValues: {
       idle: "空闲",
       discovering: "发现中",
+      connecting: "连接中",
+      connected: "已连接",
       online: "在线",
       offline: "离线",
+      disabled: "已禁用",
       pairing: "配对中",
       error: "异常",
       unknown: "未知",

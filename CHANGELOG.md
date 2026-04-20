@@ -1,6 +1,8 @@
 # Changelog
 
 ## [0.6.0] - 2026-04-20
+- Added Phase 3 WebSocket transport skeleton with backend server/client handshake, protocol message framing, heartbeat ping/pong, reconnect backoff, and paired-device runtime connection states.
+- Updated SyncPanel device status rendering to show more realistic transport states such as connecting, connected, disabled, and reconnecting-related activity.
 
 ### Added
 - Added a Phase 3 LAN Sync MVP management experience with a dedicated Sync panel in the desktop UI.
