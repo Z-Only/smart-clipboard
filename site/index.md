@@ -64,5 +64,5 @@ features:
 | 开源免费   |     ✅ MIT      |     ✅     |       ⚠️       |
 
 <p style="text-align:center;margin-top:2rem">
-  <a href="/guide/getting-started" class="VPButton brand">立即开始使用 →</a>
+  <a href="./guide/getting-started" class="VPButton brand">立即开始使用 →</a>
 </p>

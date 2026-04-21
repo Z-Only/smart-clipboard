@@ -6,6 +6,7 @@ const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1] ?? 'smart-clipboar
 const base = isGithubActions ? `/${repoName}/` : '/';
 const siteUrl = 'https://z-only.github.io';
 const ogImage = `${siteUrl}/${repoName}/images/branding/logo-mark.svg`;
+const iconHref = `${base}images/branding/logo-mark.svg`;
 
 export default defineConfig({
   lang: 'zh-CN',
@@ -29,7 +30,7 @@ export default defineConfig({
       },
     ],
     ['meta', { property: 'og:image', content: ogImage }],
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/images/branding/logo-mark.svg' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: iconHref }],
   ],
 
   themeConfig: {

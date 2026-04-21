@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] - 2026-04-21
+
+### Fixed
+
+- **Docs site link integrity**: Fixed the homepage CTA so it resolves correctly on GitHub Pages with the repository base path instead of jumping to an invalid root-level URL
+- **Base-aware favicon path**: Updated the VitePress head icon configuration so deployed pages load the favicon from the correct GitHub Pages subpath
+
+### Changed
+
+- **Version bump to 2.1.0**: Promoted the docs-site hotfix and deployment-path cleanup as a minor release
+
 ## [2.0.0] - 2026-04-21
 
 ### Added
