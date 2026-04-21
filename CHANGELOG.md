@@ -1,5 +1,30 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
+
+## [2.0.0] - 2026-04-21
+
+### Added
+
+- **Phase 4 access security**: Added app lock with password enable/disable flow, startup lock gate, manual lock, tray/hotkey wakeup interception, auto-lock, and a lock screen managed primarily by Rust-side security logic
+- **Secure local password handling**: Added Argon2 password hashing with OS credential store persistence via keyring; passwords are never stored in plaintext in config or database
+- **Biometric/system-auth convenience unlock path**: Added a convenience unlock path on supported platforms with mandatory password fallback on failure
+- **Rust-side command guards**: Added access-control checks for clipboard, sync, WebDAV, and template commands so locked apps refuse sensitive command access
+- **Frontend sensitive-state clearing**: Added lock-triggered clearing of clipboard, sync, template, WebDAV, and statistics state with automatic reload after unlock
+- **Security regression tests**: Added password/hash tests, command-guard tests, and template-guard tests to validate lock/unlock behavior contracts
+
+### Changed
+
+- **Version bump to 2.0.0**: Promoted the project to a major release now that clipboard management, sync, templates, and Phase 4 access security are all implemented together
+- Updated README documentation in English and Chinese to reflect completed Phase 4 capabilities, current platform behavior, and future roadmap items
+
+### Notes
+
+- Native Touch ID / LocalAuthentication integration is still planned as a future improvement; current macOS behavior uses a convenience system-auth path rather than a full native biometric bridge
+- Full invoke-level black-box runtime tests are still planned; current tests cover the guard contracts and core security behavior in Rust
+
 ## [1.0.0] - 2026-04-21
 
 ### Added
@@ -15,12 +40,11 @@
 
 ### Notes
 
-- Phase 4 roadmap items (not yet implemented): SQLCipher database encryption, biometric/password app lock, pinyin fuzzy search, virtual scrolling for large lists, and batch operations (multi-select merge paste / bulk delete)
+- Phase 4 roadmap items (not yet implemented at the time): SQLCipher database encryption, biometric/password app lock, pinyin fuzzy search, virtual scrolling for large lists, and batch operations (multi-select merge paste / bulk delete)
 
 ## [0.6.0] - 2026-04-20
 - **Phase 3 UI polish & validation**: Added pairing confirmation dialog, SyncPanel loading/refreshing states, enhanced error banner with dismiss, status dot indicator, and i18n additions for sync UI.
 - Added Phase 3 end-to-end encryption and secure pairing for LAN sync, including X25519 key exchange, HKDF-SHA256 shared secret derivation, AES-256-GCM encrypted messaging, key fingerprint verification, and persistent key storage.
-- Added Phase 3 WebSocket transport skeleton with backend server/client handshake, protocol message framing, heartbeat ping/pong, reconnect backoff, and paired-device runtime connection states.
 - Updated SyncPanel device status rendering to show more realistic transport states such as connecting, connected, disabled, and reconnecting-related activity.
 - **Added Phase 3 clipboard sync business flow** — new clipboard entries are now automatically synced to paired devices over encrypted WebSocket connections.
 
@@ -54,12 +78,7 @@
 
 ### Changed
 - Updated the app version to 0.6.0 for the Phase 3 partial delivery.
-- Replaced demo discovered devices with real mDNS discovery results while keeping the existing Sync panel UI contract stable.
 - Phase 3 now ships a complete clipboard sync flow: LAN discovery → pairing → encrypted WebSocket transport → real-time clipboard entry synchronization with dedup and loop prevention.
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [0.5.0] - 2026-04-20
 

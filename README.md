@@ -2,71 +2,90 @@
 
 # Smart Clipboard Manager
 
-A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + **Vue 3** + **Rust**. It runs in the background, automatically captures and classifies clipboard content, and provides instant search and retrieval.
+A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + **Vue 3** + **Rust**. It runs in the background, automatically captures and classifies clipboard content, supports secure local protection, and provides fast search, retrieval, and sync workflows.
 
-## Phase 3 Progress — LAN Clipboard Sync
+## Release Status — Phase 4 Access Security Complete
 
-This repository now includes a **Phase 3 LAN Sync** implementation with **real-time clipboard synchronization** between paired devices. New clipboard entries are automatically encrypted and sent to all connected peers.
+This repository now includes the full **Phase 4 Access Security** package on top of clipboard history, smart enhancements, templates, LAN sync, and WebDAV cloud sync.
 
-### Sync Architecture
+### Phase 4 highlights
 
-```
-Device A                              Device B
-┌─────────────────┐                  ┌─────────────────┐
-│ ClipboardMonitor│                  │ ClipboardMonitor│
-│       ↓         │                  │       ↓         │
-│   DB Insert     │                  │   DB Insert     │
-│       ↓         │                  │       ↓         │
-│ broadcast_entry │                  │ broadcast_entry │
-│       ↓         │                  │       ↓         │
-│ SyncManager     │◄── WebSocket ──►│ SyncManager     │
-│  ├─ Encrypt     │   (AES-256-GCM) │  ├─ Decrypt     │
-│  ├─ Send        │                  │  ├─ Dedup       │
-│  └─ sync_log    │                  │  ├─ Store       │
-│                 │                  │  └─ sync_log    │
-└─────────────────┘                  └─────────────────┘
-```
-
-### What's included
-
-- **Real-time clipboard sync**: New text entries are automatically sent to paired devices
-- **Sync filtering**: Configurable rules for `auto_sync`, `sync_images`, `sync_sensitive`, and 1MB payload limit
-- **Loop prevention**: Entries received from other devices are never re-broadcast
-- **Deduplication**: Content hash + sync_log double-check prevents duplicate entries
-- **Source tracking**: Synced entries are tagged with `source_device` for origin tracking
-- **End-to-end encryption**: X25519 key exchange + AES-256-GCM per-message encryption
-- **mDNS discovery**: Automatic LAN device discovery via `_smartclip._tcp.local.`
-- **WebSocket transport**: Auto-connect, ping/pong heartbeats, reconnect backoff
-- **Sync UI**: Settings panel with device management, pairing, and per-device controls
-- **Pairing confirmation dialog**: Confirmation dialog before accepting pairing requests
-- **Loading & error states**: Enhanced SyncPanel UI with loading indicators, refresh button, and dismissible error banners
-
-### Not yet implemented
-
-- Image content sync (text-only for now; images skipped unless `sync_images` enabled)
-- Advanced conflict resolution (currently both sides keep their version)
+- **App lock**: Enable or disable a local app lock from Settings
+- **Password setup**: Create or update the unlock password
+- **Secure password storage**: Passwords are never stored in plaintext; Rust hashes them with Argon2 and stores only the hash in the OS credential store
+- **Startup unlock**: If app lock is enabled, the app starts in a locked state
+- **Manual lock**: Lock the app immediately from Settings
+- **Tray / hotkey interception**: Tray and global shortcut wakeups are blocked by Rust-side access checks when locked
+- **Auto-lock**: Re-lock after a configurable idle timeout
+- **Biometric convenience unlock**: When available, users can try a faster biometric/system-auth unlock path, with password fallback on failure
+- **Rust-side command guards**: Sensitive Tauri commands now refuse access while the app is locked
+- **Frontend sensitive-state clearing**: Clipboard, sync, template, WebDAV, and statistics state are cleared on lock and reloaded after unlock
 
 ## Features
 
-- **Clipboard History** -- Automatically captures all copied text with deduplication
-- **Smart Classification** -- Auto-categorizes content into URL, Email, Code, JSON, FilePath, Color, Phone, Address, and plain Text
-- **Full-Text Search** -- Millisecond-level search powered by SQLite FTS5
+- **Clipboard History** -- Automatically captures copied content with deduplication
+- **Smart Classification** -- Auto-categorizes content into URL, Email, Code, JSON, FilePath, Color, Phone, Address, Image, and plain Text
+- **Full-Text Search** -- Fast search powered by SQLite FTS5
 - **Category Filter** -- Browse clipboard history by content type
 - **Global Hotkey** -- `Cmd/Ctrl + Shift + V` to toggle the clipboard panel
-- **System Tray** -- Runs quietly in the background with a tray icon
+- **System Tray** -- Runs in the background with tray controls
 - **Favorites** -- Pin frequently used entries to prevent auto-cleanup
-- **Configurable** -- Max entries, retention period, excluded apps, monitor interval
+- **Configurable** -- Max entries, retention period, excluded apps, monitor interval, and sensitive-content expiry
 - **Auto-Start** -- Optionally launch on system login
-- **Appearance Modes** -- System / Light / Dark mode with automatic OS preference detection
-- **Theme Colors** -- 6 built-in color themes: Zinc, Blue, Green, Rose, Orange, Violet
+- **Appearance Modes** -- System / Light / Dark mode
+- **Theme Colors** -- 6 built-in color themes
 - **Multi-Language** -- English and Chinese UI support
-- **Sensitive Detection** -- Auto-detects passwords, API keys, tokens, JWTs, and connection strings with optional auto-expiry
-- **Content Transforms** -- 12 one-click text transformations (case, encoding, formatting)
-- **Tag Management** -- Custom tags for organizing entries with filtering support
+- **Sensitive Detection** -- Detects passwords, API keys, tokens, JWTs, and connection strings with optional auto-expiry
+- **Content Transforms** -- One-click case, encoding, and formatting transforms
+- **Tag Management** -- Custom tags for organizing entries
 - **Image Clipboard** -- Captures and displays clipboard images with PNG storage
 - **Usage Statistics** -- Dashboard with category breakdown, daily activity, and most-used entries
 - **Clipboard Templates** -- Reusable text snippets with `{{placeholder}}` syntax and fill-in dialog
-- **Lightweight** -- ~5MB binary, minimal CPU/memory usage thanks to Rust + native WebView
+- **LAN Sync** -- Encrypted peer-to-peer sync over mDNS + WebSocket
+- **WebDAV Cloud Sync** -- End-to-end encrypted cloud sync with device registry, polling, and rate limiting
+- **App Access Security** -- Password lock, auto-lock, guarded wakeups, and secure unlock flow
+- **Lightweight** -- Small binary with low CPU/memory usage thanks to Rust + native WebView
+
+## Security Model (Phase 4)
+
+### What is protected
+
+When app lock is enabled:
+
+- The main window starts locked
+- Tray and hotkey wakeups are intercepted before showing protected content
+- Sensitive Tauri commands refuse access while locked
+- Frontend cached sensitive state is cleared when the app locks
+- Biometric/system-auth unlock failures fall back to password unlock
+
+### Password storage
+
+- The password is **not** stored in plaintext
+- Rust hashes the password with **Argon2**
+- Only the password hash is stored, and it is saved in the **OS credential store** via keyring integration
+- App config stores only app-lock settings such as enabled state, timeout, and biometric preference
+
+### Current platform behavior
+
+- **macOS**: Password lock, auto-lock, tray/hotkey interception, and a system-auth convenience unlock path are available
+- **Windows / Linux**: Password lock, auto-lock, and tray/hotkey interception are available; biometric unlock currently falls back to password-only behavior
+
+## Sync Overview
+
+### LAN Sync
+
+- Real-time clipboard sync between paired devices
+- X25519 key exchange + AES-256-GCM encrypted transport
+- WebSocket heartbeats and reconnect backoff
+- Loop prevention and deduplication
+
+### WebDAV Cloud Sync
+
+- End-to-end encrypted clipboard sync across networks
+- Password-derived key via Argon2id
+- AES-256-GCM file encryption
+- ETag-based conflict handling
+- Device registry and configurable polling
 
 ## Screenshots
 
@@ -81,6 +100,8 @@ Device A                              Device B
 | Framework | Tauri 2 |
 | Database | SQLite with FTS5 (via rusqlite) |
 | Clipboard | arboard |
+| Local security | argon2 + keyring |
+| LAN discovery | mdns-sd |
 | i18n | vue-i18n |
 
 ## Getting Started
@@ -118,52 +139,58 @@ The built binary will be in `src-tauri/target/release/bundle/`.
 ## Usage
 
 1. Launch the app -- it starts minimized to the system tray
-2. Copy any text in any application
+2. Copy text or images in any application
 3. Press `Cmd+Shift+V` (macOS) or `Ctrl+Shift+V` (Windows/Linux) to open the clipboard panel
-4. Search, filter by category, or click an entry to paste it
-5. Star entries to keep them permanently
-6. Right-click the tray icon for quick access and settings
-7. Switch language in Settings (English / Chinese)
-8. Choose appearance mode (System / Light / Dark) and theme color in Settings
-9. Right-click an entry for text transforms (URL encode, Base64, JSON format, etc.)
-10. Tag entries with custom labels for easy organization
-11. Copy images -- they'll appear in the clipboard history too
-12. Click the bar chart icon to view usage statistics
-13. Click the document icon to manage and use clipboard templates
+4. Search, filter, tag, or click an entry to paste it
+5. Use templates for reusable snippets
+6. Open the sync panel to manage LAN or WebDAV sync
+7. Open Settings to configure app lock, auto-lock, and other preferences
+8. Unlock the app with password, or use biometric/system-auth convenience unlock when available
 
 ## Project Structure
 
-```
+```text
 smart-clipboard/
 ├── src/                          # Vue 3 frontend
 │   ├── components/               # UI components
 │   ├── composables/              # Vue composables
 │   ├── i18n/                     # Internationalization
-│   │   ├── locales/              # Language files (en, zh-CN)
-│   │   └── index.ts              # i18n configuration
 │   ├── stores/                   # Pinia state management
 │   └── types/                    # TypeScript types
 ├── src-tauri/                    # Rust backend
 │   └── src/
-│       ├── analyzer/             # Content classifier (regex rules)
-│       ├── clipboard/            # Clipboard monitor (arboard polling)
+│       ├── analyzer/             # Content classifier and sensitive detection
+│       ├── clipboard/            # Clipboard monitor
 │       ├── storage/              # SQLite + FTS5 database layer
-│       ├── commands.rs           # Tauri IPC commands
+│       ├── sync/                 # LAN sync + WebDAV cloud sync
+│       ├── templates/            # Clipboard template engine and commands
+│       ├── security.rs           # App lock, unlock, and access-control runtime
+│       ├── commands.rs           # Main Tauri IPC commands
 │       ├── config.rs             # Settings management
-│       ├── hotkey.rs             # Global shortcut
-│       ├── tray.rs               # System tray
+│       ├── hotkey.rs             # Global shortcut handling
+│       ├── tray.rs               # System tray integration
 │       └── lib.rs                # App entry point
 └── docs/                         # Design documents
 ```
 
 ## Roadmap
 
+### Completed
+
 - [x] **Phase 1 -- MVP**: Clipboard monitoring, storage, classification, search UI, hotkey, tray, settings
-- [x] **i18n**: Multi-language support (English, Chinese)
-- [x] **Theming**: Appearance mode switching (System/Light/Dark) and 6 color themes
-- [x] **Phase 2 -- Smart Enhancements**: Sensitive content detection, content transforms, tag management, image support, usage stats
-- [x] **Clipboard Templates**: Parameterized reusable text snippets with placeholder fill dialog
-- [ ] **Phase 3 -- Sync & Advanced**: LAN sync, E2E encrypted cloud sync, plugin system
+- [x] **Phase 2 -- Smart Enhancements**: Sensitive detection, content transforms, tags, images, usage stats
+- [x] **Templates**: Parameterized reusable clipboard snippets
+- [x] **Phase 3 -- Sync**: LAN sync, pairing, encrypted WebSocket transport, WebDAV cloud sync
+- [x] **Phase 4 -- Access Security**: App lock, secure password storage, startup unlock gate, tray/hotkey interception, auto-lock, and guarded commands
+
+### Planned / Future Improvements
+
+- [ ] **Native biometric integration**: Replace the current macOS convenience path with a fully native Touch ID / LocalAuthentication bridge and expand platform coverage where possible
+- [ ] **Deeper runtime integration tests**: Add full invoke-level black-box tests around locked/unlocked command behavior
+- [ ] **Database-at-rest encryption**: Optional encrypted local storage for clipboard data
+- [ ] **Advanced sync conflict handling**: Smarter merge / conflict-resolution behavior
+- [ ] **Plugin / extension system**: User-extensible automations and transformations
+- [ ] **More platform-specific hardening**: Better idle detection and richer OS-native unlock UX
 
 ## Contributing
 
@@ -178,12 +205,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License -- see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [Tauri](https://tauri.app/) -- Cross-platform app framework
-- [Vue.js](https://vuejs.org/) -- Frontend framework
-- [vue-i18n](https://vue-i18n.intlify.dev/) -- Internationalization for Vue.js
-- [shadcn-vue](https://www.shadcn-vue.com/) -- UI components
-- [arboard](https://github.com/1Password/arboard) -- Cross-platform clipboard library
-- [rusqlite](https://github.com/rusqlite/rusqlite) -- SQLite bindings for Rust
