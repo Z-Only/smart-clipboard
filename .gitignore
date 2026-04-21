@@ -5,6 +5,10 @@ src-tauri/target/
 node_modules/
 dist/
 
+# VitePress
+site/.vitepress/dist/
+site/.vitepress/cache/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -20,3 +24,6 @@ Thumbs.db
 
 # Coverage
 coverage
+
+# Raw screenshots (too large for git)
+docs-assets/screenshots/raw/

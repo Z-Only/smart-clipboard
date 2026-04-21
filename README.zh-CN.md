@@ -4,6 +4,9 @@
 
 一款基于 **Tauri 2** + **Vue 3** + **Rust** 构建的跨平台轻量级智能剪贴板管理工具。它在后台运行，自动捕获和分类剪贴板内容，并在本地保护、快速检索与跨设备同步之间提供平衡。
 
+- 官网 / 文档站：https://z-only.github.io/smart-clipboard/
+- 仓库地址：https://github.com/Z-Only/smart-clipboard
+
 ## 发布状态 — Phase 4 访问安全已完成
 
 当前仓库已经包含完整的 **Phase 4 访问安全** 实现包，并叠加了剪贴板历史、智能增强、模板、局域网同步和 WebDAV 云同步能力。
@@ -89,7 +92,7 @@
 
 ## 截图
 
-_即将推出_
+可在官网截图页查看最新界面预览：https://z-only.github.io/smart-clipboard/guide/screenshots
 
 ## 技术栈
 

@@ -4,6 +4,9 @@
 
 A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + **Vue 3** + **Rust**. It runs in the background, automatically captures and classifies clipboard content, supports secure local protection, and provides fast search, retrieval, and sync workflows.
 
+- Website / Docs: https://z-only.github.io/smart-clipboard/
+- Repository: https://github.com/Z-Only/smart-clipboard
+
 ## Release Status — Phase 4 Access Security Complete
 
 This repository now includes the full **Phase 4 Access Security** package on top of clipboard history, smart enhancements, templates, LAN sync, and WebDAV cloud sync.
@@ -89,7 +92,7 @@ When app lock is enabled:
 
 ## Screenshots
 
-_Coming soon_
+See the live screenshots and docs site: https://z-only.github.io/smart-clipboard/guide/screenshots
 
 ## Tech Stack
 

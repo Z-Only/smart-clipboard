@@ -1,0 +1,96 @@
+/* ── Smart Clipboard branding overrides ── */
+
+:root {
+  --sc-brand: #3b82f6;
+  --sc-brand-light: #60a5fa;
+  --sc-brand-dark: #2563eb;
+  --sc-surface: #111827;
+  --sc-surface-light: #1f2937;
+}
+
+/* Hero section */
+.VPHero .name {
+  background: linear-gradient(135deg, var(--sc-brand-light), var(--sc-brand-dark));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Brand link */
+.VPNavBarTitle .title {
+  font-weight: 700;
+  color: var(--sc-brand-light);
+}
+
+/* Accent for action buttons */
+.VPButton.brand {
+  background: linear-gradient(135deg, var(--sc-brand-light), var(--sc-brand-dark)) !important;
+  border-color: transparent !important;
+}
+
+/* Feature cards subtle hover */
+.VPFeature:hover {
+  border-color: var(--sc-brand) !important;
+  transition: border-color 0.25s ease;
+}
+
+/* Screenshot gallery container */
+.screenshot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 480px), 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.screenshot-grid figure {
+  margin: 0;
+  text-align: center;
+}
+
+.screenshot-grid img {
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.screenshot-grid img:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.screenshot-grid figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--vp-c-text-2);
+}
+
+/* Feature matrix table */
+.feature-matrix {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.feature-matrix table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.feature-matrix th,
+.feature-matrix td {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--vp-c-divider);
+  text-align: center;
+}
+
+.feature-matrix th {
+  background: var(--vp-c-bg-soft);
+  font-weight: 600;
+}
+
+.feature-matrix td:first-child {
+  text-align: left;
+  font-weight: 500;
+}
