@@ -3,6 +3,8 @@ import { cn } from '@/lib/utils';
 
 describe('cn', () => {
   it('merges class names and resolves Tailwind conflicts', () => {
-    expect(cn('px-2', 'px-4', 'text-sm', false && 'hidden')).toBe('px-4 text-sm');
+    const hiddenClass: string | undefined = undefined;
+
+    expect(cn('px-2', 'px-4', 'text-sm', hiddenClass)).toBe('px-4 text-sm');
   });
 });
