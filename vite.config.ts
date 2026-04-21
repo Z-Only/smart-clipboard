@@ -13,6 +13,11 @@ export default defineConfig(async () => ({
     },
   },
   clearScreen: false,
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: [],
+  },
   server: {
     port: 1420,
     strictPort: true,
