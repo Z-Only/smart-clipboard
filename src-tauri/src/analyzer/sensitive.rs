@@ -1,30 +1,23 @@
-use std::sync::LazyLock;
-
+use lazy_static::lazy_static;
 use regex::Regex;
 
-/// Compiled regex patterns for detecting sensitive information in clipboard content.
-static SENSITIVE_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
-    let patterns = [
-        // API Keys
-        r#"(?i)(api[_\-]?key|apikey)\s*[:=]\s*['"]?[A-Za-z0-9_\-]{16,}"#,
-        // AWS Access Key IDs
-        r#"AKIA[0-9A-Z]{16}"#,
-        // Tokens (bearer, auth tokens)
-        r#"(?i)(token|bearer|auth)\s*[:=]\s*['"]?[A-Za-z0-9_\-\.]{20,}"#,
-        // Private Keys (PEM format)
-        r#"-----BEGIN\s+(RSA|EC|DSA|OPENSSH)?\s*PRIVATE KEY-----"#,
-        // Generic secrets (password, credential, etc.)
-        r#"(?i)(password|passwd|secret|credential)\s*[:=]\s*['"]?[^\s'"]{4,}"#,
-        // JWT tokens
-        r#"eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_\-]+"#,
-        // Database connection strings
-        r#"(?i)(mysql|postgres|mongodb|redis)://[^\s]+"#,
-    ];
-    patterns
-        .iter()
-        .map(|p| Regex::new(p).expect("Invalid sensitive pattern regex"))
-        .collect()
-});
+lazy_static! {
+    static ref SENSITIVE_PATTERNS: Vec<Regex> = {
+        let patterns = [
+            r#"(?i)(api[_\-]?key|apikey)\s*[:=]\s*['"]?[A-Za-z0-9_\-]{16,}"#,
+            r#"AKIA[0-9A-Z]{16}"#,
+            r#"(?i)(token|bearer|auth)\s*[:=]\s*['"]?[A-Za-z0-9_\-\.]{20,}"#,
+            r#"-----BEGIN\s+(RSA|EC|DSA|OPENSSH)?\s*PRIVATE KEY-----"#,
+            r#"(?i)(password|passwd|secret|credential)\s*[:=]\s*['"]?[^\s'"]{4,}"#,
+            r#"eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_\-]+"#,
+            r#"(?i)(mysql|postgres|mongodb|redis)://[^\s]+"#,
+        ];
+        patterns
+            .iter()
+            .map(|p| Regex::new(p).expect("Invalid sensitive pattern regex"))
+            .collect()
+    };
+}
 
 /// Returns `true` if the content contains any sensitive information patterns
 /// such as API keys, tokens, passwords, private keys, or connection strings.

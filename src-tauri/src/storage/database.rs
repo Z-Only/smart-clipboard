@@ -299,7 +299,7 @@ impl Database {
             "SELECT id, content, content_type, category, hash, source_app, is_favorite, is_sensitive, use_count, created_at, updated_at, expires_at, source_device FROM clipboard_entries ORDER BY use_count DESC LIMIT 10",
         )?;
         let most_used: Vec<ClipboardEntry> = most_stmt
-            .query_map([], |row| row_to_entry(row))?
+            .query_map([], row_to_entry)?
             .filter_map(|r| r.ok())
             .collect();
 
@@ -576,7 +576,7 @@ impl Database {
              ORDER BY e.created_at DESC",
         )?;
         let entries = stmt
-            .query_map(params![tag_id], |row| row_to_entry(row))?
+            .query_map(params![tag_id], row_to_entry)?
             .filter_map(|r| r.ok())
             .collect();
         Ok(entries)
@@ -624,7 +624,7 @@ impl Database {
         let mut stmt = conn.prepare(
             "SELECT id, name, content, category, is_favorite, use_count, created_at, updated_at FROM templates WHERE id = ?1",
         )?;
-        stmt.query_row(params![id], |row| row_to_template(row))
+        stmt.query_row(params![id], row_to_template)
     }
 
     pub fn delete_template(&self, id: i64) -> Result<()> {
@@ -640,7 +640,7 @@ impl Database {
                 "SELECT id, name, content, category, is_favorite, use_count, created_at, updated_at FROM templates WHERE category = ?1 ORDER BY updated_at DESC",
             )?;
             let templates = stmt
-                .query_map(params![cat], |row| row_to_template(row))?
+                .query_map(params![cat], row_to_template)?
                 .filter_map(|r| r.ok())
                 .collect();
             Ok(templates)
@@ -649,7 +649,7 @@ impl Database {
                 "SELECT id, name, content, category, is_favorite, use_count, created_at, updated_at FROM templates ORDER BY updated_at DESC",
             )?;
             let templates = stmt
-                .query_map([], |row| row_to_template(row))?
+                .query_map([], row_to_template)?
                 .filter_map(|r| r.ok())
                 .collect();
             Ok(templates)
@@ -748,7 +748,7 @@ fn search_fts(conn: &Connection, keyword: &str, query: &SearchQuery) -> Result<S
     let entries: Vec<ClipboardEntry> = stmt
         .query_map(
             params![fts_query, like_pattern, query.limit, query.offset],
-            |row| row_to_entry(row),
+            row_to_entry,
         )?
         .filter_map(|r| r.ok())
         .collect();
@@ -784,7 +784,7 @@ fn get_entries_inner(conn: &Connection, query: &SearchQuery) -> Result<SearchRes
 
     let mut stmt = conn.prepare(&sql)?;
     let entries: Vec<ClipboardEntry> = stmt
-        .query_map(params![query.limit, query.offset], |row| row_to_entry(row))?
+        .query_map(params![query.limit, query.offset], row_to_entry)?
         .filter_map(|r| r.ok())
         .collect();
 

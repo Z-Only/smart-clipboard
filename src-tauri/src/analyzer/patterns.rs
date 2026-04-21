@@ -1,45 +1,30 @@
-use std::sync::LazyLock;
-
+use lazy_static::lazy_static;
 use regex::Regex;
 
-static URL_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"(?i)^https?://[^\s<>"']+$"#).unwrap());
-
-static EMAIL_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$").unwrap());
-
-static HEX_COLOR_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^#(?:[0-9a-fA-F]{3}){1,2}$").unwrap());
-
-static RGB_COLOR_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?i)^(?:rgb|hsl)a?\(\s*[\d.,\s%]+\)$").unwrap());
-
-static UNIX_PATH_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^(?:/|~/)(?:[a-zA-Z0-9._\-]+/)*[a-zA-Z0-9._\-]+/?$").unwrap());
-
-static WIN_PATH_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"^[A-Z]:\\(?:[^\s\\/:*?"<>|]+\\)*[^\s\\/:*?"<>|]+$"#).unwrap());
-
-static PHONE_CN_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^1[3-9]\d{9}$").unwrap());
-
-static PHONE_US_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}$").unwrap()
-});
-
-static PHONE_INTL_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\+\d{1,3}[-.\s]?\d{4,14}$").unwrap());
-
-static XML_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*<(\?xml|[a-zA-Z][\w\-]*)[\s>]").unwrap());
-
-static CODE_KEYWORDS_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r"(?m)(^|\s)(fn |function |def |class |import |from .+ import |#include|pub fn |pub struct |pub enum |const |let |var |SELECT |INSERT |UPDATE |DELETE |CREATE TABLE|impl )"
-    ).unwrap()
-});
-
-static CODE_SYMBOLS_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"[{};]\s*$|=>\s|->|&&|\|\||!=|==").unwrap());
+lazy_static! {
+    static ref URL_RE: Regex = Regex::new(r#"(?i)^https?://[^\s<>"']+$"#).unwrap();
+    static ref EMAIL_RE: Regex =
+        Regex::new(r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$").unwrap();
+    static ref HEX_COLOR_RE: Regex = Regex::new(r"^#(?:[0-9a-fA-F]{3}){1,2}$").unwrap();
+    static ref RGB_COLOR_RE: Regex =
+        Regex::new(r"(?i)^(?:rgb|hsl)a?\(\s*[\d.,\s%]+\)$").unwrap();
+    static ref UNIX_PATH_RE: Regex =
+        Regex::new(r"^(?:/|~/)(?:[a-zA-Z0-9._\-]+/)*[a-zA-Z0-9._\-]+/?$").unwrap();
+    static ref WIN_PATH_RE: Regex =
+        Regex::new(r#"^[A-Z]:\\(?:[^\s\\/:*?"<>|]+\\)*[^\s\\/:*?"<>|]+$"#).unwrap();
+    static ref PHONE_CN_RE: Regex = Regex::new(r"^1[3-9]\d{9}$").unwrap();
+    static ref PHONE_US_RE: Regex = Regex::new(
+        r"^(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}$",
+    )
+    .unwrap();
+    static ref PHONE_INTL_RE: Regex = Regex::new(r"^\+\d{1,3}[-.\s]?\d{4,14}$").unwrap();
+    static ref XML_RE: Regex = Regex::new(r"^\s*<(\?xml|[a-zA-Z][\w\-]*)[\s>]").unwrap();
+    static ref CODE_KEYWORDS_RE: Regex = Regex::new(
+        r"(?m)(^|\s)(fn |function |def |class |import |from .+ import |#include|pub fn |pub struct |pub enum |const |let |var |SELECT |INSERT |UPDATE |DELETE |CREATE TABLE|impl )",
+    )
+    .unwrap();
+    static ref CODE_SYMBOLS_RE: Regex = Regex::new(r"[{};]\s*$|=>\s|->|&&|\|\||!=|==").unwrap();
+}
 
 pub fn is_url(text: &str) -> bool {
     URL_RE.is_match(text)

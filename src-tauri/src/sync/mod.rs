@@ -680,12 +680,9 @@ impl SyncManager {
                 } else {
                     "offline".to_string()
                 };
-            } else if state.status == "offline" && discovered_online {
-                state.status = "online".to_string();
-            } else if state.status == "disabled"
-                && discovered_online
-                && self.is_sync_enabled()
-                && device.is_active
+            } else if discovered_online
+                && (state.status == "offline"
+                    || (state.status == "disabled" && self.is_sync_enabled() && device.is_active))
             {
                 state.status = "online".to_string();
             }

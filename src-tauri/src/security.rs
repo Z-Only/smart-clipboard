@@ -11,7 +11,7 @@ use crate::config::ConfigManager;
 const APP_LOCK_KEYRING_SERVICE: &str = "smart-clipboard";
 const APP_LOCK_KEYRING_ACCOUNT: &str = "app-lock-password-hash";
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct AppLockConfig {
     #[serde(default)]
     pub enabled: bool,
@@ -19,16 +19,6 @@ pub struct AppLockConfig {
     pub auto_lock_seconds: u64,
     #[serde(default)]
     pub biometric_enabled: bool,
-}
-
-impl Default for AppLockConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            auto_lock_seconds: 0,
-            biometric_enabled: false,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

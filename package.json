@@ -17,8 +17,8 @@
     "prepare": "husky",
     "lint": "pnpm run lint:web && pnpm run lint:rust",
     "lint:web": "eslint . --max-warnings=0",
-    "lint:rust": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets",
-    "check": "pnpm run format:check && pnpm run lint:web && pnpm run typecheck && pnpm run test:rust",
+    "lint:rust": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test:rust",
     "typecheck": "vue-tsc --noEmit",
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml"
   },

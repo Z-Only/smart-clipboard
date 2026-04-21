@@ -34,7 +34,7 @@ impl Category {
         }
     }
 
-    pub fn from_str(s: &str) -> Self {
+    pub fn from_label(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "url" => Category::Url,
             "email" => Category::Email,

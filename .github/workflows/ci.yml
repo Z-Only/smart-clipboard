@@ -55,7 +55,7 @@ jobs:
       - name: Rust tests
         run: pnpm run test:rust
 
-      - name: Rust clippy (non-blocking until backlog is fixed)
+      - name: Rust clippy
         run: pnpm run lint:rust
 
       - name: Build frontend
