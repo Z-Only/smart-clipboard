@@ -8,7 +8,47 @@ on:
   pull_request:
 
 jobs:
-  quality:
+  web-quality:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Restore Vitest cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.vitest
+          key: ${{ runner.os }}-vitest-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('vite.config.ts', 'tests/**/*.ts', 'src/**/*.ts', 'src/**/*.vue') }}
+          restore-keys: |
+            ${{ runner.os }}-vitest-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format check
+        run: pnpm run format:web:check
+
+      - name: ESLint
+        run: pnpm run lint:web
+
+      - name: Type check
+        run: pnpm run typecheck
+
+      - name: Frontend tests
+        run: pnpm run test:web
+
+  rust-quality:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -43,20 +83,35 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Format check
-        run: pnpm run format:check
+      - name: Rust format check
+        run: pnpm run format:rust:check
 
-      - name: ESLint
-        run: pnpm run lint:web
-
-      - name: Type check
-        run: pnpm run typecheck
+      - name: Rust clippy
+        run: pnpm run lint:rust
 
       - name: Rust tests
         run: pnpm run test:rust
 
-      - name: Rust clippy
-        run: pnpm run lint:rust
+  build-frontend:
+    runs-on: ubuntu-22.04
+    needs: [web-quality, rust-quality]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Build frontend
         run: pnpm run build
