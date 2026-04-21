@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.0] - 2026-04-21
+
+### Added
+
+- **WebDAV cloud sync**: End-to-end encrypted clipboard sync via WebDAV (compatible with Jianguoyun/Nextcloud/Synology), with Argon2id password-derived key, AES-256-GCM file encryption, ETag-based conflict resolution, token-bucket rate limiting, configurable poll interval, and device registry
+- **LAN sync (production-ready)**: Complete mDNS discovery + encrypted WebSocket transport with X25519 key exchange, real-time clipboard broadcast, dedup-by-hash, loop prevention, heartbeat monitoring, and automatic reconnection with exponential backoff
+- **Platform-aware source tracking**: Captures the frontmost application name for each clipboard entry (macOS via osascript, Linux via xdotool, Windows via PowerShell) and enforces excluded-apps filtering
+- **mDNS log noise suppression**: Custom log filter to silence harmless "Network is down" errors from mdns_sd on macOS awdl0 interface
+
+### Changed
+
+- Bumped version to **1.0.0** — all three development phases (MVP, Smart Enhancements, Sync & Templates) are now complete
+
+### Notes
+
+- Phase 4 roadmap items (not yet implemented): SQLCipher database encryption, biometric/password app lock, pinyin fuzzy search, virtual scrolling for large lists, and batch operations (multi-select merge paste / bulk delete)
+
 ## [0.6.0] - 2026-04-20
 - **Phase 3 UI polish & validation**: Added pairing confirmation dialog, SyncPanel loading/refreshing states, enhanced error banner with dismiss, status dot indicator, and i18n additions for sync UI.
 - Added Phase 3 end-to-end encryption and secure pairing for LAN sync, including X25519 key exchange, HKDF-SHA256 shared secret derivation, AES-256-GCM encrypted messaging, key fingerprint verification, and persistent key storage.
