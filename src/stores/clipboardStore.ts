@@ -117,21 +117,17 @@ export const useClipboardStore = defineStore("clipboard", () => {
       }
 
       const offset = currentPage.value * pageSize;
+      const isFavoriteFilter = selectedCategory.value === "favorites" ? true : null;
       const category = selectedCategory.value === "all" || selectedCategory.value === "favorites" || selectedCategory.value === "tags"
         ? null
         : selectedCategory.value;
 
       const result = searchKeyword.value.trim()
         ? await invoke<SearchResult>("search_entries", { keyword: searchKeyword.value.trim(), category, limit: pageSize, offset })
-        : await invoke<SearchResult>("get_entries", { limit: pageSize, offset, category });
+        : await invoke<SearchResult>("get_entries", { limit: pageSize, offset, category, isFavorite: isFavoriteFilter });
 
-      let nextEntries = result.entries;
-      if (selectedCategory.value === "favorites") {
-        nextEntries = nextEntries.filter((entry) => entry.is_favorite);
-        totalCount.value = reset ? nextEntries.length : entries.value.length + nextEntries.length + (hasMore.value ? 1 : 0);
-      } else {
-        totalCount.value = result.total_count;
-      }
+      const nextEntries = result.entries;
+      totalCount.value = result.total_count;
 
       setEntries(nextEntries, reset);
       if (reset) activeEntryId.value = nextEntries[0]?.id ?? null;
@@ -271,6 +267,27 @@ export const useClipboardStore = defineStore("clipboard", () => {
     }
   }
 
+  async function favoriteSelectedEntries(favorite: boolean) {
+    const ids = selectedEntries.value.map((entry) => entry.id);
+    if (ids.length === 0) return;
+    try {
+      await invoke<number>("set_favorite_state_for_entries", { ids, favorite });
+      const selectedIdSet = new Set(ids);
+      for (const entry of entries.value) {
+        if (selectedIdSet.has(entry.id)) {
+          entry.is_favorite = favorite;
+        }
+      }
+      if (selectedCategory.value === "favorites" && !favorite) {
+        entries.value = entries.value.filter((entry) => entry.is_favorite);
+        totalCount.value = entries.value.length;
+        reconcileSelection();
+      }
+    } catch (e) {
+      console.error("Failed to update favorite state for selected entries:", e);
+    }
+  }
+
   async function toggleFavorite(id: number) {
     try {
       const newState = await invoke<boolean>("toggle_favorite", { id });
@@ -355,6 +372,7 @@ export const useClipboardStore = defineStore("clipboard", () => {
     deleteEntry,
     deleteSelectedEntries,
     copySelectedEntries,
+    favoriteSelectedEntries,
     toggleFavorite,
     pasteEntry,
     onClipboardChanged,

@@ -10,6 +10,13 @@
       <div class="flex items-center gap-2">
         <button
           class="rounded-md border border-border px-2.5 py-1 text-xs transition-colors hover:bg-accent disabled:opacity-50"
+          :disabled="selectedCount === 0"
+          @click="store.favoriteSelectedEntries(true)"
+        >
+          {{ $t('list.batchFavorite') }}
+        </button>
+        <button
+          class="rounded-md border border-border px-2.5 py-1 text-xs transition-colors hover:bg-accent disabled:opacity-50"
           :disabled="!canBatchCopy"
           @click="store.copySelectedEntries"
         >
@@ -85,7 +92,7 @@
             :is-selected="activeEntryId === item.entry.id"
             :show-checkbox="isMultiSelectMode"
             :is-checked="selectedEntryIdSet.has(item.entry.id)"
-            @select="handleSelect"
+            @select="handleSelectPayload"
             @toggle-check="store.toggleEntrySelection"
             @toggle-favorite="store.toggleFavorite"
             @delete="store.deleteEntry"
@@ -179,6 +186,10 @@ function ensureActiveVisible() {
 
 function handleSelect(id: number, range = false) {
   store.handleEntryPrimaryAction(id, { range });
+}
+
+function handleSelectPayload(payload: { id: number; shiftKey: boolean }) {
+  handleSelect(payload.id, payload.shiftKey);
 }
 
 function toggleMultiSelect() {

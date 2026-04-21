@@ -42,6 +42,7 @@ pub fn run() {
             commands::delete_entry,
             commands::delete_entries,
             commands::copy_entries,
+            commands::set_favorite_state_for_entries,
             commands::toggle_favorite,
             commands::get_entry_count,
             commands::get_statistics,

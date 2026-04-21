@@ -60,6 +60,7 @@ export default {
     toggleSelection: "Toggle selection",
     selectedCount: "{count} selected",
     batchDelete: "Delete selected",
+    batchFavorite: "Favorite selected",
     batchCopy: "Merge copy",
     virtualizedHint: "Virtualized list enabled",
   },

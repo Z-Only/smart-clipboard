@@ -16,8 +16,9 @@ pub async fn get_entries(
     limit: i64,
     offset: i64,
     category: Option<String>,
+    is_favorite: Option<bool>,
 ) -> Result<SearchResult, String> {
-    db.get_entries(limit, offset, category.as_deref())
+    db.get_entries(limit, offset, category.as_deref(), is_favorite)
         .map_err(|e| e.to_string())
 }
 
@@ -78,6 +79,17 @@ pub async fn copy_entries(
         .map_err(|e| format!("Clipboard error: {}", e))?;
 
     Ok(merged)
+}
+
+
+#[tauri::command]
+pub async fn set_favorite_state_for_entries(
+    db: State<'_, Arc<Database>>,
+    ids: Vec<i64>,
+    favorite: bool,
+) -> Result<i64, String> {
+    db.set_favorite_state_for_entries(&ids, favorite)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

@@ -8,7 +8,7 @@
           ? 'bg-accent'
           : 'hover:bg-accent/50',
     ]"
-    @click="$emit('select', entry.id)"
+    @click="handleClick"
   >
     <button
       v-if="showCheckbox"
@@ -119,12 +119,16 @@ const props = defineProps<{
   isChecked?: boolean;
 }>();
 
-defineEmits<{
-  select: [id: number];
+const emit = defineEmits<{
+  select: [payload: { id: number; shiftKey: boolean }];
   "toggle-check": [id: number];
   toggleFavorite: [id: number];
   delete: [id: number];
 }>();
+
+function handleClick(event: MouseEvent) {
+  emit("select", { id: props.entry.id, shiftKey: event.shiftKey });
+}
 
 const entryTags = ref<Tag[]>([]);
 

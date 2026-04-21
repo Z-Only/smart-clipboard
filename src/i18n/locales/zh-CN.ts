@@ -60,6 +60,7 @@ export default {
     toggleSelection: "切换选择",
     selectedCount: "已选 {count} 项",
     batchDelete: "批量删除",
+    batchFavorite: "批量收藏",
     batchCopy: "合并复制",
     virtualizedHint: "已启用虚拟滚动",
   },

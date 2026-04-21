@@ -115,11 +115,12 @@ impl Database {
         limit: i64,
         offset: i64,
         category: Option<&str>,
+        is_favorite: Option<bool>,
     ) -> Result<SearchResult> {
         let query = SearchQuery {
             keyword: None,
             category: category.map(|s| s.to_string()),
-            is_favorite: None,
+            is_favorite,
             limit,
             offset,
         };
@@ -189,6 +190,20 @@ impl Database {
             |row| row.get(0),
         )?;
         Ok(new_state)
+    }
+
+    pub fn set_favorite_state_for_entries(&self, ids: &[i64], favorite: bool) -> Result<i64> {
+        let conn = self.conn.lock().unwrap();
+        let tx = conn.unchecked_transaction()?;
+        let mut updated = 0;
+        for id in ids {
+            updated += tx.execute(
+                "UPDATE clipboard_entries SET is_favorite = ?1 WHERE id = ?2",
+                params![if favorite { 1 } else { 0 }, id],
+            )? as i64;
+        }
+        tx.commit()?;
+        Ok(updated)
     }
 
     pub fn delete_expired(&self) -> Result<i64> {
@@ -965,7 +980,7 @@ mod tests {
             .unwrap();
         db.insert_entry(&make_entry("plain text", "text")).unwrap();
 
-        let result = db.get_entries(50, 0, Some("url")).unwrap();
+        let result = db.get_entries(50, 0, Some("url"), None).unwrap();
         assert_eq!(result.total_count, 1);
         assert_eq!(result.entries[0].category, "url");
     }
@@ -978,11 +993,11 @@ mod tests {
                 .unwrap();
         }
 
-        let page1 = db.get_entries(3, 0, None).unwrap();
+        let page1 = db.get_entries(3, 0, None, None).unwrap();
         assert_eq!(page1.entries.len(), 3);
         assert_eq!(page1.total_count, 10);
 
-        let page2 = db.get_entries(3, 3, None).unwrap();
+        let page2 = db.get_entries(3, 3, None, None).unwrap();
         assert_eq!(page2.entries.len(), 3);
         assert_ne!(page1.entries[0].id, page2.entries[0].id);
     }
