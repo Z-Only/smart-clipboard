@@ -2,12 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 
 const invoke = vi.fn();
+const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 vi.mock('@tauri-apps/api/core', () => ({ invoke }));
 
 describe('useSyncStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     invoke.mockReset();
+    errorSpy.mockClear();
   });
 
   it('normalizes refreshAll payloads', async () => {
@@ -59,5 +61,75 @@ describe('useSyncStore', () => {
 
     expect(store.isSaving).toBe(false);
     expect(store.error).toBe('save failed');
+  });
+
+  it('captures refreshAll errors without throwing', async () => {
+    invoke.mockRejectedValue(new Error('refresh failed'));
+
+    const { useSyncStore } = await import('@/stores/syncStore');
+    const store = useSyncStore();
+
+    await store.refreshAll();
+
+    expect(store.isLoading).toBe(false);
+    expect(store.error).toBe('refresh failed');
+    expect(errorSpy).toHaveBeenCalled();
+  });
+
+  it('clears sensitive state and transient errors', async () => {
+    const { useSyncStore } = await import('@/stores/syncStore');
+    const store = useSyncStore();
+
+    store.enabled = true;
+    store.deviceName = 'MacBook';
+    store.port = 9000;
+    store.status = 'connected';
+    store.pairedDevices = [
+      {
+        id: 'dev-1',
+        name: 'Phone',
+        deviceName: 'Phone',
+        address: null,
+        ip: null,
+        port: null,
+        status: 'online',
+        syncEnabled: true,
+        enabled: true,
+        lastSeenAt: null,
+        pairedAt: null,
+        fingerprint: null,
+      },
+    ];
+    store.discoveredDevices = [
+      {
+        id: 'dev-2',
+        name: 'iPad',
+        deviceName: 'iPad',
+        address: null,
+        ip: null,
+        port: null,
+        status: 'unknown',
+        syncEnabled: true,
+        enabled: true,
+        lastSeenAt: null,
+        pairedAt: null,
+        fingerprint: null,
+      },
+    ];
+    store.isLoading = true;
+    store.isSaving = true;
+    store.error = 'boom';
+
+    store.clearSensitiveState();
+
+    expect(store.enabled).toBe(false);
+    expect(store.deviceName).toBe('');
+    expect(store.port).toBe(8484);
+    expect(store.status).toBe('unknown');
+    expect(store.pairedDevices).toEqual([]);
+    expect(store.discoveredDevices).toEqual([]);
+    expect(store.isLoading).toBe(false);
+    expect(store.isSaving).toBe(false);
+    expect(store.error).toBeNull();
   });
 });

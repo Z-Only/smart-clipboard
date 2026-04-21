@@ -50,4 +50,26 @@ describe('useSecurityStore', () => {
     expect(store.loading).toBe(false);
     expect(store.error).toContain('bad password');
   });
+
+  it('stores error when setPassword fails', async () => {
+    invoke.mockRejectedValue(new Error('update failed'));
+
+    const { useSecurityStore } = await import('@/stores/securityStore');
+    const store = useSecurityStore();
+
+    await expect(store.setPassword(null, 'new-secret')).rejects.toThrow('update failed');
+    expect(store.loading).toBe(false);
+    expect(store.error).toContain('update failed');
+  });
+
+  it('locks immediately when lock succeeds', async () => {
+    invoke.mockResolvedValue({ ...defaultStatus, locked: true, unlock_reason: 'manual' });
+
+    const { useSecurityStore } = await import('@/stores/securityStore');
+    const store = useSecurityStore();
+
+    await store.lock();
+    expect(store.status.locked).toBe(true);
+    expect(store.status.unlock_reason).toBe('manual');
+  });
 });
