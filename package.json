@@ -7,7 +7,14 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "format": "pnpm run format:web && pnpm run format:rust",
+    "format:web": "prettier --write src src-tauri .github *.json *.md docs index.html vite.config.ts tsconfig*.json",
+    "format:rust": "cargo fmt --manifest-path src-tauri/Cargo.toml",
+    "format:check": "pnpm run format:web:check && pnpm run format:rust:check",
+    "format:web:check": "prettier --check src src-tauri .github *.json *.md docs index.html vite.config.ts tsconfig*.json",
+    "format:rust:check": "cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check",
+    "prepare": "husky"
   },
   "keywords": [],
   "author": "",
@@ -36,6 +43,13 @@
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.3",
     "vite": "^8.0.8",
-    "vue-tsc": "^3.2.7"
+    "vue-tsc": "^3.2.7",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.1",
+    "prettier": "^3.8.3"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,vue,json,md,yml,yaml,css,html}": "prettier --write",
+    "*.rs": "cargo fmt --manifest-path src-tauri/Cargo.toml --"
   }
 }
