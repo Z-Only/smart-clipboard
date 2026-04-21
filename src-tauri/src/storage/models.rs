@@ -55,7 +55,7 @@ pub struct ClipboardEntry {
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
     pub expires_at: Option<NaiveDateTime>,
-    pub source_device: Option<String>,  // device_id of origin, None = local
+    pub source_device: Option<String>, // device_id of origin, None = local
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

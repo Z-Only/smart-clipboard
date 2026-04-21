@@ -1,6 +1,6 @@
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
-use argon2::{Argon2, Params, Version, Algorithm};
+use argon2::{Algorithm, Argon2, Params, Version};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use hkdf::Hkdf;
 use rand::rngs::OsRng;
@@ -137,7 +137,7 @@ pub fn compute_fingerprint(shared_secret: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(shared_secret);
     let hash = hasher.finalize();
-    
+
     // Take first 8 bytes and format as hex with colon separators
     let bytes = &hash[..8];
     bytes
@@ -244,14 +244,17 @@ mod tests {
     fn test_compute_fingerprint_format() {
         let secret = vec![0xAB; 32];
         let fp = compute_fingerprint(&secret);
-        
+
         // Should be 8 groups of 2 hex chars separated by colons: XX:XX:XX:XX:XX:XX:XX:XX
         let parts: Vec<&str> = fp.split(':').collect();
         assert_eq!(parts.len(), 8, "Fingerprint should have 8 parts");
-        
+
         for part in &parts {
             assert_eq!(part.len(), 2, "Each part should be 2 characters");
-            assert!(part.chars().all(|c| c.is_ascii_hexdigit()), "Each part should be valid hex");
+            assert!(
+                part.chars().all(|c| c.is_ascii_hexdigit()),
+                "Each part should be valid hex"
+            );
         }
     }
 
@@ -268,13 +271,13 @@ mod tests {
     fn test_encrypt_decrypt_wrong_key_fails() {
         let kp1 = generate_keypair();
         let kp2 = generate_keypair();
-        
+
         let secret1 = derive_shared_secret(&kp1.private_key, &kp1.public_key).unwrap();
         let secret2 = derive_shared_secret(&kp2.private_key, &kp2.public_key).unwrap();
-        
+
         let plaintext = b"test message";
         let encrypted = encrypt(plaintext, &secret1).unwrap();
-        
+
         // Decrypting with wrong key should fail
         let result = decrypt(&encrypted, &secret2);
         assert!(result.is_err());
@@ -285,16 +288,16 @@ mod tests {
         let short_key = vec![1u8; 16];
         let long_key = vec![1u8; 64];
         let valid_key = vec![1u8; 32];
-        
+
         // Short private key should fail
         assert!(derive_shared_secret(&short_key, &valid_key).is_err());
-        
+
         // Long private key should fail
         assert!(derive_shared_secret(&long_key, &valid_key).is_err());
-        
+
         // Short public key should fail
         assert!(derive_shared_secret(&valid_key, &short_key).is_err());
-        
+
         // Long public key should fail
         assert!(derive_shared_secret(&valid_key, &long_key).is_err());
     }

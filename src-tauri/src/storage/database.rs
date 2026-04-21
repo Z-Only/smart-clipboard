@@ -9,6 +9,7 @@ use super::models::{
     CategoryCount, ClipboardEntry, DayCount, PairedDevice, SearchQuery, SearchResult, Statistics,
     Tag, Template,
 };
+use super::search_pinyin::{build_pinyin_fields, normalize_search_keyword};
 
 pub struct Database {
     conn: Mutex<Connection>,
@@ -32,9 +33,10 @@ impl Database {
 
     pub fn insert_entry(&self, entry: &ClipboardEntry) -> Result<i64> {
         let conn = self.conn.lock().unwrap();
+        let (pinyin_full, pinyin_initials) = build_pinyin_fields(&entry.content);
         conn.execute(
-            "INSERT INTO clipboard_entries (content, content_type, category, hash, source_app, is_favorite, is_sensitive, use_count, created_at, updated_at, expires_at, source_device)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            "INSERT INTO clipboard_entries (content, content_type, category, hash, source_app, is_favorite, is_sensitive, pinyin_full, pinyin_initials, use_count, created_at, updated_at, expires_at, source_device)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
             params![
                 entry.content,
                 entry.content_type,
@@ -43,6 +45,8 @@ impl Database {
                 entry.source_app,
                 entry.is_favorite as i32,
                 entry.is_sensitive as i32,
+                pinyin_full,
+                pinyin_initials,
                 entry.use_count,
                 entry.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 entry.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
@@ -382,9 +386,17 @@ impl Database {
         Ok(())
     }
 
-    pub fn insert_sync_log(&self, entry_hash: &str, device_id: &str, direction: &str) -> Result<()> {
+    pub fn insert_sync_log(
+        &self,
+        entry_hash: &str,
+        device_id: &str,
+        direction: &str,
+    ) -> Result<()> {
         let conn = self.conn.lock().unwrap();
-        let now = Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string();
+        let now = Local::now()
+            .naive_local()
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string();
         conn.execute(
             "INSERT INTO sync_log (entry_hash, device_id, direction, synced_at) VALUES (?1, ?2, ?3, ?4)",
             params![entry_hash, device_id, direction, now],
@@ -486,7 +498,7 @@ impl Database {
     pub fn get_entries_by_tag(&self, tag_id: i64) -> Result<Vec<ClipboardEntry>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT e.id, e.content, e.content_type, e.category, e.hash, e.source_app, e.is_favorite, e.is_sensitive, e.use_count, e.created_at, e.updated_at, e.expires_at
+            "SELECT e.id, e.content, e.content_type, e.category, e.hash, e.source_app, e.is_favorite, e.is_sensitive, e.use_count, e.created_at, e.updated_at, e.expires_at, e.source_device
              FROM clipboard_entries e
              INNER JOIN entry_tags et ON e.id = et.entry_id
              WHERE et.tag_id = ?1
@@ -608,25 +620,39 @@ impl Database {
 }
 
 fn search_fts(conn: &Connection, keyword: &str, query: &SearchQuery) -> Result<SearchResult> {
-    // Escape FTS5 special characters and build match expression
+    let normalized_keyword = normalize_search_keyword(keyword);
+
+    if normalized_keyword.is_empty() {
+        return get_entries_inner(conn, query);
+    }
+
     let fts_query = keyword
         .replace('"', "\"\"")
         .split_whitespace()
         .map(|w| format!("\"{}\"", w))
         .collect::<Vec<_>>()
         .join(" ");
+    let like_pattern = format!("%{}%", normalized_keyword.replace(' ', "%"));
 
     let mut sql = String::from(
-        "SELECT e.id, e.content, e.content_type, e.category, e.hash, e.source_app, e.is_favorite, e.is_sensitive, e.use_count, e.created_at, e.updated_at, e.expires_at
+        "SELECT e.id, e.content, e.content_type, e.category, e.hash, e.source_app, e.is_favorite, e.is_sensitive, e.use_count, e.created_at, e.updated_at, e.expires_at, e.source_device
          FROM clipboard_entries e
-         INNER JOIN clipboard_fts f ON e.id = f.rowid
-         WHERE clipboard_fts MATCH ?1",
+         WHERE (
+             e.id IN (SELECT rowid FROM clipboard_fts WHERE clipboard_fts MATCH ?1)
+             OR LOWER(e.content) LIKE ?2
+             OR e.pinyin_full LIKE ?2
+             OR e.pinyin_initials LIKE ?2
+         )",
     );
     let mut count_sql = String::from(
         "SELECT COUNT(*)
          FROM clipboard_entries e
-         INNER JOIN clipboard_fts f ON e.id = f.rowid
-         WHERE clipboard_fts MATCH ?1",
+         WHERE (
+             e.id IN (SELECT rowid FROM clipboard_fts WHERE clipboard_fts MATCH ?1)
+             OR LOWER(e.content) LIKE ?2
+             OR e.pinyin_full LIKE ?2
+             OR e.pinyin_initials LIKE ?2
+         )",
     );
 
     if let Some(ref cat) = query.category {
@@ -641,15 +667,18 @@ fn search_fts(conn: &Connection, keyword: &str, query: &SearchQuery) -> Result<S
         count_sql.push_str(&filter);
     }
 
-    sql.push_str(" ORDER BY e.created_at DESC LIMIT ?2 OFFSET ?3");
+    sql.push_str(" ORDER BY e.created_at DESC LIMIT ?3 OFFSET ?4");
 
-    let total_count: i64 = conn.query_row(&count_sql, params![fts_query], |row| row.get(0))?;
+    let total_count: i64 = conn.query_row(&count_sql, params![fts_query, like_pattern], |row| {
+        row.get(0)
+    })?;
 
     let mut stmt = conn.prepare(&sql)?;
     let entries: Vec<ClipboardEntry> = stmt
-        .query_map(params![fts_query, query.limit, query.offset], |row| {
-            row_to_entry(row)
-        })?
+        .query_map(
+            params![fts_query, like_pattern, query.limit, query.offset],
+            |row| row_to_entry(row),
+        )?
         .filter_map(|r| r.ok())
         .collect();
 
@@ -821,6 +850,60 @@ mod tests {
         assert_eq!(result.entries[0].content, "rust programming language");
     }
 
+    #[test]
+    fn test_search_matches_pinyin_full_and_initials() {
+        let db = Database::new(":memory:").unwrap();
+        db.insert_entry(&make_entry("智能剪贴板", "text")).unwrap();
+        db.insert_entry(&make_entry("普通内容", "text")).unwrap();
+
+        let full = db
+            .search(&SearchQuery {
+                keyword: Some("zhineng".to_string()),
+                category: None,
+                is_favorite: None,
+                limit: 50,
+                offset: 0,
+            })
+            .unwrap();
+        assert_eq!(full.total_count, 1, "full={:?}", full.entries);
+        assert_eq!(full.entries[0].content, "智能剪贴板");
+
+        let initials = db
+            .search(&SearchQuery {
+                keyword: Some("znjtb".to_string()),
+                category: None,
+                is_favorite: None,
+                limit: 50,
+                offset: 0,
+            })
+            .unwrap();
+        assert_eq!(initials.total_count, 1);
+        assert_eq!(initials.entries[0].content, "智能剪贴板");
+    }
+
+    #[test]
+    fn test_search_pinyin_preserves_category_and_pagination() {
+        let db = Database::new(":memory:").unwrap();
+        for i in 0..5 {
+            db.insert_entry(&make_entry(&format!("智能条目 {}", i), "text"))
+                .unwrap();
+        }
+        db.insert_entry(&make_entry("智能链接", "url")).unwrap();
+
+        let page = db
+            .search(&SearchQuery {
+                keyword: Some("zhineng".to_string()),
+                category: Some("text".to_string()),
+                is_favorite: None,
+                limit: 2,
+                offset: 1,
+            })
+            .unwrap();
+
+        assert_eq!(page.total_count, 5);
+        assert_eq!(page.entries.len(), 2);
+        assert!(page.entries.iter().all(|entry| entry.category == "text"));
+    }
     #[test]
     fn test_fts5_search_no_results() {
         let db = Database::new(":memory:").unwrap();

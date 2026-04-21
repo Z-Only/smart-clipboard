@@ -292,8 +292,8 @@ impl WebDavSyncManager {
             created_at: entry.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
         };
 
-        let json = serde_json::to_vec(&payload)
-            .map_err(|e| format!("Failed to serialize entry: {e}"))?;
+        let json =
+            serde_json::to_vec(&payload).map_err(|e| format!("Failed to serialize entry: {e}"))?;
 
         index_manager
             .upload_entry(&entry.hash, &json, &master_key)
@@ -307,9 +307,7 @@ impl WebDavSyncManager {
             created_at: entry.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
             size_bytes: json.len() as u64,
         };
-        index_manager
-            .append_entry(index_entry, &master_key)
-            .await?;
+        index_manager.append_entry(index_entry, &master_key).await?;
 
         if let Err(e) = index_manager
             .enforce_entry_limit(max_cloud_entries, &master_key)
@@ -375,12 +373,12 @@ impl WebDavSyncManager {
                 (0, vec![])
             };
 
-        let (rate_available, rate_capacity) =
-            if let Some(ref rl) = *self.rate_limiter.read().await {
-                (rl.available(), rl.capacity())
-            } else {
-                (0, 0)
-            };
+        let (rate_available, rate_capacity) = if let Some(ref rl) = *self.rate_limiter.read().await
+        {
+            (rl.available(), rl.capacity())
+        } else {
+            (0, 0)
+        };
 
         WebDavSyncStatus {
             status,
@@ -410,12 +408,7 @@ impl WebDavSyncManager {
             .await
             .clone()
             .ok_or("Not connected")?;
-        let salt = self
-            .salt
-            .read()
-            .await
-            .clone()
-            .ok_or("Not connected")?;
+        let salt = self.salt.read().await.clone().ok_or("Not connected")?;
         let index_manager = self
             .index_manager
             .read()
@@ -424,9 +417,7 @@ impl WebDavSyncManager {
             .ok_or("Not connected")?;
 
         let mut registry = index_manager.load_device_registry(&master_key).await?;
-        registry
-            .devices
-            .retain(|d| d.device_id != target_device_id);
+        registry.devices.retain(|d| d.device_id != target_device_id);
         index_manager
             .save_device_registry(&registry, &master_key, &salt)
             .await?;

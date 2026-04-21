@@ -14,6 +14,8 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
             source_app  TEXT,
             is_favorite INTEGER NOT NULL DEFAULT 0,
             is_sensitive INTEGER NOT NULL DEFAULT 0,
+            pinyin_full TEXT NOT NULL DEFAULT '',
+            pinyin_initials TEXT NOT NULL DEFAULT '',
             use_count   INTEGER NOT NULL DEFAULT 1,
             created_at  DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
             updated_at  DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
@@ -122,7 +124,8 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
 
     let paired_columns: Vec<String> = {
         let mut stmt = conn.prepare("PRAGMA table_info(paired_devices)")?;
-        let columns = stmt.query_map([], |row| row.get::<_, String>(1))?
+        let columns = stmt
+            .query_map([], |row| row.get::<_, String>(1))?
             .filter_map(|r| r.ok())
             .collect();
         columns
@@ -135,26 +138,68 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         conn.execute_batch("ALTER TABLE paired_devices ADD COLUMN local_public_key BLOB;")?;
     }
 
-    if !paired_columns
-        .iter()
-        .any(|column| column == "fingerprint")
-    {
+    if !paired_columns.iter().any(|column| column == "fingerprint") {
         conn.execute_batch("ALTER TABLE paired_devices ADD COLUMN fingerprint TEXT;")?;
     }
 
     // Add source_device column for sync origin tracking
     let entry_columns: Vec<String> = {
         let mut stmt = conn.prepare("PRAGMA table_info(clipboard_entries)")?;
-        let columns = stmt.query_map([], |row| row.get::<_, String>(1))?
+        let columns = stmt
+            .query_map([], |row| row.get::<_, String>(1))?
             .filter_map(|r| r.ok())
             .collect();
         columns
     };
 
     if !entry_columns.iter().any(|c| c == "source_device") {
+        conn.execute_batch("ALTER TABLE clipboard_entries ADD COLUMN source_device TEXT;")?;
+    }
+
+    if !entry_columns.iter().any(|c| c == "pinyin_full") {
         conn.execute_batch(
-            "ALTER TABLE clipboard_entries ADD COLUMN source_device TEXT;"
+            "ALTER TABLE clipboard_entries ADD COLUMN pinyin_full TEXT NOT NULL DEFAULT '';",
         )?;
+    }
+
+    if !entry_columns.iter().any(|c| c == "pinyin_initials") {
+        conn.execute_batch(
+            "ALTER TABLE clipboard_entries ADD COLUMN pinyin_initials TEXT NOT NULL DEFAULT '';",
+        )?;
+    }
+
+    conn.execute_batch(
+        "CREATE INDEX IF NOT EXISTS idx_entries_pinyin_full ON clipboard_entries(pinyin_full);",
+    )?;
+    conn.execute_batch(
+        "CREATE INDEX IF NOT EXISTS idx_entries_pinyin_initials ON clipboard_entries(pinyin_initials);"
+    )?;
+
+    {
+        use crate::storage::search_pinyin::build_pinyin_fields;
+
+        let mut stmt = conn.prepare(
+            "SELECT id, content FROM clipboard_entries WHERE pinyin_full = '' AND pinyin_initials = ''",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+        })?;
+
+        let pending: Vec<(i64, String, String)> = rows
+            .filter_map(|r| r.ok())
+            .map(|(id, content)| {
+                let (full, initials) = build_pinyin_fields(&content);
+                (id, full, initials)
+            })
+            .collect();
+        drop(stmt);
+
+        for (id, full, initials) in pending {
+            conn.execute(
+                "UPDATE clipboard_entries SET pinyin_full = ?1, pinyin_initials = ?2 WHERE id = ?3",
+                [full, initials, id.to_string()],
+            )?;
+        }
     }
 
     // Template management table
@@ -177,4 +222,38 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
     )?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn migration_backfills_pinyin_columns() {
+        let conn = Connection::open_in_memory().unwrap();
+        run_migrations(&conn).unwrap();
+
+        conn.execute_batch(
+            "
+            INSERT INTO clipboard_entries (
+                content, content_type, category, hash, created_at, updated_at, pinyin_full, pinyin_initials
+            ) VALUES (
+                '智能剪贴板', 'text', 'text', 'legacy-hash', datetime('now', 'localtime'), datetime('now', 'localtime'), '', ''
+            );
+            "
+        ).unwrap();
+
+        run_migrations(&conn).unwrap();
+
+        let (full, initials): (String, String) = conn
+            .query_row(
+                "SELECT pinyin_full, pinyin_initials FROM clipboard_entries WHERE hash = 'legacy-hash'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+
+        assert_eq!(full, "zhinengjiantieban");
+        assert_eq!(initials, "znjtb");
+    }
 }

@@ -1,6 +1,7 @@
 pub mod database;
 pub mod migrations;
 pub mod models;
+pub mod search_pinyin;
 
 pub use database::Database;
 pub use models::{

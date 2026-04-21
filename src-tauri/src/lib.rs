@@ -1,9 +1,9 @@
 pub mod analyzer;
 pub mod clipboard;
-pub mod platform;
 pub mod commands;
 pub mod config;
 pub mod hotkey;
+pub mod platform;
 pub mod storage;
 pub mod sync;
 pub mod templates;
@@ -90,8 +90,9 @@ pub fn run() {
                     .level_for("mdns_sd::service_daemon", log::LevelFilter::Warn)
                     .filter(|metadata| {
                         // Also filter via the callback for additional safety
-                        if metadata.target().starts_with("mdns_sd") 
-                            && metadata.level() == log::Level::Error {
+                        if metadata.target().starts_with("mdns_sd")
+                            && metadata.level() == log::Level::Error
+                        {
                             return false;
                         }
                         true

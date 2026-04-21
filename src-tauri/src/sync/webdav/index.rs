@@ -72,20 +72,13 @@ impl IndexManager {
     }
 
     fn entry_path(&self, hash: &str) -> String {
-        let prefix = if hash.len() >= 12 {
-            &hash[..12]
-        } else {
-            hash
-        };
+        let prefix = if hash.len() >= 12 { &hash[..12] } else { hash };
         format!("{}/entries/{}.enc", self.remote_path, prefix)
     }
 
     // --- Device Registry ---
 
-    pub async fn load_device_registry(
-        &self,
-        master_key: &[u8],
-    ) -> Result<DeviceRegistry, String> {
+    pub async fn load_device_registry(&self, master_key: &[u8]) -> Result<DeviceRegistry, String> {
         let (encrypted, _etag) = self.client.get(&self.devices_path()).await?;
         let (plaintext, _salt) = crypto::decrypt_file(&encrypted, master_key)?;
         serde_json::from_slice(&plaintext)
@@ -139,7 +132,11 @@ impl IndexManager {
     ) -> Result<(), String> {
         let mut registry = self.load_device_registry(master_key).await?;
 
-        if let Some(existing) = registry.devices.iter_mut().find(|d| d.device_id == device_id) {
+        if let Some(existing) = registry
+            .devices
+            .iter_mut()
+            .find(|d| d.device_id == device_id)
+        {
             existing.device_name = device_name.to_string();
             existing.public_key = crypto::encode_key_material(public_key);
             existing.last_sync_at = Some(Utc::now().to_rfc3339());
@@ -212,11 +209,7 @@ impl IndexManager {
         }
     }
 
-    pub async fn append_entry(
-        &self,
-        entry: IndexEntry,
-        master_key: &[u8],
-    ) -> Result<(), String> {
+    pub async fn append_entry(&self, entry: IndexEntry, master_key: &[u8]) -> Result<(), String> {
         for attempt in 0..MAX_ETAG_RETRIES {
             let (mut index, etag) = self.load_index(master_key).await?;
 
@@ -228,9 +221,7 @@ impl IndexManager {
             index.updated_at = Utc::now().to_rfc3339();
             index.updated_by = self.device_id.clone();
 
-            let saved = self
-                .save_index(&index, master_key, etag.as_deref())
-                .await?;
+            let saved = self.save_index(&index, master_key, etag.as_deref()).await?;
             if saved {
                 return Ok(());
             }
@@ -265,8 +256,7 @@ impl IndexManager {
 
         index.updated_at = Utc::now().to_rfc3339();
         index.updated_by = self.device_id.clone();
-        self.save_index(&index, master_key, etag.as_deref())
-            .await?;
+        self.save_index(&index, master_key, etag.as_deref()).await?;
 
         info!("Cleaned up {} old entries from cloud", remove_count);
         Ok(remove_count)
@@ -299,11 +289,7 @@ impl IndexManager {
         self.client.put(&self.entry_path(hash), &encrypted).await
     }
 
-    pub async fn download_entry(
-        &self,
-        hash: &str,
-        master_key: &[u8],
-    ) -> Result<Vec<u8>, String> {
+    pub async fn download_entry(&self, hash: &str, master_key: &[u8]) -> Result<Vec<u8>, String> {
         let (encrypted, _etag) = self.client.get(&self.entry_path(hash)).await?;
         let (plaintext, _salt) = crypto::decrypt_file(&encrypted, master_key)?;
         Ok(plaintext)

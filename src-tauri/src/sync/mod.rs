@@ -249,7 +249,10 @@ impl SyncManager {
             return;
         }
         let payload = self.entry_to_sync_payload(entry);
-        log::info!("Broadcasting clipboard entry {} to paired devices", payload.hash);
+        log::info!(
+            "Broadcasting clipboard entry {} to paired devices",
+            payload.hash
+        );
         let _ = self.outgoing_tx.send(payload);
     }
 
@@ -279,8 +282,9 @@ impl SyncManager {
         }
 
         // 3. Parse created_at
-        let created_at = chrono::NaiveDateTime::parse_from_str(&payload.created_at, "%Y-%m-%d %H:%M:%S")
-            .unwrap_or_else(|_| chrono::Local::now().naive_local());
+        let created_at =
+            chrono::NaiveDateTime::parse_from_str(&payload.created_at, "%Y-%m-%d %H:%M:%S")
+                .unwrap_or_else(|_| chrono::Local::now().naive_local());
         let now = chrono::Local::now().naive_local();
 
         // 4. Build ClipboardEntry
@@ -306,8 +310,15 @@ impl SyncManager {
                 let mut stored = entry;
                 stored.id = Some(id);
                 let _ = self.db.insert_sync_log(hash, sender_device_id, "received");
-                self.touch_last_sync(format!("Received clipboard entry from {}", sender_device_id));
-                log::info!("Stored synced entry {} from device {}", hash, sender_device_id);
+                self.touch_last_sync(format!(
+                    "Received clipboard entry from {}",
+                    sender_device_id
+                ));
+                log::info!(
+                    "Stored synced entry {} from device {}",
+                    hash,
+                    sender_device_id
+                );
                 Ok(Some(stored))
             }
             Err(e) => {
@@ -826,9 +837,15 @@ impl SyncManager {
                 device_name: remote_device_name
                     .clone()
                     .unwrap_or_else(|| remote_device_id.to_string()),
-                host: remote_host.clone().unwrap_or_else(|| "127.0.0.1".to_string()),
-                address: remote_host.clone().unwrap_or_else(|| "127.0.0.1".to_string()),
-                ip: remote_host.clone().unwrap_or_else(|| "127.0.0.1".to_string()),
+                host: remote_host
+                    .clone()
+                    .unwrap_or_else(|| "127.0.0.1".to_string()),
+                address: remote_host
+                    .clone()
+                    .unwrap_or_else(|| "127.0.0.1".to_string()),
+                ip: remote_host
+                    .clone()
+                    .unwrap_or_else(|| "127.0.0.1".to_string()),
                 port: i64::from(remote_port.unwrap_or(23456)),
                 status: "connecting".to_string(),
                 public_key: None,
@@ -856,7 +873,9 @@ impl SyncManager {
         device.public_key = Some(remote_public_key);
         device.local_public_key = Some(self.local_device.public_key.clone());
         device.shared_secret = Some(shared_secret);
-        device.fingerprint = Some(crypto::compute_fingerprint(device.shared_secret.as_ref().unwrap()));
+        device.fingerprint = Some(crypto::compute_fingerprint(
+            device.shared_secret.as_ref().unwrap(),
+        ));
         device.last_seen_at = Some(Local::now().naive_local());
         self.db
             .upsert_paired_device(&device)

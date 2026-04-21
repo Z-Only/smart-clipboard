@@ -97,7 +97,12 @@ impl WebDavClient {
         Ok(())
     }
 
-    pub async fn put_with_etag(&self, path: &str, data: &[u8], etag: &str) -> Result<PutResult, String> {
+    pub async fn put_with_etag(
+        &self,
+        path: &str,
+        data: &[u8],
+        etag: &str,
+    ) -> Result<PutResult, String> {
         self.rate_limiter.acquire(1).await;
         let response = self
             .http
@@ -124,7 +129,10 @@ impl WebDavClient {
         self.rate_limiter.acquire(1).await;
         let response = self
             .http
-            .request(reqwest::Method::from_bytes(b"MKCOL").unwrap(), self.url(path))
+            .request(
+                reqwest::Method::from_bytes(b"MKCOL").unwrap(),
+                self.url(path),
+            )
             .basic_auth(&self.username, Some(&self.password))
             .send()
             .await
@@ -197,7 +205,9 @@ impl WebDavClient {
             info!("WebDAV connection test successful");
             return Ok(());
         }
-        Err(format!("WebDAV server returned unexpected status: {status}"))
+        Err(format!(
+            "WebDAV server returned unexpected status: {status}"
+        ))
     }
 
     pub async fn ensure_directory_structure(&self, remote_path: &str) -> Result<(), String> {
