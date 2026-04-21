@@ -48,6 +48,7 @@ export const useClipboardStore = defineStore("clipboard", () => {
   const selectedEntryIds = ref<number[]>([]);
   const selectionAnchorId = ref<number | null>(null);
   const pendingLoadMore = ref(false);
+  const measuredItemHeights = ref<Record<string, number>>({});
 
   const hasMore = computed(() => entries.value.length < totalCount.value);
   const selectedEntryIdSet = computed(() => new Set(selectedEntryIds.value));
@@ -75,6 +76,20 @@ export const useClipboardStore = defineStore("clipboard", () => {
 
   const entryIndexMap = computed(() => new Map(entries.value.map((entry, index) => [entry.id, index])));
 
+  function getVirtualItemHeight(key: string, fallback: number) {
+    return measuredItemHeights.value[key] ?? fallback;
+  }
+
+  function setVirtualItemHeight(key: string, height: number) {
+    if (!Number.isFinite(height) || height <= 0) return;
+    if (measuredItemHeights.value[key] === height) return;
+    measuredItemHeights.value = { ...measuredItemHeights.value, [key]: height };
+  }
+
+  function clearVirtualItemHeights() {
+    measuredItemHeights.value = {};
+  }
+
   function reconcileSelection() {
     const idSet = new Set(entries.value.map((entry) => entry.id));
     selectedEntryIds.value = selectedEntryIds.value.filter((id) => idSet.has(id));
@@ -99,6 +114,7 @@ export const useClipboardStore = defineStore("clipboard", () => {
     currentPage.value = 0;
     pendingLoadMore.value = false;
     entries.value = [];
+    clearVirtualItemHeights();
     activeEntryId.value = null;
     selectionAnchorId.value = null;
     clearSelection();
@@ -334,6 +350,16 @@ export const useClipboardStore = defineStore("clipboard", () => {
     reconcileSelection();
   }
 
+  async function applyTagsToSelectedEntries(tagIds: number[]) {
+    const ids = selectedEntries.value.map((entry) => entry.id);
+    if (ids.length === 0) return;
+    try {
+      await invoke("set_tags_for_entries", { ids, tagIds });
+    } catch (e) {
+      console.error("Failed to set tags for selected entries:", e);
+    }
+  }
+
   async function fetchAllTags() {
     try {
       allTags.value = await invoke<Tag[]>("get_all_tags");
@@ -370,6 +396,7 @@ export const useClipboardStore = defineStore("clipboard", () => {
     canBatchCopy,
     groupedEntryItems,
     selectionAnchorId,
+    measuredItemHeights,
     fetchEntries,
     loadMore,
     setCategory,
@@ -377,6 +404,9 @@ export const useClipboardStore = defineStore("clipboard", () => {
     setActiveEntry,
     enterMultiSelectMode,
     exitMultiSelectMode,
+    getVirtualItemHeight,
+    setVirtualItemHeight,
+    clearVirtualItemHeights,
     clearSelection,
     invertLoadedSelection,
     selectAllLoadedEntries,
@@ -387,6 +417,7 @@ export const useClipboardStore = defineStore("clipboard", () => {
     deleteSelectedEntries,
     copySelectedEntries,
     favoriteSelectedEntries,
+    applyTagsToSelectedEntries,
     toggleFavorite,
     pasteEntry,
     onClipboardChanged,

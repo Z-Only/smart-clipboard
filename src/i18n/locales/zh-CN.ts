@@ -63,6 +63,7 @@ export default {
     batchFavorite: "批量收藏",
     batchUnfavorite: "取消收藏",
     batchCopy: "合并复制",
+    batchTag: "批量打标签",
     virtualizedHint: "已启用虚拟滚动",
     selectAllLoaded: "全选",
     invertSelection: "反选",
@@ -123,6 +124,10 @@ export default {
     noTags: "暂无标签",
     deleteTag: "删除标签",
     filterByTag: "按标签筛选",
+    batchTitle: "批量标签",
+    batchHint: "为已选的 {count} 项设置标签",
+    applyBatch: "应用标签",
+    createAction: "创建",
   },
   templates: {
     title: "模板",

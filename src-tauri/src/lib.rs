@@ -58,6 +58,7 @@ pub fn run() {
             commands::add_tag_to_entry,
             commands::remove_tag_from_entry,
             commands::get_entry_tags,
+            commands::set_tags_for_entries,
             commands::get_entries_by_tag,
             commands::get_sync_status,
             commands::get_sync_config,

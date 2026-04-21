@@ -63,6 +63,7 @@ export default {
     batchFavorite: "Favorite selected",
     batchUnfavorite: "Unfavorite selected",
     batchCopy: "Merge copy",
+    batchTag: "Tag selected",
     virtualizedHint: "Virtualized list enabled",
     selectAllLoaded: "Select all",
     invertSelection: "Invert",
@@ -123,6 +124,10 @@ export default {
     noTags: "No tags yet",
     deleteTag: "Delete tag",
     filterByTag: "Filter by tag",
+    batchTitle: "Batch tags",
+    batchHint: "Apply tags to {count} selected items",
+    applyBatch: "Apply tags",
+    createAction: "Create",
   },
   templates: {
     title: "Templates",

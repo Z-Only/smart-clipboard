@@ -1,5 +1,11 @@
 <template>
   <div class="flex h-full min-h-0 flex-col">
+    <BatchTagDialog
+      :is-open="showBatchTagDialog"
+      :count="selectedCount"
+      @close="showBatchTagDialog = false"
+      @apply="handleApplyBatchTags"
+    />
     <div
       v-if="isMultiSelectMode"
       class="flex items-center justify-between gap-3 border-b border-border px-3 py-2 text-sm"
@@ -8,6 +14,13 @@
         <span class="font-medium">{{ $t('list.selectedCount', { count: selectedCount }) }}</span>
       </div>
       <div class="flex items-center gap-2">
+        <button
+          class="rounded-md border border-border px-2.5 py-1 text-xs transition-colors hover:bg-accent disabled:opacity-50"
+          :disabled="selectedCount === 0"
+          @click="showBatchTagDialog = true"
+        >
+          {{ $t('list.batchTag') }}
+        </button>
         <button
           class="rounded-md border border-border px-2.5 py-1 text-xs transition-colors hover:bg-accent disabled:opacity-50"
           :disabled="selectedCount === 0"
@@ -107,12 +120,13 @@
         >
           <div
             v-if="item.type === 'group'"
+            :ref="(el) => measureVirtualItem(item.key, el)"
             class="px-3 py-1.5"
           >
             <span class="text-xs font-medium text-muted-foreground">{{ item.group.label }}</span>
           </div>
-          <EntryCard
-            v-else
+          <div v-else :ref="(el) => measureVirtualItem(item.key, el)">
+            <EntryCard
             :entry="item.entry"
             :is-selected="activeEntryId === item.entry.id"
             :show-checkbox="isMultiSelectMode"
@@ -122,6 +136,7 @@
             @toggle-favorite="store.toggleFavorite"
             @delete="store.deleteEntry"
           />
+          </div>
         </div>
       </div>
       <div v-if="hasMore" ref="sentinelRef" class="h-6" />
@@ -136,6 +151,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import EntryCard from "./EntryCard.vue";
+import BatchTagDialog from "./BatchTagDialog.vue";
 import { useClipboardStore } from "@/stores/clipboardStore";
 import type { ClipboardListItem } from "@/types";
 
@@ -152,6 +168,8 @@ const {
   groupedEntryItems,
 } = storeToRefs(store);
 
+const showBatchTagDialog = ref(false);
+
 const viewportRef = ref<HTMLElement | null>(null);
 const sentinelRef = ref<HTMLElement | null>(null);
 const scrollTop = ref(0);
@@ -165,7 +183,8 @@ const OVERSCAN = 8;
 const layoutItems = computed(() => {
   let offset = 0;
   return groupedEntryItems.value.map((item) => {
-    const height = item.type === "group" ? GROUP_HEIGHT : ENTRY_HEIGHT;
+    const fallback = item.type === "group" ? GROUP_HEIGHT : ENTRY_HEIGHT;
+    const height = store.getVirtualItemHeight(item.key, fallback);
     const laidOut = { ...item, height, offset };
     offset += height;
     return laidOut;
@@ -220,6 +239,17 @@ function handleSelectPayload(payload: { id: number; shiftKey: boolean }) {
 function toggleMultiSelect() {
   if (isMultiSelectMode.value) store.exitMultiSelectMode();
   else store.enterMultiSelectMode(activeEntryId.value ?? entries.value[0]?.id);
+}
+
+function measureVirtualItem(key: string, el: Element | { $el?: Element | null } | null) {
+  const target = el instanceof HTMLElement ? el : (el as { $el?: Element | null } | null)?.$el;
+  if (!(target instanceof HTMLElement)) return;
+  store.setVirtualItemHeight(key, Math.ceil(target.getBoundingClientRect().height));
+}
+
+async function handleApplyBatchTags(tagIds: number[]) {
+  await store.applyTagsToSelectedEntries(tagIds);
+  showBatchTagDialog.value = false;
 }
 
 function handleScroll() {

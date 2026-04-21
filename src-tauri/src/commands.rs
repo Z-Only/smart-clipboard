@@ -214,6 +214,17 @@ pub async fn remove_tag_from_entry(
         .map_err(|e| e.to_string())
 }
 
+
+#[tauri::command]
+pub async fn set_tags_for_entries(
+    db: State<'_, Arc<Database>>,
+    ids: Vec<i64>,
+    tag_ids: Vec<i64>,
+) -> Result<(), String> {
+    db.set_tags_for_entries(&ids, &tag_ids)
+        .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub async fn get_entry_tags(
     db: State<'_, Arc<Database>>,
