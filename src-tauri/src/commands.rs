@@ -27,13 +27,14 @@ pub async fn search_entries(
     db: State<'_, Arc<Database>>,
     keyword: String,
     category: Option<String>,
+    is_favorite: Option<bool>,
     limit: i64,
     offset: i64,
 ) -> Result<SearchResult, String> {
     let query = SearchQuery {
         keyword: Some(keyword),
         category,
-        is_favorite: None,
+        is_favorite,
         limit,
         offset,
     };

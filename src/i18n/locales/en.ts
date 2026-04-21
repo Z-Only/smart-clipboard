@@ -61,8 +61,12 @@ export default {
     selectedCount: "{count} selected",
     batchDelete: "Delete selected",
     batchFavorite: "Favorite selected",
+    batchUnfavorite: "Unfavorite selected",
     batchCopy: "Merge copy",
     virtualizedHint: "Virtualized list enabled",
+    selectAllLoaded: "Select all",
+    invertSelection: "Invert",
+    clearSelection: "Clear",
   },
   settings: {
     title: "Settings",

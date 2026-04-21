@@ -123,7 +123,7 @@ export const useClipboardStore = defineStore("clipboard", () => {
         : selectedCategory.value;
 
       const result = searchKeyword.value.trim()
-        ? await invoke<SearchResult>("search_entries", { keyword: searchKeyword.value.trim(), category, limit: pageSize, offset })
+        ? await invoke<SearchResult>("search_entries", { keyword: searchKeyword.value.trim(), category, isFavorite: isFavoriteFilter, limit: pageSize, offset })
         : await invoke<SearchResult>("get_entries", { limit: pageSize, offset, category, isFavorite: isFavoriteFilter });
 
       const nextEntries = result.entries;
@@ -179,6 +179,19 @@ export const useClipboardStore = defineStore("clipboard", () => {
 
   function clearSelection() {
     selectedEntryIds.value = [];
+  }
+
+  function invertLoadedSelection() {
+    const current = new Set(selectedEntryIds.value);
+    selectedEntryIds.value = entries.value
+      .map((entry) => entry.id)
+      .filter((id) => !current.has(id));
+    if (selectedEntryIds.value.length > 0) {
+      isMultiSelectMode.value = true;
+      selectionAnchorId.value = selectionAnchorId.value ?? selectedEntryIds.value[0] ?? null;
+    } else {
+      selectionAnchorId.value = null;
+    }
   }
 
   function selectAllLoadedEntries() {
@@ -365,6 +378,7 @@ export const useClipboardStore = defineStore("clipboard", () => {
     enterMultiSelectMode,
     exitMultiSelectMode,
     clearSelection,
+    invertLoadedSelection,
     selectAllLoadedEntries,
     selectRangeTo,
     toggleEntrySelection,

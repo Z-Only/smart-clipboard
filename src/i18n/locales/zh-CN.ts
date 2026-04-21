@@ -61,8 +61,12 @@ export default {
     selectedCount: "已选 {count} 项",
     batchDelete: "批量删除",
     batchFavorite: "批量收藏",
+    batchUnfavorite: "取消收藏",
     batchCopy: "合并复制",
     virtualizedHint: "已启用虚拟滚动",
+    selectAllLoaded: "全选",
+    invertSelection: "反选",
+    clearSelection: "清空选择",
   },
   settings: {
     title: "设置",

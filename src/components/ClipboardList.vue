@@ -17,6 +17,13 @@
         </button>
         <button
           class="rounded-md border border-border px-2.5 py-1 text-xs transition-colors hover:bg-accent disabled:opacity-50"
+          :disabled="selectedCount === 0"
+          @click="store.favoriteSelectedEntries(false)"
+        >
+          {{ $t('list.batchUnfavorite') }}
+        </button>
+        <button
+          class="rounded-md border border-border px-2.5 py-1 text-xs transition-colors hover:bg-accent disabled:opacity-50"
           :disabled="!canBatchCopy"
           @click="store.copySelectedEntries"
         >
@@ -28,6 +35,24 @@
           @click="store.deleteSelectedEntries"
         >
           {{ $t('list.batchDelete') }}
+        </button>
+        <button
+          class="rounded-md border border-border px-2.5 py-1 text-xs transition-colors hover:bg-accent"
+          @click="store.selectAllLoadedEntries"
+        >
+          {{ $t('list.selectAllLoaded') }}
+        </button>
+        <button
+          class="rounded-md border border-border px-2.5 py-1 text-xs transition-colors hover:bg-accent"
+          @click="store.invertLoadedSelection"
+        >
+          {{ $t('list.invertSelection') }}
+        </button>
+        <button
+          class="rounded-md border border-border px-2.5 py-1 text-xs transition-colors hover:bg-accent"
+          @click="store.clearSelection"
+        >
+          {{ $t('list.clearSelection') }}
         </button>
         <button
           class="rounded-md border border-border px-2.5 py-1 text-xs transition-colors hover:bg-accent"
