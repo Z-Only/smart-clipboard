@@ -127,6 +127,52 @@ pnpm install
 pnpm tauri dev
 ```
 
+### Quality checks
+
+```bash
+# Format all supported files
+pnpm run format
+
+# Verify formatting only
+pnpm run format:check
+
+# Run web + Rust lint
+pnpm run lint
+
+# Run TypeScript checks
+pnpm run typecheck
+
+# Run frontend unit tests
+pnpm run test:web
+
+# Run frontend unit tests with coverage
+pnpm run test:web:coverage
+
+# Run Rust tests
+pnpm run test:rust
+
+# Run the full local quality gate
+pnpm run check
+```
+
+### Git hooks and commit rules
+
+This repository includes local Husky hooks:
+
+- `pre-commit`: formats staged files
+- `commit-msg`: validates commit messages with commitlint
+- `pre-push`: runs the main quality checks
+
+Commit messages should follow a conventional style such as:
+
+- `feat: add xxx`
+- `fix: resolve xxx`
+- `test: add xxx`
+- `ci: improve xxx`
+- `chore: update xxx`
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the contributor workflow.
+
 ### Build
 
 ```bash
