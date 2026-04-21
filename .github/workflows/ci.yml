@@ -45,8 +45,15 @@ jobs:
       - name: Type check
         run: pnpm run typecheck
 
-      - name: Frontend tests
-        run: pnpm run test:web
+      - name: Frontend tests with coverage
+        run: pnpm run test:web:coverage
+
+      - name: Upload frontend coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: coverage
+          if-no-files-found: error
 
       - name: Commit message lint
         if: github.event_name == 'pull_request'

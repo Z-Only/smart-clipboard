@@ -17,6 +17,13 @@ export default defineConfig(async () => ({
     environment: 'jsdom',
     globals: true,
     setupFiles: [],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.{ts,vue}'],
+      exclude: ['src/main.ts', 'src/vite-env.d.ts', 'src/types/**'],
+    },
   },
   server: {
     port: 1420,

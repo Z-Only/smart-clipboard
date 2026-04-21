@@ -23,7 +23,8 @@
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
     "test:web": "vitest run",
     "test:web:watch": "vitest",
-    "lint:commit": "commitlint --from HEAD~1 --to HEAD"
+    "lint:commit": "commitlint --from HEAD~1 --to HEAD",
+    "test:web:coverage": "vitest run --coverage"
   },
   "keywords": [],
   "author": "",
@@ -52,6 +53,7 @@
     "@tailwindcss/vite": "^4.2.2",
     "@tauri-apps/cli": "^2.10.1",
     "@vitejs/plugin-vue": "^6.0.6",
+    "@vitest/coverage-v8": "^4.1.4",
     "@vue/test-utils": "^2.4.6",
     "eslint": "^10.2.1",
     "eslint-plugin-vue": "^10.8.0",
