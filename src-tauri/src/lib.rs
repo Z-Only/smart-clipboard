@@ -1,5 +1,6 @@
 pub mod analyzer;
 pub mod clipboard;
+pub mod platform;
 pub mod commands;
 pub mod config;
 pub mod hotkey;
@@ -80,12 +81,23 @@ pub fn run() {
             commands::webdav_remove_device,
         ])
         .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
+            {
+                // Build the log plugin with a custom filter that suppresses
+                // noisy mdns_sd errors on macOS awdl0 interface.
+                // "Network is down (os error 50)" is expected and harmless.
+                let log_builder = tauri_plugin_log::Builder::default()
+                    .level(log::LevelFilter::Info)
+                    .level_for("mdns_sd::service_daemon", log::LevelFilter::Warn)
+                    .filter(|metadata| {
+                        // Also filter via the callback for additional safety
+                        if metadata.target().starts_with("mdns_sd") 
+                            && metadata.level() == log::Level::Error {
+                            return false;
+                        }
+                        true
+                    });
+
+                app.handle().plugin(log_builder.build())?;
             }
 
             // Determine app data directory
@@ -166,6 +178,21 @@ pub fn run() {
 
             tauri::async_runtime::spawn(async move {
                 while let Some(change) = rx.recv().await {
+                    // Capture frontmost application as source_app
+                    let source_app = platform::get_frontmost_app();
+
+                    // Check if the source app is in the excluded list
+                    let excluded_apps = config_for_rx.get().excluded_apps;
+                    if let Some(ref app) = source_app {
+                        if excluded_apps.iter().any(|excluded| {
+                            app.to_lowercase().contains(&excluded.to_lowercase())
+                                || excluded.to_lowercase().contains(&app.to_lowercase())
+                        }) {
+                            log::debug!("Skipping clipboard from excluded app: {}", app);
+                            continue;
+                        }
+                    }
+
                     let is_image = change.content_type == "image";
 
                     // For images, hash the raw RGBA bytes; for text, hash the content string
@@ -248,7 +275,7 @@ pub fn run() {
                         content_type: change.content_type,
                         category,
                         hash,
-                        source_app: change.source_app,
+                        source_app,
                         is_favorite: false,
                         is_sensitive,
                         use_count: 1,

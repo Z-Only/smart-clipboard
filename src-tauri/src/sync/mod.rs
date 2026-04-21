@@ -618,12 +618,12 @@ impl SyncManager {
             let mut ticker = tokio::time::interval(Duration::from_secs(10));
             loop {
                 ticker.tick().await;
-                manager.reconcile_connection_states();
+                manager.reconcile_connection_states().await;
             }
         });
     }
 
-    fn reconcile_connection_states(&self) {
+    async fn reconcile_connection_states(&self) {
         let discovered = self.discovery.current_devices();
         let discovered_map: HashMap<String, DiscoveredDevice> = discovered
             .into_iter()
@@ -639,7 +639,7 @@ impl SyncManager {
         };
 
         let now = Local::now().naive_local();
-        let mut states = self.connection_states.blocking_write();
+        let mut states = self.connection_states.write().await;
         for device in &paired {
             let state = states.entry(device.id.clone()).or_default();
             if !self.is_sync_enabled() || !device.is_active {

@@ -221,7 +221,6 @@
       </div>
     </div>
 
-      </div>
 
     <PairConfirmDialog
       :is-open="!!pairingDevice"
