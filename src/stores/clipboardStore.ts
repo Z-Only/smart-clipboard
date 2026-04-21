@@ -112,6 +112,17 @@ export const useClipboardStore = defineStore("clipboard", () => {
     clearSelection();
   }
 
+
+  function clearSensitiveViewState() {
+    resetListState();
+    totalCount.value = 0;
+    allTags.value = [];
+    selectedTagId.value = null;
+    selectedCategory.value = "all";
+    searchKeyword.value = "";
+    isLoading.value = false;
+  }
+
   async function fetchEntries(reset = true) {
     if (reset) resetListState();
     isLoading.value = true;
@@ -287,6 +298,6 @@ export const useClipboardStore = defineStore("clipboard", () => {
     clearSelection, invertLoadedSelection, selectAllLoadedEntries, selectRangeTo, toggleEntrySelection,
     handleEntryPrimaryAction, deleteEntry, deleteSelectedEntries, copySelectedEntries, favoriteSelectedEntries,
     refreshTagsForEntries, applyTagsToSelectedEntries, toggleFavorite, pasteEntry, onClipboardChanged,
-    fetchAllTags, selectTag, clearTagFilter,
+    fetchAllTags, selectTag, clearTagFilter, clearSensitiveViewState,
   };
 });

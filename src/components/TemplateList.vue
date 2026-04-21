@@ -110,13 +110,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useTemplateStore } from "@/stores/templateStore";
 import TemplateEditor from "./TemplateEditor.vue";
 import TemplateFillDialog from "./TemplateFillDialog.vue";
 import type { Template } from "@/types";
 
-defineProps<{ isOpen: boolean }>();
+const props = defineProps<{ isOpen: boolean }>();
 defineEmits<{ close: [] }>();
 
 const store = useTemplateStore();
@@ -126,9 +126,16 @@ const showFillDialog = ref(false);
 const fillingTemplate = ref<Template | null>(null);
 const fillPlaceholders = ref<string[]>([]);
 
+async function refreshTemplates() {
+  await Promise.all([store.fetchTemplates(), store.fetchCategories()]);
+}
+
 onMounted(() => {
-  store.fetchTemplates();
-  store.fetchCategories();
+  refreshTemplates();
+});
+
+watch(() => props.isOpen, (open) => {
+  if (open) refreshTemplates();
 });
 
 async function handleUseTemplate(tmpl: Template) {

@@ -44,3 +44,8 @@ x25519-dalek = { version = "2", features = ["static_secrets"] }
 
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 argon2 = "0.5"
+
+keyring = "4.0.0-rc.3"
+keyring-core = "0.7.2"
+urlencoding = "2"
+html-escape = "0.2"

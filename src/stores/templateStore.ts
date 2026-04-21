@@ -93,6 +93,14 @@ export const useTemplateStore = defineStore("template", () => {
     }
   }
 
+
+  function clearSensitiveState() {
+    templates.value = [];
+    categories.value = [];
+    selectedCategory.value = null;
+    isLoading.value = false;
+  }
+
   function setCategory(category: string | null) {
     selectedCategory.value = category;
     fetchTemplates();
@@ -112,5 +120,6 @@ export const useTemplateStore = defineStore("template", () => {
     useTemplate,
     getPlaceholders,
     setCategory,
+    clearSensitiveState,
   };
 });

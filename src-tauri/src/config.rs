@@ -1,3 +1,4 @@
+use crate::security::AppLockConfig;
 use crate::sync::webdav::WebDavConfig;
 use crate::sync::SyncConfig;
 use serde_json::Value;
@@ -19,6 +20,8 @@ pub struct AppConfig {
     pub sync_metadata: Option<Value>,
     #[serde(default)]
     pub webdav: WebDavConfig,
+    #[serde(default)]
+    pub app_lock: AppLockConfig,
 }
 
 impl Default for AppConfig {
@@ -33,6 +36,7 @@ impl Default for AppConfig {
             sync: SyncConfig::default(),
             sync_metadata: None,
             webdav: WebDavConfig::default(),
+            app_lock: AppLockConfig::default(),
         }
     }
 }

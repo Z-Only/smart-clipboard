@@ -137,7 +137,56 @@
           </div>
         </div>
 
+
         <Separator />
+
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <label class="text-sm font-medium">{{ $t('lock.settingsTitle') }}</label>
+              <p class="text-xs text-muted-foreground">{{ $t('lock.settingsHint') }}</p>
+            </div>
+            <button
+              class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors"
+              :class="form.app_lock.enabled ? 'bg-primary' : 'bg-input'"
+              @click="form.app_lock.enabled = !form.app_lock.enabled"
+            >
+              <span class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform"
+                :class="form.app_lock.enabled ? 'translate-x-4' : 'translate-x-0'" />
+            </button>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium">{{ $t('lock.autoLock') }}</label>
+            <Input v-model="form.app_lock.auto_lock_seconds" type="number" min="0" max="86400" class="h-8" />
+            <span class="text-xs text-muted-foreground">{{ $t('lock.autoLockHint') }}</span>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <div>
+              <label class="text-sm font-medium">{{ $t('lock.biometric') }}</label>
+              <p class="text-xs text-muted-foreground">{{ $t('lock.biometricHint') }}</p>
+            </div>
+            <button
+              class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors"
+              :disabled="!security.status.biometric_available"
+              :class="form.app_lock.biometric_enabled ? 'bg-primary' : 'bg-input disabled:opacity-50'"
+              @click="form.app_lock.biometric_enabled = !form.app_lock.biometric_enabled"
+            >
+              <span class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform"
+                :class="form.app_lock.biometric_enabled ? 'translate-x-4' : 'translate-x-0'" />
+            </button>
+          </div>
+
+          <div class="grid gap-2">
+            <Input v-model="currentPassword" type="password" class="h-8" :placeholder="$t('lock.currentPasswordPlaceholder')" />
+            <Input v-model="newPassword" type="password" class="h-8" :placeholder="$t('lock.newPasswordPlaceholder')" />
+            <Button variant="outline" size="sm" @click="savePassword">{{ $t('lock.setPassword') }}</Button>
+          </div>
+
+          <Button variant="outline" size="sm" @click="manualLock">{{ $t('lock.lockNow') }}</Button>
+        </div>
+
 
         <!-- Action buttons -->
         <div class="flex justify-end gap-2">
@@ -158,6 +207,13 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { setLocale, getLocale } from "@/i18n";
 import { useTheme, type AppearanceMode, type ThemeColor } from "@/composables/useTheme";
+import { useSecurityStore } from "@/stores/securityStore";
+
+interface AppLockConfig {
+  enabled: boolean;
+  auto_lock_seconds: number;
+  biometric_enabled: boolean;
+}
 
 interface AppConfig {
   max_entries: number;
@@ -166,6 +222,7 @@ interface AppConfig {
   monitor_interval_ms: number;
   autostart_enabled: boolean;
   sensitive_expiry_minutes: number;
+  app_lock: AppLockConfig;
 }
 
 const props = defineProps<{ isOpen: boolean }>();
@@ -179,6 +236,7 @@ function changeLanguage(lang: string) {
 }
 
 const { appearance, themeColor, setAppearance, setThemeColor } = useTheme();
+const security = useSecurityStore();
 const appearanceModes: AppearanceMode[] = ["system", "light", "dark"];
 const themeColors: { id: ThemeColor; swatch: string }[] = [
   { id: "zinc", swatch: "#71717a" },
@@ -196,6 +254,11 @@ const form = reactive<AppConfig>({
   monitor_interval_ms: 500,
   autostart_enabled: false,
   sensitive_expiry_minutes: 5,
+  app_lock: {
+    enabled: false,
+    auto_lock_seconds: 0,
+    biometric_enabled: false,
+  },
 });
 
 const autostart = ref(false);
@@ -224,6 +287,7 @@ async function loadConfig() {
     const config = await invoke<AppConfig>("get_config");
     Object.assign(form, config);
     autostart.value = await invoke<boolean>("get_autostart_enabled");
+    await security.refresh();
   } catch (e) {
     console.error("Failed to load config:", e);
   }
@@ -232,6 +296,7 @@ async function loadConfig() {
 async function save() {
   try {
     await invoke("update_config", { newConfig: { ...form } });
+    await security.updateSettings(form.app_lock);
     close();
   } catch (e) {
     console.error("Failed to save config:", e);
@@ -245,6 +310,23 @@ function resetDefaults() {
   form.monitor_interval_ms = 500;
   form.autostart_enabled = false;
   form.sensitive_expiry_minutes = 5;
+  form.app_lock = { enabled: false, auto_lock_seconds: 0, biometric_enabled: false }
+}
+
+const currentPassword = ref("");
+const newPassword = ref("");
+
+async function savePassword() {
+  if (!newPassword.value) return;
+  await security.setPassword(currentPassword.value || null, newPassword.value);
+  currentPassword.value = "";
+  newPassword.value = "";
+  form.app_lock.enabled = true;
+}
+
+async function manualLock() {
+  await security.lock();
+  close();
 }
 
 async function toggleAutostart() {

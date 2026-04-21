@@ -153,6 +153,9 @@ watch(
   async (open) => {
     if (open) {
       await loadStatistics();
+    } else {
+      stats.value = null;
+      loading.value = false;
     }
   }
 );

@@ -4,6 +4,7 @@ pub mod commands;
 pub mod config;
 pub mod hotkey;
 pub mod platform;
+pub mod security;
 pub mod storage;
 pub mod sync;
 pub mod templates;
@@ -21,6 +22,7 @@ use tokio::sync::mpsc;
 use analyzer::{classify, detect_sensitive};
 use clipboard::ClipboardMonitor;
 use config::ConfigManager;
+use security::AppLockManager;
 use storage::{ClipboardEntry, Database};
 use sync::webdav::WebDavSyncManager;
 use sync::SyncManager;
@@ -83,6 +85,11 @@ pub fn run() {
             commands::webdav_update_config,
             commands::webdav_trigger_sync,
             commands::webdav_remove_device,
+            commands::get_app_lock_status,
+            commands::set_app_lock_password,
+            commands::update_app_lock_settings,
+            commands::lock_app,
+            commands::unlock_app,
         ])
         .setup(|app| {
             {
@@ -119,6 +126,9 @@ pub fn run() {
             let config = config_manager.get();
             app.manage(config_manager.clone());
 
+            let app_lock_manager = Arc::new(AppLockManager::new(config_manager.clone()));
+            app.manage(app_lock_manager.clone());
+
             // Initialize database
             let db_path = app_data_dir.join("clipboard.db");
             let db = Arc::new(
@@ -143,6 +153,8 @@ pub fn run() {
             webdav_manager.set_app_handle(app.handle().clone());
             app.manage(webdav_manager.clone());
 
+            security::attach_lock_runtime(app.handle(), app_lock_manager.clone());
+
             // Setup hotkey
             if let Err(e) = hotkey::setup_hotkey(app.handle()) {
                 log::error!("Failed to setup hotkey: {}", e);
@@ -156,10 +168,16 @@ pub fn run() {
             // Handle window close: hide to tray instead of quit
             if let Some(window) = app.get_webview_window("main") {
                 let w = window.clone();
+                let app_handle = app.handle().clone();
+                let lock_manager = app_lock_manager.clone();
                 window.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                         api.prevent_close();
                         let _ = w.hide();
+                        lock_manager.record_activity();
+                    }
+                    if let tauri::WindowEvent::Focused(true) = event {
+                        security::emit_lock_state(&app_handle, &lock_manager);
                     }
                 });
             }
@@ -167,6 +185,8 @@ pub fn run() {
             // Create images directory for image clipboard support
             let images_dir = app_data_dir.join("images");
             std::fs::create_dir_all(&images_dir).ok();
+
+            security::emit_lock_state(app.handle(), &app_lock_manager);
 
             // Start clipboard monitor
             let (tx, mut rx) = mpsc::unbounded_channel();

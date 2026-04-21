@@ -173,9 +173,11 @@ impl Database {
             .map(|entry| entry.content.trim().to_string())
             .filter(|content| !content.is_empty())
             .collect::<Vec<_>>()
-            .join("
+            .join(
+                "
 
-"))
+",
+            ))
     }
 
     pub fn toggle_favorite(&self, id: i64) -> Result<bool> {
@@ -548,7 +550,10 @@ impl Database {
         let tx = conn.unchecked_transaction()?;
         for entry_id in ids {
             if mode == "replace" {
-                tx.execute("DELETE FROM entry_tags WHERE entry_id = ?1", params![entry_id])?;
+                tx.execute(
+                    "DELETE FROM entry_tags WHERE entry_id = ?1",
+                    params![entry_id],
+                )?;
             }
             for tag_id in tag_ids {
                 tx.execute(

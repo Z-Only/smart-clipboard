@@ -6,6 +6,7 @@ use tauri::{
 };
 
 use crate::hotkey::toggle_window;
+use crate::security::{enforce_window_access, AppLockManager};
 
 pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let show_i = MenuItem::with_id(app, "show", "Show Clipboard", true, None::<&str>)?;
@@ -24,10 +25,9 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app_handle, event| match event.id().as_ref() {
             "show" => {
-                if let Some(w) = app_handle.get_webview_window("main") {
-                    let _ = w.show();
-                    let _ = w.set_focus();
-                    let _ = app_handle.emit("window-shown", ());
+                if let Some(lock_manager) = app_handle.try_state::<std::sync::Arc<AppLockManager>>()
+                {
+                    enforce_window_access(app_handle, &lock_manager, "tray_menu");
                 }
             }
             "settings" => {

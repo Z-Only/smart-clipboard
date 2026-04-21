@@ -148,6 +148,33 @@ export const useWebDavStore = defineStore("webdav", () => {
     }
   }
 
+
+  function clearSensitiveState() {
+    config.value = {
+      enabled: false,
+      serverUrl: "",
+      username: "",
+      password: "",
+      syncPassword: "",
+      pollIntervalSecs: 30,
+      syncImages: false,
+      syncSensitive: false,
+      rateLimitCapacity: 150,
+      rateLimitRefillMinutes: 30,
+      remotePath: "/SmartClipboard",
+      maxCloudEntries: 2000,
+    };
+    status.value = "disconnected";
+    lastSyncAt.value = null;
+    cloudEntryCount.value = 0;
+    registeredDevices.value = [];
+    rateLimitAvailable.value = 0;
+    rateLimitCapacity.value = 0;
+    error.value = null;
+    isLoading.value = false;
+    isConnecting.value = false;
+  }
+
   function clearError() {
     error.value = null;
   }
@@ -172,5 +199,6 @@ export const useWebDavStore = defineStore("webdav", () => {
     triggerSync,
     removeDevice,
     clearError,
+    clearSensitiveState,
   };
 });

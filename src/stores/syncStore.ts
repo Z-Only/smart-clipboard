@@ -162,6 +162,19 @@ export const useSyncStore = defineStore("sync", () => {
     }
   }
 
+
+  function clearSensitiveState() {
+    enabled.value = false;
+    deviceName.value = "";
+    port.value = 8484;
+    status.value = "unknown";
+    pairedDevices.value = [];
+    discoveredDevices.value = [];
+    isLoading.value = false;
+    isSaving.value = false;
+    error.value = null;
+  }
+
   function clearError() {
     error.value = null;
   }
@@ -183,5 +196,6 @@ export const useSyncStore = defineStore("sync", () => {
     unpairDevice,
     toggleDeviceSync,
     clearError,
+    clearSensitiveState,
   };
 });

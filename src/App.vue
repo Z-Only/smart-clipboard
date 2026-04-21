@@ -79,6 +79,8 @@
       <span class="opacity-60">Cmd+Shift+V</span>
     </div>
 
+    <LockScreen v-if="showLockOverlay" />
+
     <!-- Sync panel -->
     <SyncPanel :is-open="showSync" @close="showSync = false" />
 
@@ -94,7 +96,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { listen } from "@tauri-apps/api/event";
 import { Separator } from "@/components/ui/separator";
@@ -105,11 +107,20 @@ import SettingsPanel from "@/components/SettingsPanel.vue";
 import StatisticsPanel from "@/components/StatisticsPanel.vue";
 import TemplateList from "@/components/TemplateList.vue";
 import SyncPanel from "@/components/SyncPanel.vue";
+import LockScreen from "@/components/LockScreen.vue";
+import { useSecurityStore } from "@/stores/securityStore";
 import { useClipboardStore } from "@/stores/clipboardStore";
+import { useSyncStore } from "@/stores/syncStore";
+import { useTemplateStore } from "@/stores/templateStore";
+import { useWebDavStore } from "@/stores/webdavStore";
 import { useClipboard } from "@/composables/useClipboard";
 import { useTheme } from "@/composables/useTheme";
 
 const store = useClipboardStore();
+const security = useSecurityStore();
+const syncStore = useSyncStore();
+const templateStore = useTemplateStore();
+const webdavStore = useWebDavStore();
 useTheme();
 const { totalCount } = storeToRefs(store);
 
@@ -118,16 +129,53 @@ const showSettings = ref(false);
 const showStatistics = ref(false);
 const showTemplates = ref(false);
 const showSync = ref(false);
+const showLockOverlay = computed(() => security.status.enabled && security.status.locked);
 
 // Listen for clipboard changes from backend
 useClipboard();
 
+
+watch(
+  () => security.status.locked,
+  async (locked, prev) => {
+    if (locked) {
+      store.clearSensitiveViewState();
+      syncStore.clearSensitiveState();
+      templateStore.clearSensitiveState();
+      webdavStore.clearSensitiveState();
+      showSettings.value = false;
+      showStatistics.value = false;
+      showTemplates.value = false;
+      showSync.value = false;
+      return;
+    }
+    if (prev && !locked) {
+      await Promise.allSettled([
+        store.fetchEntries(true),
+        store.fetchAllTags(),
+        syncStore.refreshAll(),
+        templateStore.fetchTemplates(),
+        templateStore.fetchCategories(),
+        webdavStore.refreshAll(),
+      ]);
+      searchBarRef.value?.focus();
+    }
+  }
+);
+
+
 onMounted(async () => {
-  await store.fetchEntries();
+  await security.init();
+  if (!security.status.locked) {
+    await store.fetchEntries();
+  }
 
   // Focus search bar when window is shown
-  await listen("window-shown", () => {
-    searchBarRef.value?.focus();
+  await listen("window-shown", async () => {
+    if (!security.status.locked) {
+      searchBarRef.value?.focus();
+      await store.fetchEntries();
+    }
   });
 
   // Open settings from tray menu
