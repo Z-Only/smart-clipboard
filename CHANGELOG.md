@@ -43,6 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Phase 4 roadmap items (not yet implemented at the time): SQLCipher database encryption, biometric/password app lock, pinyin fuzzy search, virtual scrolling for large lists, and batch operations (multi-select merge paste / bulk delete)
 
 ## [0.6.0] - 2026-04-20
+
 - **Phase 3 UI polish & validation**: Added pairing confirmation dialog, SyncPanel loading/refreshing states, enhanced error banner with dismiss, status dot indicator, and i18n additions for sync UI.
 - Added Phase 3 end-to-end encryption and secure pairing for LAN sync, including X25519 key exchange, HKDF-SHA256 shared secret derivation, AES-256-GCM encrypted messaging, key fingerprint verification, and persistent key storage.
 - Updated SyncPanel device status rendering to show more realistic transport states such as connecting, connected, disabled, and reconnecting-related activity.
@@ -51,6 +52,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 #### Clipboard Sync Flow (new)
+
 - Added `ClipboardSync` protocol message and `SyncEntryPayload` for real clipboard entry synchronization between devices.
 - Added `source_device` column to `clipboard_entries` table to track sync origin and prevent loop syncing.
 - Added `sync_log` database methods (`insert_sync_log`, `has_sync_log`, `has_received_entry`) for deduplication and audit.
@@ -62,6 +64,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Hooked clipboard monitor into sync pipeline — after local DB insert, entries are automatically broadcast to paired devices.
 
 #### Previous Phase 3 additions
+
 - Added X25519 key pair generation with persistent storage in app config for device identity.
 - Added HKDF-SHA256 shared secret derivation from Diffie-Hellman key exchange during device pairing.
 - Added AES-256-GCM encryption and decryption for all sync protocol messages between paired devices.
@@ -77,6 +80,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added discovered-device deduplication, last-seen refresh, and online/offline status updates in the Phase 3 sync backend.
 
 ### Changed
+
 - Updated the app version to 0.6.0 for the Phase 3 partial delivery.
 - Phase 3 now ships a complete clipboard sync flow: LAN discovery → pairing → encrypted WebSocket transport → real-time clipboard entry synchronization with dedup and loop prevention.
 
@@ -119,7 +123,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **Multi-language support (i18n)**: Full internationalization with vue-i18n, supporting English and Chinese
 - **Language switcher**: Users can switch between English and Chinese in the Settings panel
-- **Auto language detection**: Defaults to system language (Chinese for zh-* locales, English otherwise)
+- **Auto language detection**: Defaults to system language (Chinese for zh-\* locales, English otherwise)
 - **Bilingual README**: Separate README.md (English) and README.zh-CN.md (Chinese) with language switch links
 
 ## [0.1.0] - 2026-04-20

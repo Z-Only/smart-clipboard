@@ -4,7 +4,9 @@
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4"
     @click.self="close"
   >
-    <div class="w-full max-w-4xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+    <div
+      class="w-full max-w-4xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+    >
       <div class="flex items-center justify-between border-b border-border px-5 py-4">
         <div>
           <h2 class="text-lg font-semibold">{{ $t('sync.title') }}</h2>
@@ -12,14 +14,22 @@
           <div class="mt-2 flex gap-1 rounded-lg bg-muted p-1">
             <button
               class="rounded-md px-3 py-1 text-sm font-medium transition-colors"
-              :class="activeTab === 'lan' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+              :class="
+                activeTab === 'lan'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              "
               @click="activeTab = 'lan'"
             >
               {{ $t('sync.tab.lan') }}
             </button>
             <button
               class="rounded-md px-3 py-1 text-sm font-medium transition-colors"
-              :class="activeTab === 'webdav' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+              :class="
+                activeTab === 'webdav'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              "
               @click="activeTab = 'webdav'"
             >
               {{ $t('sync.tab.webdav') }}
@@ -48,9 +58,18 @@
             {{ isLoading ? $t('sync.actions.refreshing') : $t('sync.actions.refresh') }}
           </button>
           <button class="text-muted-foreground hover:text-foreground" @click="close">
-            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+            <svg
+              class="h-4 w-4"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
             </svg>
           </button>
         </div>
@@ -62,7 +81,10 @@
       </div>
 
       <!-- LAN Tab -->
-      <div v-else class="grid max-h-[80vh] gap-0 overflow-y-auto lg:grid-cols-[320px_minmax(0,1fr)]">
+      <div
+        v-else
+        class="grid max-h-[80vh] gap-0 overflow-y-auto lg:grid-cols-[320px_minmax(0,1fr)]"
+      >
         <section class="border-b border-border p-5 lg:border-b-0 lg:border-r">
           <div class="space-y-5">
             <div class="rounded-xl bg-accent/40 p-4">
@@ -110,10 +132,7 @@
               <div class="rounded-xl border border-border bg-background p-3">
                 <p class="text-xs text-muted-foreground">{{ $t('sync.panel.status') }}</p>
                 <div class="mt-1 flex items-center gap-2">
-                  <span
-                    class="inline-block h-2 w-2 rounded-full"
-                    :class="statusDotClass"
-                  />
+                  <span class="inline-block h-2 w-2 rounded-full" :class="statusDotClass" />
                   <p class="text-sm font-semibold">{{ currentStatusText }}</p>
                 </div>
               </div>
@@ -122,7 +141,9 @@
                 <p class="mt-1 text-sm font-semibold">{{ pairedDevices.length }}</p>
               </div>
               <div class="rounded-xl border border-border bg-background p-3">
-                <p class="text-xs text-muted-foreground">{{ $t('sync.panel.discoveredDevices') }}</p>
+                <p class="text-xs text-muted-foreground">
+                  {{ $t('sync.panel.discoveredDevices') }}
+                </p>
                 <p class="mt-1 text-sm font-semibold">{{ discoveredDevices.length }}</p>
               </div>
               <div class="rounded-xl border border-border bg-background p-3">
@@ -131,11 +152,24 @@
               </div>
             </div>
 
-            <div v-if="error" class="flex items-start justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            <div
+              v-if="error"
+              class="flex items-start justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+            >
               <div class="flex items-start gap-2">
-                <svg class="mt-0.5 h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                <svg
+                  class="mt-0.5 h-4 w-4 shrink-0"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"
+                  />
                   <path d="M12 9v4" />
                   <path d="M12 17h.01" />
                 </svg>
@@ -145,8 +179,16 @@
                 class="shrink-0 text-destructive/70 hover:text-destructive"
                 @click="clearError"
               >
-                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg
+                  class="h-4 w-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
                   <path d="M18 6 6 18" />
                   <path d="m6 6 12 12" />
                 </svg>
@@ -186,7 +228,10 @@
                 @toggle-sync="handleToggleSync"
                 @unpair="handleUnpair"
               />
-              <div v-if="!pairedDevices.length && !isLoading" class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              <div
+                v-if="!pairedDevices.length && !isLoading"
+                class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground"
+              >
                 {{ $t('sync.empty.paired') }}
               </div>
             </div>
@@ -198,8 +243,16 @@
               <span class="text-xs text-muted-foreground">{{ discoveredDevices.length }}</span>
             </div>
             <div v-if="isLoading" class="flex flex-col items-center justify-center gap-3 py-12">
-              <svg class="h-8 w-8 animate-spin text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg
+                class="h-8 w-8 animate-spin text-muted-foreground"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
               <p class="text-sm text-muted-foreground">{{ $t('sync.loading') }}</p>
@@ -212,7 +265,10 @@
                 mode="discovered"
                 @pair="handlePair"
               />
-              <div v-if="!discoveredDevices.length" class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              <div
+                v-if="!discoveredDevices.length"
+                class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground"
+              >
                 {{ $t('sync.empty.discovered') }}
               </div>
             </div>
@@ -220,7 +276,6 @@
         </section>
       </div>
     </div>
-
 
     <PairConfirmDialog
       :is-open="!!pairingDevice"
@@ -232,14 +287,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
-import { storeToRefs } from "pinia";
-import { useI18n } from "vue-i18n";
-import DeviceCard from "@/components/DeviceCard.vue";
-import PairConfirmDialog from "@/components/PairConfirmDialog.vue";
-import WebDavPanel from "@/components/WebDavPanel.vue";
-import { useSyncStore } from "@/stores/syncStore";
-import type { SyncDevice, SyncStatus } from "@/types";
+import { computed, reactive, ref, watch } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useI18n } from 'vue-i18n';
+import DeviceCard from '@/components/DeviceCard.vue';
+import PairConfirmDialog from '@/components/PairConfirmDialog.vue';
+import WebDavPanel from '@/components/WebDavPanel.vue';
+import { useSyncStore } from '@/stores/syncStore';
+import type { SyncDevice, SyncStatus } from '@/types';
 
 const props = defineProps<{ isOpen: boolean }>();
 const emit = defineEmits<{ close: [] }>();
@@ -261,11 +316,11 @@ const {
 
 const form = reactive({
   enabled: false,
-  deviceName: "",
+  deviceName: '',
   port: 8484,
 });
 
-const activeTab = ref<"lan" | "webdav">("lan");
+const activeTab = ref<'lan' | 'webdav'>('lan');
 const pairingDevice = ref<SyncDevice | null>(null);
 
 function getStatusText(value: SyncStatus) {
@@ -276,16 +331,16 @@ const currentStatusText = computed(() => getStatusText(status.value));
 
 const statusDotClass = computed(() => {
   const s = status.value;
-  if (s === "online" || s === "connected") {
-    return "bg-emerald-500";
+  if (s === 'online' || s === 'connected') {
+    return 'bg-emerald-500';
   }
-  if (s === "discovering" || s === "connecting" || s === "pairing") {
-    return "bg-amber-500 animate-pulse";
+  if (s === 'discovering' || s === 'connecting' || s === 'pairing') {
+    return 'bg-amber-500 animate-pulse';
   }
-  if (s === "error") {
-    return "bg-destructive";
+  if (s === 'error') {
+    return 'bg-destructive';
   }
-  return "bg-muted-foreground";
+  return 'bg-muted-foreground';
 });
 
 watch(
@@ -348,6 +403,6 @@ function clearError() {
 }
 
 function close() {
-  emit("close");
+  emit('close');
 }
 </script>

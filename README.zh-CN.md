@@ -89,20 +89,20 @@
 
 ## 截图
 
-*即将推出*
+_即将推出_
 
 ## 技术栈
 
-| 层级 | 技术 |
-|------|------|
-| 前端 | Vue 3 + TypeScript + Tailwind CSS + shadcn-vue |
-| 后端 | Rust |
-| 框架 | Tauri 2 |
-| 数据库 | SQLite with FTS5（通过 rusqlite） |
-| 剪贴板 | arboard |
-| 本地安全 | argon2 + keyring |
-| 局域网发现 | mdns-sd |
-| 国际化 | vue-i18n |
+| 层级       | 技术                                           |
+| ---------- | ---------------------------------------------- |
+| 前端       | Vue 3 + TypeScript + Tailwind CSS + shadcn-vue |
+| 后端       | Rust                                           |
+| 框架       | Tauri 2                                        |
+| 数据库     | SQLite with FTS5（通过 rusqlite）              |
+| 剪贴板     | arboard                                        |
+| 本地安全   | argon2 + keyring                               |
+| 局域网发现 | mdns-sd                                        |
+| 国际化     | vue-i18n                                       |
 
 ## 快速开始
 

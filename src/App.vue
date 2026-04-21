@@ -10,8 +10,16 @@
         :title="$t('templates.title')"
         @click="showTemplates = true"
       >
-        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          class="h-4 w-4"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
           <polyline points="14 2 14 8 20 8" />
           <line x1="16" y1="13" x2="8" y2="13" />
@@ -24,8 +32,16 @@
         :title="$t('app.statistics')"
         @click="showStatistics = true"
       >
-        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          class="h-4 w-4"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <line x1="18" y1="20" x2="18" y2="10" />
           <line x1="12" y1="20" x2="12" y2="4" />
           <line x1="6" y1="20" x2="6" y2="14" />
@@ -36,8 +52,16 @@
         :title="$t('sync.title')"
         @click="showSync = true"
       >
-        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          class="h-4 w-4"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <path d="M8 17l-4-4 4-4" />
           <path d="M16 7l4 4-4 4" />
           <path d="M14 4l-4 16" />
@@ -48,9 +72,19 @@
         :title="$t('app.settings')"
         @click="showSettings = true"
       >
-        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+        <svg
+          class="h-4 w-4"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+          />
           <circle cx="12" cy="12" r="3" />
         </svg>
       </button>
@@ -96,25 +130,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from "vue";
-import { storeToRefs } from "pinia";
-import { listen } from "@tauri-apps/api/event";
-import { Separator } from "@/components/ui/separator";
-import SearchBar from "@/components/SearchBar.vue";
-import CategoryFilter from "@/components/CategoryFilter.vue";
-import ClipboardList from "@/components/ClipboardList.vue";
-import SettingsPanel from "@/components/SettingsPanel.vue";
-import StatisticsPanel from "@/components/StatisticsPanel.vue";
-import TemplateList from "@/components/TemplateList.vue";
-import SyncPanel from "@/components/SyncPanel.vue";
-import LockScreen from "@/components/LockScreen.vue";
-import { useSecurityStore } from "@/stores/securityStore";
-import { useClipboardStore } from "@/stores/clipboardStore";
-import { useSyncStore } from "@/stores/syncStore";
-import { useTemplateStore } from "@/stores/templateStore";
-import { useWebDavStore } from "@/stores/webdavStore";
-import { useClipboard } from "@/composables/useClipboard";
-import { useTheme } from "@/composables/useTheme";
+import { ref, onMounted, computed, watch } from 'vue';
+import { storeToRefs } from 'pinia';
+import { listen } from '@tauri-apps/api/event';
+import { Separator } from '@/components/ui/separator';
+import SearchBar from '@/components/SearchBar.vue';
+import CategoryFilter from '@/components/CategoryFilter.vue';
+import ClipboardList from '@/components/ClipboardList.vue';
+import SettingsPanel from '@/components/SettingsPanel.vue';
+import StatisticsPanel from '@/components/StatisticsPanel.vue';
+import TemplateList from '@/components/TemplateList.vue';
+import SyncPanel from '@/components/SyncPanel.vue';
+import LockScreen from '@/components/LockScreen.vue';
+import { useSecurityStore } from '@/stores/securityStore';
+import { useClipboardStore } from '@/stores/clipboardStore';
+import { useSyncStore } from '@/stores/syncStore';
+import { useTemplateStore } from '@/stores/templateStore';
+import { useWebDavStore } from '@/stores/webdavStore';
+import { useClipboard } from '@/composables/useClipboard';
+import { useTheme } from '@/composables/useTheme';
 
 const store = useClipboardStore();
 const security = useSecurityStore();
@@ -133,7 +167,6 @@ const showLockOverlay = computed(() => security.status.enabled && security.statu
 
 // Listen for clipboard changes from backend
 useClipboard();
-
 
 watch(
   () => security.status.locked,
@@ -160,9 +193,8 @@ watch(
       ]);
       searchBarRef.value?.focus();
     }
-  }
+  },
 );
-
 
 onMounted(async () => {
   await security.init();
@@ -171,7 +203,7 @@ onMounted(async () => {
   }
 
   // Focus search bar when window is shown
-  await listen("window-shown", async () => {
+  await listen('window-shown', async () => {
     if (!security.status.locked) {
       searchBarRef.value?.focus();
       await store.fetchEntries();
@@ -179,7 +211,7 @@ onMounted(async () => {
   });
 
   // Open settings from tray menu
-  await listen("open-settings", () => {
+  await listen('open-settings', () => {
     showSettings.value = true;
   });
 });

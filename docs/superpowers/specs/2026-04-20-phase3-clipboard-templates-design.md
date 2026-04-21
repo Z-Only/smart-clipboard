@@ -26,7 +26,7 @@ CREATE INDEX idx_templates_name ON templates(name);
 
 ### Placeholder Syntax
 
-- Format: `{{placeholder_name}}` 
+- Format: `{{placeholder_name}}`
 - Names: alphanumeric + underscores, case-insensitive
 - Same placeholder used multiple times = filled once, applied everywhere
 - Example: `Hello {{name}}, welcome to {{company}}. {{name}}, your account is ready.`
@@ -38,10 +38,12 @@ CREATE INDEX idx_templates_name ON templates(name);
 **`mod.rs`** - Module exports
 
 **`engine.rs`** - Template engine
+
 - `extract_placeholders(content: &str) -> Vec<String>` - Extract unique placeholder names via regex `\{\{(\w+)\}\}`
 - `render(content: &str, values: &HashMap<String, String>) -> String` - Replace placeholders with values
 
 **`commands.rs`** - Tauri IPC commands
+
 - `create_template(name, content, category) -> Template`
 - `update_template(id, name, content, category) -> Template`
 - `delete_template(id) -> bool`
@@ -59,12 +61,14 @@ Add migration in `storage/migrations.rs` to create the `templates` table. Follow
 ### Components
 
 **`TemplateList.vue`** - Template list panel (sidebar view)
+
 - Shows all templates grouped by category
 - Search/filter by name
 - Create new template button
 - Click to use, right-click for edit/delete
 
 **`TemplateEditor.vue`** - Create/edit dialog
+
 - Name input
 - Category selector (existing categories + create new)
 - Content textarea with placeholder highlighting
@@ -72,6 +76,7 @@ Add migration in `storage/migrations.rs` to create the `templates` table. Follow
 - Save/Cancel buttons
 
 **`TemplateFillDialog.vue`** - Placeholder fill dialog
+
 - Shows when user clicks "Use" on a template
 - Input field for each unique placeholder
 - Live preview of rendered result
@@ -80,6 +85,7 @@ Add migration in `storage/migrations.rs` to create the `templates` table. Follow
 ### Store: `src/stores/templateStore.ts`
 
 Pinia store managing template state:
+
 - `templates: Template[]`
 - `categories: string[]`
 - `selectedCategory: string | null`
@@ -92,6 +98,7 @@ Add "Templates" entry to sidebar navigation (below Tags, above Statistics). Use 
 ### i18n
 
 Add keys to both `en.json` and `zh-CN.json`:
+
 - `templates.title`, `templates.create`, `templates.edit`, `templates.delete`
 - `templates.name`, `templates.content`, `templates.category`, `templates.placeholder`
 - `templates.use`, `templates.fill_placeholders`, `templates.preview`

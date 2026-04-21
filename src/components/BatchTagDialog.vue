@@ -12,14 +12,26 @@
 
       <div class="space-y-3 px-5 py-4">
         <div class="grid grid-cols-2 gap-2">
-          <button class="rounded-md border px-3 py-2 text-xs font-medium transition-colors"
-            :class="mode === 'append' ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-accent'"
-            @click="mode = 'append'">
+          <button
+            class="rounded-md border px-3 py-2 text-xs font-medium transition-colors"
+            :class="
+              mode === 'append'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border hover:bg-accent'
+            "
+            @click="mode = 'append'"
+          >
             {{ $t('tags.batchModeAppend') }}
           </button>
-          <button class="rounded-md border px-3 py-2 text-xs font-medium transition-colors"
-            :class="mode === 'replace' ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-accent'"
-            @click="mode = 'replace'">
+          <button
+            class="rounded-md border px-3 py-2 text-xs font-medium transition-colors"
+            :class="
+              mode === 'replace'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border hover:bg-accent'
+            "
+            @click="mode = 'replace'"
+          >
             {{ $t('tags.batchModeReplace') }}
           </button>
         </div>
@@ -31,14 +43,26 @@
             :placeholder="$t('tags.createTag')"
             @keydown.enter.prevent="handleCreate"
           />
-          <button class="rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:opacity-90" @click="handleCreate">
+          <button
+            class="rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:opacity-90"
+            @click="handleCreate"
+          >
             {{ $t('tags.createAction') }}
           </button>
         </div>
 
         <div class="max-h-64 space-y-1 overflow-y-auto rounded-md border border-border p-2">
-          <label v-for="tag in allTags" :key="tag.id" class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent">
-            <input type="checkbox" class="h-4 w-4 accent-primary" :checked="selectedTagIds.has(tag.id)" @change="toggleTag(tag.id)" />
+          <label
+            v-for="tag in allTags"
+            :key="tag.id"
+            class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
+          >
+            <input
+              type="checkbox"
+              class="h-4 w-4 accent-primary"
+              :checked="selectedTagIds.has(tag.id)"
+              @change="toggleTag(tag.id)"
+            />
             <span class="truncate">{{ tag.name }}</span>
           </label>
           <div v-if="allTags.length === 0" class="py-6 text-center text-xs text-muted-foreground">
@@ -48,10 +72,16 @@
       </div>
 
       <div class="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
-        <button class="rounded-md border border-border px-3 py-2 text-xs hover:bg-accent" @click="$emit('close')">
+        <button
+          class="rounded-md border border-border px-3 py-2 text-xs hover:bg-accent"
+          @click="$emit('close')"
+        >
           {{ $t('templates.cancel') }}
         </button>
-        <button class="rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:opacity-90" @click="submit">
+        <button
+          class="rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:opacity-90"
+          @click="submit"
+        >
           {{ $t('tags.applyBatch') }}
         </button>
       </div>
@@ -60,20 +90,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
-import { invoke } from "@tauri-apps/api/core";
-import type { Tag } from "@/types";
+import { ref, watch } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
+import type { Tag } from '@/types';
 
 const props = defineProps<{ isOpen: boolean; count: number }>();
-const emit = defineEmits<{ close: []; apply: [payload: { tagIds: number[]; mode: "append" | "replace" }] }>();
+const emit = defineEmits<{
+  close: [];
+  apply: [payload: { tagIds: number[]; mode: 'append' | 'replace' }];
+}>();
 
 const allTags = ref<Tag[]>([]);
 const selectedTagIds = ref<Set<number>>(new Set());
-const newTagName = ref("");
-const mode = ref<"append" | "replace">("append");
+const newTagName = ref('');
+const mode = ref<'append' | 'replace'>('append');
 
 async function loadTags() {
-  allTags.value = await invoke<Tag[]>("get_all_tags");
+  allTags.value = await invoke<Tag[]>('get_all_tags');
 }
 function toggleTag(tagId: number) {
   const next = new Set(selectedTagIds.value);
@@ -83,21 +116,25 @@ function toggleTag(tagId: number) {
 async function handleCreate() {
   const name = newTagName.value.trim();
   if (!name) return;
-  const tag = await invoke<Tag>("create_tag", { name });
+  const tag = await invoke<Tag>('create_tag', { name });
   allTags.value = [...allTags.value, tag].sort((a, b) => a.name.localeCompare(b.name));
   const next = new Set(selectedTagIds.value);
   next.add(tag.id);
   selectedTagIds.value = next;
-  newTagName.value = "";
+  newTagName.value = '';
 }
 function submit() {
-  emit("apply", { tagIds: Array.from(selectedTagIds.value), mode: mode.value });
+  emit('apply', { tagIds: Array.from(selectedTagIds.value), mode: mode.value });
 }
-watch(() => props.isOpen, async (open) => {
-  if (!open) return;
-  selectedTagIds.value = new Set();
-  newTagName.value = "";
-  mode.value = "append";
-  await loadTags();
-}, { immediate: true });
+watch(
+  () => props.isOpen,
+  async (open) => {
+    if (!open) return;
+    selectedTagIds.value = new Set();
+    newTagName.value = '';
+    mode.value = 'append';
+    await loadTags();
+  },
+  { immediate: true },
+);
 </script>

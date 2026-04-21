@@ -88,6 +88,7 @@ Device A                                    Device B
 ```
 
 **Design decisions**:
+
 - Index file is the **sole discovery mechanism** — polling reads only `index.enc` (one HTTP GET), then compares against local known-hash set to find new entries
 - **No PROPFIND dependency** — avoids directory listing entirely, maximizing WebDAV compatibility
 - **Concurrent write conflicts** handled via **read-modify-write + ETag optimistic locking**: GET index → merge new entry → PUT with `If-Match: <etag>` → retry on 412 (max 3 attempts)
@@ -234,11 +235,13 @@ Behavior:
 ### New Module: `src-tauri/src/sync/webdav/`
 
 **`mod.rs`** — WebDavSyncManager
+
 - Lifecycle management (start/stop/connect/disconnect)
 - Push entry dispatch
 - Holds master key in memory (`RwLock<Option<Vec<u8>>>`)
 
 **`client.rs`** — WebDavClient
+
 - HTTP operations via `reqwest`: PUT, GET, MKCOL, DELETE
 - ETag-aware PUT (`If-Match` header)
 - `exists()` via HEAD request
@@ -246,18 +249,21 @@ Behavior:
 - Connection test endpoint
 
 **`index.rs`** — IndexManager
+
 - Read/write/merge encrypted index file
 - Read/write encrypted device registry
 - ETag-based conflict retry logic
 - Device registration flow
 
 **`poller.rs`** — SyncPoller
+
 - Configurable interval timer (5s–300s)
 - Calls IndexManager to discover new entries
 - Downloads and inserts new entries into local DB
 - Respects rate limiter
 
 **`rate_limiter.rs`** — TokenBucketLimiter
+
 - Async `acquire(count)` — blocks until tokens available
 - `try_acquire(count)` — non-blocking attempt
 - `available()` — current token count
@@ -313,6 +319,7 @@ argon2 = "0.5"                                              # Password key deriv
 ### SyncPanel Tab Extension
 
 The existing `SyncPanel.vue` gains a **tab switcher** with two tabs:
+
 - **局域网同步** (LAN Sync) — existing content
 - **☁️ WebDAV 云同步** (WebDAV Cloud Sync) — new content
 
@@ -396,7 +403,12 @@ export interface WebDavDevice {
   lastSyncAt: string | null;
 }
 
-export type WebDavSyncStatusType = 'disconnected' | 'connecting' | 'connected' | 'syncing' | 'error';
+export type WebDavSyncStatusType =
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'syncing'
+  | 'error';
 
 export interface WebDavSyncStatus {
   status: WebDavSyncStatusType;
@@ -426,17 +438,17 @@ webdav.tabs.lan, webdav.tabs.webdav
 
 ## Error Handling
 
-| Scenario | Handling |
-|----------|----------|
-| WebDAV connection failure | Show error in UI, auto-retry with exponential backoff (5s/10s/30s/60s), does not affect LAN sync |
-| Authentication failure (401/403) | Stop sync, prompt user to check credentials, no auto-retry |
-| Wrong sync password | `devices.enc` decryption fails → show "Incorrect sync password" |
-| Index ETag conflict (412) | Auto read-modify-write retry, max 3 attempts, defer to next poll on failure |
-| Token exhaustion | Requests queue and wait for refill, UI shows "Rate limited, waiting N seconds" |
-| Network timeout | 30s per-request timeout, poll-cycle failures don't block next cycle |
-| Entry too large (>1MB) | Skip entry, log warning, other entries unaffected |
-| Server disk full (507) | Catch error, pause uploads, prompt user to free space |
-| Local DB vs cloud inconsistency | Content-hash dedup is authoritative; no full reconciliation in MVP |
+| Scenario                         | Handling                                                                                         |
+| -------------------------------- | ------------------------------------------------------------------------------------------------ |
+| WebDAV connection failure        | Show error in UI, auto-retry with exponential backoff (5s/10s/30s/60s), does not affect LAN sync |
+| Authentication failure (401/403) | Stop sync, prompt user to check credentials, no auto-retry                                       |
+| Wrong sync password              | `devices.enc` decryption fails → show "Incorrect sync password"                                  |
+| Index ETag conflict (412)        | Auto read-modify-write retry, max 3 attempts, defer to next poll on failure                      |
+| Token exhaustion                 | Requests queue and wait for refill, UI shows "Rate limited, waiting N seconds"                   |
+| Network timeout                  | 30s per-request timeout, poll-cycle failures don't block next cycle                              |
+| Entry too large (>1MB)           | Skip entry, log warning, other entries unaffected                                                |
+| Server disk full (507)           | Catch error, pause uploads, prompt user to free space                                            |
+| Local DB vs cloud inconsistency  | Content-hash dedup is authoritative; no full reconciliation in MVP                               |
 
 ## Security
 

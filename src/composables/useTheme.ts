@@ -1,49 +1,45 @@
-import { ref, watch, onMounted, onUnmounted } from "vue";
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 
-export type AppearanceMode = "system" | "light" | "dark";
-export type ThemeColor = "zinc" | "blue" | "green" | "rose" | "orange" | "violet";
+export type AppearanceMode = 'system' | 'light' | 'dark';
+export type ThemeColor = 'zinc' | 'blue' | 'green' | 'rose' | 'orange' | 'violet';
 
-const APPEARANCE_KEY = "smart-clipboard-appearance";
-const THEME_KEY = "smart-clipboard-theme";
+const APPEARANCE_KEY = 'smart-clipboard-appearance';
+const THEME_KEY = 'smart-clipboard-theme';
 
 const appearance = ref<AppearanceMode>(
-  (localStorage.getItem(APPEARANCE_KEY) as AppearanceMode) || "system"
+  (localStorage.getItem(APPEARANCE_KEY) as AppearanceMode) || 'system',
 );
-const themeColor = ref<ThemeColor>(
-  (localStorage.getItem(THEME_KEY) as ThemeColor) || "zinc"
-);
+const themeColor = ref<ThemeColor>((localStorage.getItem(THEME_KEY) as ThemeColor) || 'zinc');
 
 let mediaQuery: MediaQueryList | null = null;
 
 function getSystemDark(): boolean {
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
 function applyAppearance() {
-  const isDark =
-    appearance.value === "dark" ||
-    (appearance.value === "system" && getSystemDark());
+  const isDark = appearance.value === 'dark' || (appearance.value === 'system' && getSystemDark());
 
-  document.documentElement.classList.toggle("dark", isDark);
+  document.documentElement.classList.toggle('dark', isDark);
 }
 
 function applyThemeColor() {
   const root = document.documentElement;
   // Remove all theme classes
   root.classList.remove(
-    "theme-zinc",
-    "theme-blue",
-    "theme-green",
-    "theme-rose",
-    "theme-orange",
-    "theme-violet"
+    'theme-zinc',
+    'theme-blue',
+    'theme-green',
+    'theme-rose',
+    'theme-orange',
+    'theme-violet',
   );
   // Add current theme class (zinc is default, no class needed but we add for consistency)
   root.classList.add(`theme-${themeColor.value}`);
 }
 
 function onSystemThemeChange() {
-  if (appearance.value === "system") {
+  if (appearance.value === 'system') {
     applyAppearance();
   }
 }
@@ -53,12 +49,12 @@ export function useTheme() {
     applyAppearance();
     applyThemeColor();
 
-    mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    mediaQuery.addEventListener("change", onSystemThemeChange);
+    mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQuery.addEventListener('change', onSystemThemeChange);
   });
 
   onUnmounted(() => {
-    mediaQuery?.removeEventListener("change", onSystemThemeChange);
+    mediaQuery?.removeEventListener('change', onSystemThemeChange);
   });
 
   watch(appearance, (val) => {

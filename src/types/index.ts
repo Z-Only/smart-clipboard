@@ -30,8 +30,8 @@ export interface ClipboardListGroupMeta {
 }
 
 export type ClipboardListItem =
-  | { type: "group"; key: string; group: ClipboardListGroupMeta }
-  | { type: "entry"; key: string; entry: ClipboardEntry; groupKey: string };
+  | { type: 'group'; key: string; group: ClipboardListGroupMeta }
+  | { type: 'entry'; key: string; entry: ClipboardEntry; groupKey: string };
 
 export interface Template {
   id: number | null;
@@ -45,21 +45,21 @@ export interface Template {
 }
 
 export type CategoryType =
-  | "all"
-  | "favorites"
-  | "tags"
-  | "templates"
-  | "image"
-  | "url"
-  | "email"
-  | "color"
-  | "filepath"
-  | "json"
-  | "xml"
-  | "code"
-  | "phone"
-  | "address"
-  | "text";
+  | 'all'
+  | 'favorites'
+  | 'tags'
+  | 'templates'
+  | 'image'
+  | 'url'
+  | 'email'
+  | 'color'
+  | 'filepath'
+  | 'json'
+  | 'xml'
+  | 'code'
+  | 'phone'
+  | 'address'
+  | 'text';
 
 export interface CategoryItem {
   key: CategoryType;
@@ -68,33 +68,33 @@ export interface CategoryItem {
 }
 
 export const CATEGORIES: CategoryItem[] = [
-  { key: "all", labelKey: "categories.all", icon: "📋" },
-  { key: "favorites", labelKey: "categories.favorites", icon: "⭐" },
-  { key: "tags", labelKey: "categories.tags", icon: "🏷️" },
-  { key: "templates", labelKey: "categories.templates", icon: "📄" },
-  { key: "image", labelKey: "categories.image", icon: "📷" },
-  { key: "url", labelKey: "categories.url", icon: "🔗" },
-  { key: "email", labelKey: "categories.email", icon: "📧" },
-  { key: "code", labelKey: "categories.code", icon: "💻" },
-  { key: "json", labelKey: "categories.json", icon: "{}" },
-  { key: "filepath", labelKey: "categories.filepath", icon: "📁" },
-  { key: "color", labelKey: "categories.color", icon: "🎨" },
-  { key: "phone", labelKey: "categories.phone", icon: "📞" },
-  { key: "address", labelKey: "categories.address", icon: "📍" },
-  { key: "text", labelKey: "categories.text", icon: "📝" },
+  { key: 'all', labelKey: 'categories.all', icon: '📋' },
+  { key: 'favorites', labelKey: 'categories.favorites', icon: '⭐' },
+  { key: 'tags', labelKey: 'categories.tags', icon: '🏷️' },
+  { key: 'templates', labelKey: 'categories.templates', icon: '📄' },
+  { key: 'image', labelKey: 'categories.image', icon: '📷' },
+  { key: 'url', labelKey: 'categories.url', icon: '🔗' },
+  { key: 'email', labelKey: 'categories.email', icon: '📧' },
+  { key: 'code', labelKey: 'categories.code', icon: '💻' },
+  { key: 'json', labelKey: 'categories.json', icon: '{}' },
+  { key: 'filepath', labelKey: 'categories.filepath', icon: '📁' },
+  { key: 'color', labelKey: 'categories.color', icon: '🎨' },
+  { key: 'phone', labelKey: 'categories.phone', icon: '📞' },
+  { key: 'address', labelKey: 'categories.address', icon: '📍' },
+  { key: 'text', labelKey: 'categories.text', icon: '📝' },
 ];
 
 export type SyncStatus =
-  | "idle"
-  | "discovering"
-  | "connecting"
-  | "connected"
-  | "online"
-  | "offline"
-  | "disabled"
-  | "pairing"
-  | "error"
-  | "unknown";
+  | 'idle'
+  | 'discovering'
+  | 'connecting'
+  | 'connected'
+  | 'online'
+  | 'offline'
+  | 'disabled'
+  | 'pairing'
+  | 'error'
+  | 'unknown';
 
 export interface SyncDevice {
   id: string;

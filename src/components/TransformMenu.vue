@@ -5,8 +5,16 @@
       @click.stop="toggleMenu"
       :title="t('transforms.title')"
     >
-      <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg
+        class="h-3.5 w-3.5"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
         <path d="M7 16V4m0 0L3 8m4-4l4 4" />
         <path d="M17 8v12m0 0l4-4m-4 4l-4-4" />
       </svg>
@@ -34,9 +42,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { useI18n } from "vue-i18n";
-import { invoke } from "@tauri-apps/api/core";
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { invoke } from '@tauri-apps/api/core';
 
 const { t } = useI18n();
 
@@ -47,7 +55,7 @@ const props = defineProps<{
 
 const isOpen = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
-const toastMessage = ref("");
+const toastMessage = ref('');
 
 interface TransformItem {
   type: string;
@@ -56,23 +64,23 @@ interface TransformItem {
 }
 
 const allTransforms: TransformItem[] = [
-  { type: "uppercase", labelKey: "transforms.uppercase" },
-  { type: "lowercase", labelKey: "transforms.lowercase" },
-  { type: "title_case", labelKey: "transforms.titleCase" },
-  { type: "url_encode", labelKey: "transforms.urlEncode" },
-  { type: "url_decode", labelKey: "transforms.urlDecode" },
-  { type: "json_format", labelKey: "transforms.jsonFormat", jsonOnly: true },
-  { type: "json_compact", labelKey: "transforms.jsonCompact", jsonOnly: true },
-  { type: "base64_encode", labelKey: "transforms.base64Encode" },
-  { type: "base64_decode", labelKey: "transforms.base64Decode" },
-  { type: "trim", labelKey: "transforms.trim" },
-  { type: "html_escape", labelKey: "transforms.htmlEscape" },
-  { type: "html_unescape", labelKey: "transforms.htmlUnescape" },
+  { type: 'uppercase', labelKey: 'transforms.uppercase' },
+  { type: 'lowercase', labelKey: 'transforms.lowercase' },
+  { type: 'title_case', labelKey: 'transforms.titleCase' },
+  { type: 'url_encode', labelKey: 'transforms.urlEncode' },
+  { type: 'url_decode', labelKey: 'transforms.urlDecode' },
+  { type: 'json_format', labelKey: 'transforms.jsonFormat', jsonOnly: true },
+  { type: 'json_compact', labelKey: 'transforms.jsonCompact', jsonOnly: true },
+  { type: 'base64_encode', labelKey: 'transforms.base64Encode' },
+  { type: 'base64_decode', labelKey: 'transforms.base64Decode' },
+  { type: 'trim', labelKey: 'transforms.trim' },
+  { type: 'html_escape', labelKey: 'transforms.htmlEscape' },
+  { type: 'html_unescape', labelKey: 'transforms.htmlUnescape' },
 ];
 
 const availableTransforms = computed(() => {
   return allTransforms.filter((item) => {
-    if (item.jsonOnly && props.category !== "json") return false;
+    if (item.jsonOnly && props.category !== 'json') return false;
     return true;
   });
 });
@@ -87,12 +95,12 @@ function closeMenu() {
 
 async function handleTransform(transformType: string) {
   try {
-    const result = await invoke<string>("transform_content", {
+    const result = await invoke<string>('transform_content', {
       content: props.content,
       transformType: transformType,
     });
     await navigator.clipboard.writeText(result);
-    showToast(t("transforms.copied"));
+    showToast(t('transforms.copied'));
   } catch (err) {
     showToast(String(err));
   }
@@ -105,7 +113,7 @@ function showToast(message: string) {
   toastMessage.value = message;
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => {
-    toastMessage.value = "";
+    toastMessage.value = '';
   }, 2000);
 }
 
@@ -116,11 +124,11 @@ function handleClickOutside(event: MouseEvent) {
 }
 
 onMounted(() => {
-  document.addEventListener("click", handleClickOutside);
+  document.addEventListener('click', handleClickOutside);
 });
 
 onUnmounted(() => {
-  document.removeEventListener("click", handleClickOutside);
+  document.removeEventListener('click', handleClickOutside);
   if (toastTimer) clearTimeout(toastTimer);
 });
 </script>

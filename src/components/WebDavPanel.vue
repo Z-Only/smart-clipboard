@@ -73,7 +73,9 @@
         </div>
         <div class="rounded-xl border border-border bg-background p-3">
           <p class="text-xs text-muted-foreground">{{ $t('webdav.rateLimit') }}</p>
-          <p class="mt-1 text-sm font-semibold">{{ rateLimitAvailable }} / {{ rateLimitCapacity }}</p>
+          <p class="mt-1 text-sm font-semibold">
+            {{ rateLimitAvailable }} / {{ rateLimitCapacity }}
+          </p>
         </div>
       </div>
 
@@ -96,7 +98,10 @@
       <!-- Registered Devices -->
       <div class="space-y-2">
         <h3 class="text-sm font-semibold">{{ $t('webdav.registeredDevices') }}</h3>
-        <div v-if="registeredDevices.length === 0" class="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+        <div
+          v-if="registeredDevices.length === 0"
+          class="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground"
+        >
           {{ $t('webdav.noDevices') }}
         </div>
         <div v-else class="space-y-2">
@@ -108,7 +113,13 @@
             <div>
               <p class="text-sm font-medium">{{ device.deviceName }}</p>
               <p class="text-xs text-muted-foreground">
-                {{ device.lastSyncAt ? formatTime(device.lastSyncAt) : device.registeredAt ? formatTime(device.registeredAt) : '' }}
+                {{
+                  device.lastSyncAt
+                    ? formatTime(device.lastSyncAt)
+                    : device.registeredAt
+                      ? formatTime(device.registeredAt)
+                      : ''
+                }}
               </p>
             </div>
             <button
@@ -123,7 +134,9 @@
 
       <!-- Settings -->
       <details class="rounded-xl border border-border">
-        <summary class="cursor-pointer px-4 py-3 text-sm font-medium">{{ $t('webdav.settings') }}</summary>
+        <summary class="cursor-pointer px-4 py-3 text-sm font-medium">
+          {{ $t('webdav.settings') }}
+        </summary>
         <div class="space-y-3 border-t border-border px-4 py-3">
           <div class="flex items-center justify-between">
             <div>
@@ -180,7 +193,9 @@
           </div>
 
           <details class="rounded-lg border border-border">
-            <summary class="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground">{{ $t('webdav.advanced') }}</summary>
+            <summary class="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground">
+              {{ $t('webdav.advanced') }}
+            </summary>
             <div class="space-y-3 border-t border-border px-3 py-2">
               <div class="space-y-1.5">
                 <label class="text-xs font-medium">{{ $t('webdav.remotePath') }}</label>
@@ -223,19 +238,43 @@
     </div>
 
     <!-- Error Display -->
-    <div v-if="error" class="flex items-start justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+    <div
+      v-if="error"
+      class="flex items-start justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+    >
       <div class="flex items-start gap-2">
-        <svg class="mt-0.5 h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          class="mt-0.5 h-4 w-4 shrink-0"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-          <path d="M12 9v4" /><path d="M12 17h.01" />
+          <path d="M12 9v4" />
+          <path d="M12 17h.01" />
         </svg>
         <span>{{ error }}</span>
       </div>
-      <button class="shrink-0 text-destructive/70 hover:text-destructive" @click="webdavStore.clearError()">
-        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+      <button
+        class="shrink-0 text-destructive/70 hover:text-destructive"
+        @click="webdavStore.clearError()"
+      >
+        <svg
+          class="h-4 w-4"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
         </svg>
       </button>
     </div>
@@ -243,10 +282,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
-import { storeToRefs } from "pinia";
-import { useI18n } from "vue-i18n";
-import { useWebDavStore } from "@/stores/webdavStore";
+import { computed, reactive, ref, watch } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useI18n } from 'vue-i18n';
+import { useWebDavStore } from '@/stores/webdavStore';
 
 const props = defineProps<{ isActive: boolean }>();
 
@@ -267,10 +306,10 @@ const {
 const isSyncing = ref(false);
 
 const form = reactive({
-  serverUrl: "",
-  username: "",
-  password: "",
-  syncPassword: "",
+  serverUrl: '',
+  username: '',
+  password: '',
+  syncPassword: '',
 });
 
 const settingsForm = reactive({
@@ -278,37 +317,43 @@ const settingsForm = reactive({
   syncSensitive: false,
   pollIntervalSecs: 30,
   maxCloudEntries: 2000,
-  remotePath: "/SmartClipboard",
+  remotePath: '/SmartClipboard',
   rateLimitCapacity: 150,
   rateLimitRefillMinutes: 30,
 });
 
-const canConnect = computed(() =>
-  form.serverUrl.trim() !== "" &&
-  form.username.trim() !== "" &&
-  form.password.trim() !== "" &&
-  form.syncPassword.trim() !== ""
+const canConnect = computed(
+  () =>
+    form.serverUrl.trim() !== '' &&
+    form.username.trim() !== '' &&
+    form.password.trim() !== '' &&
+    form.syncPassword.trim() !== '',
 );
 
 const statusText = computed(() => {
   switch (status.value) {
-    case "connected": return t("webdav.connected");
-    case "connecting": return t("webdav.connecting");
-    case "disconnected": return t("webdav.disconnected");
-    case "error": return t("webdav.error");
-    default: return status.value;
+    case 'connected':
+      return t('webdav.connected');
+    case 'connecting':
+      return t('webdav.connecting');
+    case 'disconnected':
+      return t('webdav.disconnected');
+    case 'error':
+      return t('webdav.error');
+    default:
+      return status.value;
   }
 });
 
 const statusDotClass = computed(() => {
-  if (status.value === "connected") return "bg-emerald-500";
-  if (status.value === "connecting") return "bg-amber-500 animate-pulse";
-  if (status.value === "error") return "bg-destructive";
-  return "bg-muted-foreground";
+  if (status.value === 'connected') return 'bg-emerald-500';
+  if (status.value === 'connecting') return 'bg-amber-500 animate-pulse';
+  if (status.value === 'error') return 'bg-destructive';
+  return 'bg-muted-foreground';
 });
 
 const lastSyncDisplay = computed(() => {
-  if (!lastSyncAt.value) return "—";
+  if (!lastSyncAt.value) return '—';
   return formatTime(lastSyncAt.value);
 });
 
@@ -403,9 +448,7 @@ async function handleSaveSettings() {
 }
 
 function handleRemoveDevice(deviceId: string, deviceName: string) {
-  const confirmed = window.confirm(
-    t("webdav.removeDeviceConfirm", { name: deviceName })
-  );
+  const confirmed = window.confirm(t('webdav.removeDeviceConfirm', { name: deviceName }));
   if (confirmed) {
     webdavStore.removeDevice(deviceId);
   }

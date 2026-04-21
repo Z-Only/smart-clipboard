@@ -4,13 +4,24 @@
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
     @click.self="close"
   >
-    <div class="bg-card border border-border rounded-lg shadow-lg w-[360px] max-h-[80vh] overflow-y-auto p-5">
+    <div
+      class="bg-card border border-border rounded-lg shadow-lg w-[360px] max-h-[80vh] overflow-y-auto p-5"
+    >
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-base font-semibold">{{ $t('settings.title') }}</h2>
         <button class="text-muted-foreground hover:text-foreground" @click="close">
-          <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+          <svg
+            class="h-4 w-4"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
           </svg>
         </button>
       </div>
@@ -33,15 +44,32 @@
         <!-- Monitor interval -->
         <div class="flex flex-col gap-1.5">
           <label class="text-sm font-medium">{{ $t('settings.monitorInterval') }}</label>
-          <Input v-model="form.monitor_interval_ms" type="number" min="200" max="5000" step="100" class="h-8" />
-          <span class="text-xs text-muted-foreground">{{ $t('settings.monitorIntervalHint') }}</span>
+          <Input
+            v-model="form.monitor_interval_ms"
+            type="number"
+            min="200"
+            max="5000"
+            step="100"
+            class="h-8"
+          />
+          <span class="text-xs text-muted-foreground">{{
+            $t('settings.monitorIntervalHint')
+          }}</span>
         </div>
 
         <!-- Sensitive expiry -->
         <div class="flex flex-col gap-1.5">
           <label class="text-sm font-medium">{{ $t('settings.sensitiveExpiry') }}</label>
-          <Input v-model="form.sensitive_expiry_minutes" type="number" min="0" max="1440" class="h-8" />
-          <span class="text-xs text-muted-foreground">{{ $t('settings.sensitiveExpiryHint') }}</span>
+          <Input
+            v-model="form.sensitive_expiry_minutes"
+            type="number"
+            min="0"
+            max="1440"
+            class="h-8"
+          />
+          <span class="text-xs text-muted-foreground">{{
+            $t('settings.sensitiveExpiryHint')
+          }}</span>
         </div>
 
         <!-- Excluded apps -->
@@ -99,9 +127,11 @@
               v-for="mode in appearanceModes"
               :key="mode"
               class="flex-1 h-8 rounded-md border text-xs font-medium transition-colors"
-              :class="appearance === mode
-                ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-input bg-background text-foreground hover:bg-accent'"
+              :class="
+                appearance === mode
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-input bg-background text-foreground hover:bg-accent'
+              "
               @click="setAppearance(mode)"
             >
               {{ $t(`settings.appearance${mode.charAt(0).toUpperCase() + mode.slice(1)}`) }}
@@ -122,21 +152,24 @@
             >
               <span
                 class="w-7 h-7 rounded-full border-2 transition-all"
-                :class="themeColor === color.id
-                  ? 'border-foreground scale-110'
-                  : 'border-transparent hover:border-muted-foreground/50'"
+                :class="
+                  themeColor === color.id
+                    ? 'border-foreground scale-110'
+                    : 'border-transparent hover:border-muted-foreground/50'
+                "
                 :style="{ backgroundColor: color.swatch }"
               />
               <span
                 class="text-[10px]"
-                :class="themeColor === color.id ? 'text-foreground font-medium' : 'text-muted-foreground'"
+                :class="
+                  themeColor === color.id ? 'text-foreground font-medium' : 'text-muted-foreground'
+                "
               >
                 {{ $t(`settings.theme${color.id.charAt(0).toUpperCase() + color.id.slice(1)}`) }}
               </span>
             </button>
           </div>
         </div>
-
 
         <Separator />
 
@@ -151,14 +184,22 @@
               :class="form.app_lock.enabled ? 'bg-primary' : 'bg-input'"
               @click="form.app_lock.enabled = !form.app_lock.enabled"
             >
-              <span class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform"
-                :class="form.app_lock.enabled ? 'translate-x-4' : 'translate-x-0'" />
+              <span
+                class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform"
+                :class="form.app_lock.enabled ? 'translate-x-4' : 'translate-x-0'"
+              />
             </button>
           </div>
 
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-medium">{{ $t('lock.autoLock') }}</label>
-            <Input v-model="form.app_lock.auto_lock_seconds" type="number" min="0" max="86400" class="h-8" />
+            <Input
+              v-model="form.app_lock.auto_lock_seconds"
+              type="number"
+              min="0"
+              max="86400"
+              class="h-8"
+            />
             <span class="text-xs text-muted-foreground">{{ $t('lock.autoLockHint') }}</span>
           </div>
 
@@ -170,27 +211,44 @@
             <button
               class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors"
               :disabled="!security.status.biometric_available"
-              :class="form.app_lock.biometric_enabled ? 'bg-primary' : 'bg-input disabled:opacity-50'"
+              :class="
+                form.app_lock.biometric_enabled ? 'bg-primary' : 'bg-input disabled:opacity-50'
+              "
               @click="form.app_lock.biometric_enabled = !form.app_lock.biometric_enabled"
             >
-              <span class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform"
-                :class="form.app_lock.biometric_enabled ? 'translate-x-4' : 'translate-x-0'" />
+              <span
+                class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform"
+                :class="form.app_lock.biometric_enabled ? 'translate-x-4' : 'translate-x-0'"
+              />
             </button>
           </div>
 
           <div class="grid gap-2">
-            <Input v-model="currentPassword" type="password" class="h-8" :placeholder="$t('lock.currentPasswordPlaceholder')" />
-            <Input v-model="newPassword" type="password" class="h-8" :placeholder="$t('lock.newPasswordPlaceholder')" />
-            <Button variant="outline" size="sm" @click="savePassword">{{ $t('lock.setPassword') }}</Button>
+            <Input
+              v-model="currentPassword"
+              type="password"
+              class="h-8"
+              :placeholder="$t('lock.currentPasswordPlaceholder')"
+            />
+            <Input
+              v-model="newPassword"
+              type="password"
+              class="h-8"
+              :placeholder="$t('lock.newPasswordPlaceholder')"
+            />
+            <Button variant="outline" size="sm" @click="savePassword">{{
+              $t('lock.setPassword')
+            }}</Button>
           </div>
 
           <Button variant="outline" size="sm" @click="manualLock">{{ $t('lock.lockNow') }}</Button>
         </div>
 
-
         <!-- Action buttons -->
         <div class="flex justify-end gap-2">
-          <Button variant="outline" size="sm" @click="resetDefaults">{{ $t('settings.resetDefaults') }}</Button>
+          <Button variant="outline" size="sm" @click="resetDefaults">{{
+            $t('settings.resetDefaults')
+          }}</Button>
           <Button size="sm" @click="save">{{ $t('settings.save') }}</Button>
         </div>
       </div>
@@ -199,15 +257,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, computed } from "vue";
-import { useI18n } from "vue-i18n";
-import { invoke } from "@tauri-apps/api/core";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { setLocale, getLocale } from "@/i18n";
-import { useTheme, type AppearanceMode, type ThemeColor } from "@/composables/useTheme";
-import { useSecurityStore } from "@/stores/securityStore";
+import { ref, reactive, watch, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { invoke } from '@tauri-apps/api/core';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { setLocale, getLocale } from '@/i18n';
+import { useTheme, type AppearanceMode, type ThemeColor } from '@/composables/useTheme';
+import { useSecurityStore } from '@/stores/securityStore';
 
 interface AppLockConfig {
   enabled: boolean;
@@ -237,14 +295,14 @@ function changeLanguage(lang: string) {
 
 const { appearance, themeColor, setAppearance, setThemeColor } = useTheme();
 const security = useSecurityStore();
-const appearanceModes: AppearanceMode[] = ["system", "light", "dark"];
+const appearanceModes: AppearanceMode[] = ['system', 'light', 'dark'];
 const themeColors: { id: ThemeColor; swatch: string }[] = [
-  { id: "zinc", swatch: "#71717a" },
-  { id: "blue", swatch: "#3b82f6" },
-  { id: "green", swatch: "#22c55e" },
-  { id: "rose", swatch: "#f43f5e" },
-  { id: "orange", swatch: "#f97316" },
-  { id: "violet", swatch: "#8b5cf6" },
+  { id: 'zinc', swatch: '#71717a' },
+  { id: 'blue', swatch: '#3b82f6' },
+  { id: 'green', swatch: '#22c55e' },
+  { id: 'rose', swatch: '#f43f5e' },
+  { id: 'orange', swatch: '#f97316' },
+  { id: 'violet', swatch: '#8b5cf6' },
 ];
 
 const form = reactive<AppConfig>({
@@ -264,10 +322,10 @@ const form = reactive<AppConfig>({
 const autostart = ref(false);
 
 const excludedAppsText = computed({
-  get: () => form.excluded_apps.join("\n"),
+  get: () => form.excluded_apps.join('\n'),
   set: (val: string) => {
     form.excluded_apps = val
-      .split("\n")
+      .split('\n')
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
   },
@@ -279,27 +337,27 @@ watch(
     if (open) {
       await loadConfig();
     }
-  }
+  },
 );
 
 async function loadConfig() {
   try {
-    const config = await invoke<AppConfig>("get_config");
+    const config = await invoke<AppConfig>('get_config');
     Object.assign(form, config);
-    autostart.value = await invoke<boolean>("get_autostart_enabled");
+    autostart.value = await invoke<boolean>('get_autostart_enabled');
     await security.refresh();
   } catch (e) {
-    console.error("Failed to load config:", e);
+    console.error('Failed to load config:', e);
   }
 }
 
 async function save() {
   try {
-    await invoke("update_config", { newConfig: { ...form } });
+    await invoke('update_config', { newConfig: { ...form } });
     await security.updateSettings(form.app_lock);
     close();
   } catch (e) {
-    console.error("Failed to save config:", e);
+    console.error('Failed to save config:', e);
   }
 }
 
@@ -310,17 +368,17 @@ function resetDefaults() {
   form.monitor_interval_ms = 500;
   form.autostart_enabled = false;
   form.sensitive_expiry_minutes = 5;
-  form.app_lock = { enabled: false, auto_lock_seconds: 0, biometric_enabled: false }
+  form.app_lock = { enabled: false, auto_lock_seconds: 0, biometric_enabled: false };
 }
 
-const currentPassword = ref("");
-const newPassword = ref("");
+const currentPassword = ref('');
+const newPassword = ref('');
 
 async function savePassword() {
   if (!newPassword.value) return;
   await security.setPassword(currentPassword.value || null, newPassword.value);
-  currentPassword.value = "";
-  newPassword.value = "";
+  currentPassword.value = '';
+  newPassword.value = '';
   form.app_lock.enabled = true;
 }
 
@@ -332,14 +390,14 @@ async function manualLock() {
 async function toggleAutostart() {
   try {
     autostart.value = !autostart.value;
-    await invoke("set_autostart_enabled", { enabled: autostart.value });
+    await invoke('set_autostart_enabled', { enabled: autostart.value });
   } catch (e) {
-    console.error("Failed to toggle autostart:", e);
+    console.error('Failed to toggle autostart:', e);
     autostart.value = !autostart.value;
   }
 }
 
 function close() {
-  emit("close");
+  emit('close');
 }
 </script>

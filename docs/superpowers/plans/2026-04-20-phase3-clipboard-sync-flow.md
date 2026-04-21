@@ -13,6 +13,7 @@
 ### Task 1: Add `source_device` Column and Sync Log DB Methods
 
 **Files:**
+
 - Modify: `src-tauri/src/storage/migrations.rs`
 - Modify: `src-tauri/src/storage/models.rs`
 - Modify: `src-tauri/src/storage/database.rs`
@@ -167,6 +168,7 @@ git add -A && git commit -m "feat(sync): add source_device column and sync_log D
 ### Task 2: Add Real `ClipboardSync` Protocol Message and Sync Entry Serialization
 
 **Files:**
+
 - Modify: `src-tauri/src/sync/protocol.rs`
 - Modify: `src-tauri/src/sync/mod.rs`
 
@@ -271,6 +273,7 @@ git add -A && git commit -m "feat(sync): add ClipboardSync protocol message and 
 ### Task 3: Implement Send Pipeline — Broadcast Entry to Connected Devices
 
 **Files:**
+
 - Modify: `src-tauri/src/sync/mod.rs`
 - Modify: `src-tauri/src/sync/server.rs`
 - Modify: `src-tauri/src/sync/client.rs`
@@ -330,7 +333,7 @@ Then in the `tokio::select!` loop, add a branch for outgoing entries:
 ```rust
 tokio::select! {
     // ... existing heartbeat and read branches ...
-    
+
     result = outgoing_rx.recv() => {
         match result {
             Ok(payload) => {
@@ -401,6 +404,7 @@ git add -A && git commit -m "feat(sync): implement send pipeline with broadcast 
 ### Task 4: Implement Receive Pipeline — Decrypt, Deduplicate, Store, Refresh
 
 **Files:**
+
 - Modify: `src-tauri/src/sync/mod.rs`
 - Modify: `src-tauri/src/sync/server.rs`
 - Modify: `src-tauri/src/sync/client.rs`
@@ -575,6 +579,7 @@ git add -A && git commit -m "feat(sync): implement receive pipeline with dedup, 
 ### Task 5: Hook Clipboard Monitor into Sync Pipeline
 
 **Files:**
+
 - Modify: `src-tauri/src/lib.rs`
 
 - [ ] **Step 1: Pass SyncManager to clipboard processing loop**
@@ -627,6 +632,7 @@ git add -A && git commit -m "feat(sync): hook clipboard monitor into sync broadc
 ### Task 6: Update README and CHANGELOG, Final Commit
 
 **Files:**
+
 - Modify: `README.md`
 - Modify: `README.zh-CN.md`
 - Modify: `CHANGELOG.md`

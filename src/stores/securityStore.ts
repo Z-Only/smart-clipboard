@@ -1,7 +1,7 @@
-import { defineStore } from "pinia";
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import type { AppLockStatus } from "@/types/security";
+import { defineStore } from 'pinia';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
+import type { AppLockStatus } from '@/types/security';
 
 interface State {
   status: AppLockStatus;
@@ -21,7 +21,7 @@ const defaultStatus: AppLockStatus = {
   failed_attempts: 0,
 };
 
-export const useSecurityStore = defineStore("security", {
+export const useSecurityStore = defineStore('security', {
   state: (): State => ({
     status: defaultStatus,
     loading: false,
@@ -31,7 +31,7 @@ export const useSecurityStore = defineStore("security", {
   actions: {
     async init() {
       if (!this.initialized) {
-        await listen<{ status: AppLockStatus }>("app-lock-status", (event) => {
+        await listen<{ status: AppLockStatus }>('app-lock-status', (event) => {
           this.status = event.payload.status;
         });
         this.initialized = true;
@@ -39,13 +39,13 @@ export const useSecurityStore = defineStore("security", {
       await this.refresh();
     },
     async refresh() {
-      this.status = await invoke<AppLockStatus>("get_app_lock_status");
+      this.status = await invoke<AppLockStatus>('get_app_lock_status');
     },
     async setPassword(currentPassword: string | null, newPassword: string) {
       this.loading = true;
       this.error = null;
       try {
-        this.status = await invoke<AppLockStatus>("set_app_lock_password", {
+        this.status = await invoke<AppLockStatus>('set_app_lock_password', {
           payload: { current_password: currentPassword, new_password: newPassword },
         });
       } catch (error) {
@@ -55,11 +55,15 @@ export const useSecurityStore = defineStore("security", {
         this.loading = false;
       }
     },
-    async updateSettings(payload: { enabled: boolean; auto_lock_seconds: number; biometric_enabled: boolean }) {
+    async updateSettings(payload: {
+      enabled: boolean;
+      auto_lock_seconds: number;
+      biometric_enabled: boolean;
+    }) {
       this.loading = true;
       this.error = null;
       try {
-        this.status = await invoke<AppLockStatus>("update_app_lock_settings", { payload });
+        this.status = await invoke<AppLockStatus>('update_app_lock_settings', { payload });
       } catch (error) {
         this.error = String(error);
         throw error;
@@ -68,13 +72,13 @@ export const useSecurityStore = defineStore("security", {
       }
     },
     async lock() {
-      this.status = await invoke<AppLockStatus>("lock_app");
+      this.status = await invoke<AppLockStatus>('lock_app');
     },
     async unlock(password: string | null, preferBiometric = false) {
       this.loading = true;
       this.error = null;
       try {
-        this.status = await invoke<AppLockStatus>("unlock_app", {
+        this.status = await invoke<AppLockStatus>('unlock_app', {
           payload: { password, prefer_biometric: preferBiometric },
         });
       } catch (error) {

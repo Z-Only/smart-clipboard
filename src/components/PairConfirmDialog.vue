@@ -4,7 +4,9 @@
     class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4"
     @click.self="handleCancel"
   >
-    <div class="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+    <div
+      class="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+    >
       <div class="px-5 py-4">
         <h3 class="text-lg font-semibold">{{ $t('sync.pairDialog.title') }}</h3>
         <p class="mt-1 text-sm text-muted-foreground">{{ $t('sync.pairDialog.message') }}</p>
@@ -22,17 +24,32 @@
           </div>
           <div v-if="device.fingerprint">
             <p class="text-xs text-muted-foreground">{{ $t('sync.pairDialog.fingerprint') }}</p>
-            <p class="text-xs font-mono text-muted-foreground break-all">{{ device.fingerprint }}</p>
+            <p class="text-xs font-mono text-muted-foreground break-all">
+              {{ device.fingerprint }}
+            </p>
           </div>
         </div>
 
-        <div class="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
-          <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <div
+          class="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2"
+        >
+          <svg
+            class="mt-0.5 h-4 w-4 shrink-0 text-amber-500"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
             <path d="M12 9v4" />
             <path d="M12 17h.01" />
           </svg>
-          <p class="text-xs text-amber-600 dark:text-amber-400">{{ $t('sync.pairDialog.warning') }}</p>
+          <p class="text-xs text-amber-600 dark:text-amber-400">
+            {{ $t('sync.pairDialog.warning') }}
+          </p>
         </div>
       </div>
 
@@ -55,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import type { SyncDevice } from "@/types";
+import type { SyncDevice } from '@/types';
 
 defineProps<{
   isOpen: boolean;
@@ -68,10 +85,10 @@ const emit = defineEmits<{
 }>();
 
 function handleConfirm() {
-  emit("confirm");
+  emit('confirm');
 }
 
 function handleCancel() {
-  emit("cancel");
+  emit('cancel');
 }
 </script>

@@ -10,6 +10,7 @@ These features were mentioned in the original design spec but deferred from Phas
 Replace the current plaintext SQLite database with an encrypted SQLCipher database. This ensures that clipboard data (which may contain sensitive information) is protected at rest.
 
 ### Implementation Notes
+
 - Switch `rusqlite` dependency from `bundled` feature to `bundled-sqlcipher` or `bundled-sqlcipher-vendored-openssl`
 - Derive encryption key from a user-configured password or a device-specific key stored in the OS keychain
 - Add a "Database Encryption" section to Settings panel with options: enable/disable, change password
@@ -26,6 +27,7 @@ Replace the current plaintext SQLite database with an encrypted SQLCipher databa
 Add an app-level lock that requires authentication before accessing the clipboard history.
 
 ### Implementation Notes
+
 - Support two unlock methods: password and biometric (Touch ID / Windows Hello / Linux PAM)
 - When enabled, the app shows a lock screen on launch and when revealed from tray/hotkey
 - Use Tauri's biometric plugin or platform-specific APIs
@@ -42,6 +44,7 @@ Add an app-level lock that requires authentication before accessing the clipboar
 Enhance the full-text search to support Chinese pinyin input, allowing users to find Chinese content by typing its pinyin initials.
 
 ### Implementation Notes
+
 - Option A: Extend SQLite FTS5 with a custom pinyin tokenizer
 - Option B: Pre-compute pinyin representation on insert and store in a separate column, then search both content and pinyin
 - Option C: Use a Rust pinyin crate (e.g., `pinyin`) to convert content at search time
@@ -57,6 +60,7 @@ Enhance the full-text search to support Chinese pinyin input, allowing users to 
 Replace the current IntersectionObserver-based infinite scroll with true virtual scrolling to handle very large entry counts efficiently.
 
 ### Implementation Notes
+
 - Integrate a virtual scroll library (e.g., `vue-virtual-scroller` or `@tanstack/vue-virtual`)
 - Render only the visible portion of the entry list, keeping DOM node count constant
 - Maintain smooth scrolling with date group headers as sticky labels
@@ -72,6 +76,7 @@ Replace the current IntersectionObserver-based infinite scroll with true virtual
 Allow users to select multiple entries and perform operations on them together.
 
 ### Implementation Notes
+
 - Add a multi-select mode toggle in the toolbar
 - Show checkboxes on entry cards when in multi-select mode
 - Support Shift+Click and Ctrl/Cmd+Click for range and toggle selection

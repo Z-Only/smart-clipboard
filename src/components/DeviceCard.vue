@@ -1,5 +1,7 @@
 <template>
-  <div class="rounded-xl border border-border bg-background/80 p-3 shadow-sm transition-colors hover:bg-accent/30">
+  <div
+    class="rounded-xl border border-border bg-background/80 p-3 shadow-sm transition-colors hover:bg-accent/30"
+  >
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0 space-y-1">
         <div class="flex items-center gap-2">
@@ -56,19 +58,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import { useI18n } from "vue-i18n";
-import type { SyncDevice } from "@/types";
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import type { SyncDevice } from '@/types';
 
 const props = defineProps<{
   device: SyncDevice;
-  mode: "paired" | "discovered";
+  mode: 'paired' | 'discovered';
 }>();
 
 defineEmits<{
   pair: [device: SyncDevice];
   unpair: [device: SyncDevice];
-  "toggle-sync": [device: SyncDevice, enabled: boolean];
+  'toggle-sync': [device: SyncDevice, enabled: boolean];
 }>();
 
 const { t } = useI18n();
@@ -79,29 +81,29 @@ const statusText = computed(() => t(`sync.statusValues.${props.device.status ?? 
 
 const statusClass = computed(() => {
   switch (props.device.status) {
-    case "online":
-    case "connected":
-      return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
-    case "connecting":
-    case "pairing":
-      return "bg-amber-500/10 text-amber-600 dark:text-amber-400";
-    case "offline":
-    case "disabled":
-      return "bg-muted text-muted-foreground";
-    case "error":
-      return "bg-destructive/10 text-destructive";
+    case 'online':
+    case 'connected':
+      return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
+    case 'connecting':
+    case 'pairing':
+      return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
+    case 'offline':
+    case 'disabled':
+      return 'bg-muted text-muted-foreground';
+    case 'error':
+      return 'bg-destructive/10 text-destructive';
     default:
-      return "bg-secondary text-secondary-foreground";
+      return 'bg-secondary text-secondary-foreground';
   }
 });
 
 const subtitle = computed(() => {
-  if (props.mode === "paired") {
-    if (!props.device.syncEnabled || props.device.status === "disabled") {
-      return t("sync.device.syncOff");
+  if (props.mode === 'paired') {
+    if (!props.device.syncEnabled || props.device.status === 'disabled') {
+      return t('sync.device.syncOff');
     }
-    return t("sync.device.syncOn");
+    return t('sync.device.syncOn');
   }
-  return t("sync.device.availableToPair");
+  return t('sync.device.availableToPair');
 });
 </script>

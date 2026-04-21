@@ -37,19 +37,20 @@
           class="text-[10px] opacity-0 group-hover:opacity-100 hover:text-destructive"
           @click.stop="handleDeleteTag(tag.id)"
           :title="$t('tags.deleteTag')"
-        >&#x2715;</span>
+          >&#x2715;</span
+        >
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from "vue";
-import { storeToRefs } from "pinia";
-import { invoke } from "@tauri-apps/api/core";
-import { useClipboardStore } from "@/stores/clipboardStore";
-import { CATEGORIES } from "@/types";
-import type { CategoryType } from "@/types";
+import { onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
+import { invoke } from '@tauri-apps/api/core';
+import { useClipboardStore } from '@/stores/clipboardStore';
+import { CATEGORIES } from '@/types';
+import type { CategoryType } from '@/types';
 
 const store = useClipboardStore();
 const { selectedCategory, selectedTagId, allTags } = storeToRefs(store);
@@ -61,15 +62,15 @@ function handleCategoryClick(key: CategoryType) {
 
 async function handleDeleteTag(tagId: number) {
   try {
-    await invoke("delete_tag", { id: tagId });
+    await invoke('delete_tag', { id: tagId });
     await store.fetchAllTags();
     // If we were filtering by this tag, reset
     if (selectedTagId.value === tagId) {
       store.clearTagFilter();
-      store.setCategory("all");
+      store.setCategory('all');
     }
   } catch (e) {
-    console.error("Failed to delete tag:", e);
+    console.error('Failed to delete tag:', e);
   }
 }
 

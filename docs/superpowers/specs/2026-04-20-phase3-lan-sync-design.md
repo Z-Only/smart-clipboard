@@ -45,11 +45,11 @@ enum SyncMessage {
     // Pairing
     PairRequest { device_id: String, device_name: String, public_key: Vec<u8> },
     PairResponse { device_id: String, accepted: bool, public_key: Vec<u8> },
-    
+
     // Sync
     ClipboardSync { entry: EncryptedEntry, timestamp: i64 },
     SyncAck { entry_hash: String },
-    
+
     // Control
     Ping,
     Pong,
@@ -111,29 +111,35 @@ CREATE INDEX idx_sync_log_device ON sync_log(device_id);
 **`mod.rs`** - Module exports and SyncManager
 
 **`mdns.rs`** - mDNS service advertisement and discovery
+
 - `advertise(device_name, port)` - Register mDNS service
 - `discover() -> Vec<DiscoveredDevice>` - Scan for peers
 - Background task: continuous discovery with periodic refresh
 
 **`server.rs`** - WebSocket server (listens for incoming connections)
+
 - Accepts connections from paired devices
 - Validates device identity via stored public key
 - Routes messages to SyncManager
 
 **`client.rs`** - WebSocket client (connects to discovered peers)
+
 - Connects to paired devices
 - Reconnects on disconnect with exponential backoff
 
 **`crypto.rs`** - Encryption utilities
+
 - `generate_keypair() -> (PrivateKey, PublicKey)`
 - `derive_shared_secret(private_key, peer_public_key) -> SharedSecret`
 - `encrypt( &[u8], shared_secret) -> EncryptedEntry`
 - `decrypt(encrypted: &EncryptedEntry, shared_secret) -> Vec<u8>`
 
 **`protocol.rs`** - Message serialization/deserialization
+
 - SyncMessage enum with serde Serialize/Deserialize
 
 **`commands.rs`** - Tauri IPC commands
+
 - `get_sync_status() -> SyncStatus`
 - `get_discovered_devices() -> Vec<DiscoveredDevice>`
 - `get_paired_devices() -> Vec<PairedDevice>`
@@ -166,18 +172,21 @@ rand = "0.8"
 ### Components
 
 **`SyncPanel.vue`** - Main sync management panel
+
 - Sync toggle (enable/disable)
 - Device name display/edit
 - Paired devices list
 - Discovered devices list with "Pair" buttons
 
 **`DeviceCard.vue`** - Single device display
+
 - Device name, status indicator (online/offline)
 - Last seen timestamp
 - Unpair button
 - Sync active toggle
 
 **`PairRequestDialog.vue`** - Incoming pair request notification
+
 - Shows requesting device name
 - Accept / Reject buttons
 - Auto-dismiss after 60 seconds (reject)
@@ -186,12 +195,12 @@ rand = "0.8"
 
 ```typescript
 interface SyncState {
-  enabled: boolean
-  deviceName: string
-  pairedDevices: PairedDevice[]
-  discoveredDevices: DiscoveredDevice[]
-  pendingRequests: PairRequest[]
-  syncStatus: 'idle' | 'syncing' | 'error'
+  enabled: boolean;
+  deviceName: string;
+  pairedDevices: PairedDevice[];
+  discoveredDevices: DiscoveredDevice[];
+  pendingRequests: PairRequest[];
+  syncStatus: 'idle' | 'syncing' | 'error';
 }
 ```
 

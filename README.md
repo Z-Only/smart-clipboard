@@ -89,20 +89,20 @@ When app lock is enabled:
 
 ## Screenshots
 
-*Coming soon*
+_Coming soon_
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Vue 3 + TypeScript + Tailwind CSS + shadcn-vue |
-| Backend | Rust |
-| Framework | Tauri 2 |
-| Database | SQLite with FTS5 (via rusqlite) |
-| Clipboard | arboard |
-| Local security | argon2 + keyring |
-| LAN discovery | mdns-sd |
-| i18n | vue-i18n |
+| Layer          | Technology                                     |
+| -------------- | ---------------------------------------------- |
+| Frontend       | Vue 3 + TypeScript + Tailwind CSS + shadcn-vue |
+| Backend        | Rust                                           |
+| Framework      | Tauri 2                                        |
+| Database       | SQLite with FTS5 (via rusqlite)                |
+| Clipboard      | arboard                                        |
+| Local security | argon2 + keyring                               |
+| LAN discovery  | mdns-sd                                        |
+| i18n           | vue-i18n                                       |
 
 ## Getting Started
 

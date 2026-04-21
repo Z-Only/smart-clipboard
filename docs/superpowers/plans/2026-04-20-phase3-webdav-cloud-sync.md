@@ -13,6 +13,7 @@
 ## File Structure
 
 ### New Files (Rust backend)
+
 - `src-tauri/src/sync/webdav/mod.rs` — WebDavSyncManager orchestrator
 - `src-tauri/src/sync/webdav/rate_limiter.rs` — Token bucket rate limiter
 - `src-tauri/src/sync/webdav/client.rs` — WebDAV HTTP client (PUT/GET/MKCOL/DELETE)
@@ -20,10 +21,12 @@
 - `src-tauri/src/sync/webdav/poller.rs` — Periodic poll scheduler
 
 ### New Files (Vue frontend)
+
 - `src/stores/webdavStore.ts` — Pinia store for WebDAV sync state
 - `src/components/WebDavPanel.vue` — WebDAV configuration and status UI
 
 ### Modified Files (Rust backend)
+
 - `src-tauri/Cargo.toml` — Add `reqwest` and `argon2` dependencies
 - `src-tauri/src/sync/crypto.rs` — Add password-derived key functions
 - `src-tauri/src/sync/mod.rs` — Re-export webdav module, integrate with SyncManager
@@ -32,6 +35,7 @@
 - `src-tauri/src/lib.rs` — Register new commands, initialize WebDavSyncManager
 
 ### Modified Files (Vue frontend)
+
 - `src/types/index.ts` — Add WebDAV types
 - `src/components/SyncPanel.vue` — Add tab switcher for LAN / WebDAV
 - `src/i18n/locales/en.ts` — Add WebDAV i18n keys
@@ -42,6 +46,7 @@
 ### Task 1: Add Cargo Dependencies
 
 **Files:**
+
 - Modify: `src-tauri/Cargo.toml`
 
 - [ ] **Step 1: Add reqwest and argon2 to Cargo.toml**
@@ -70,6 +75,7 @@ git commit -m "chore: add reqwest and argon2 dependencies for WebDAV sync"
 ### Task 2: Extend crypto.rs with Password-Derived Key Functions
 
 **Files:**
+
 - Modify: `src-tauri/src/sync/crypto.rs`
 
 - [ ] **Step 1: Add argon2 imports and constants at the top of crypto.rs**
@@ -293,6 +299,7 @@ git commit -m "feat(webdav): add password-derived key and file encryption to cry
 ### Task 3: Token Bucket Rate Limiter
 
 **Files:**
+
 - Create: `src-tauri/src/sync/webdav/rate_limiter.rs`
 
 - [ ] **Step 1: Create the rate_limiter.rs file**
@@ -443,6 +450,7 @@ git commit -m "feat(webdav): add token bucket rate limiter"
 ### Task 4: WebDAV HTTP Client
 
 **Files:**
+
 - Create: `src-tauri/src/sync/webdav/client.rs`
 
 - [ ] **Step 1: Create the client.rs file**
@@ -670,6 +678,7 @@ git commit -m "feat(webdav): add WebDAV HTTP client with rate limiting"
 ### Task 5: Encrypted Index and Device Registry Manager
 
 **Files:**
+
 - Create: `src-tauri/src/sync/webdav/index.rs`
 
 - [ ] **Step 1: Create the index.rs file**
@@ -1004,6 +1013,7 @@ git commit -m "feat(webdav): add encrypted index and device registry manager"
 ### Task 6: Sync Poller
 
 **Files:**
+
 - Create: `src-tauri/src/sync/webdav/poller.rs`
 
 - [ ] **Step 1: Create the poller.rs file**
@@ -1246,6 +1256,7 @@ git commit -m "feat(webdav): add sync poller for periodic pull"
 ### Task 7: WebDavSyncManager Orchestrator and Module Wiring
 
 **Files:**
+
 - Create: `src-tauri/src/sync/webdav/mod.rs`
 - Modify: `src-tauri/src/sync/mod.rs`
 
@@ -1742,6 +1753,7 @@ git commit -m "feat(webdav): implement WebDavSyncManager orchestrator and wire w
 ### Task 8: Extend config.rs with WebDavConfig
 
 **Files:**
+
 - Modify: `src-tauri/src/config.rs`
 
 - [ ] **Step 1: Add WebDavConfig to AppConfig**
@@ -1782,6 +1794,7 @@ git commit -m "feat(webdav): add WebDavConfig to AppConfig"
 ### Task 9: Add Tauri IPC Commands for WebDAV
 
 **Files:**
+
 - Modify: `src-tauri/src/commands.rs`
 
 - [ ] **Step 1: Add WebDAV command functions**
@@ -1874,6 +1887,7 @@ git commit -m "feat(webdav): add Tauri IPC commands for WebDAV sync"
 ### Task 10: Register Commands and Initialize WebDavSyncManager in lib.rs
 
 **Files:**
+
 - Modify: `src-tauri/src/lib.rs`
 
 - [ ] **Step 1: Initialize WebDavSyncManager and register commands**
@@ -1934,6 +1948,7 @@ git commit -m "feat(webdav): register WebDAV commands and initialize manager in 
 ### Task 11: Add Frontend TypeScript Types
 
 **Files:**
+
 - Modify: `src/types/index.ts`
 
 - [ ] **Step 1: Add WebDAV types**
@@ -1943,36 +1958,36 @@ Add at the end of `src/types/index.ts`:
 ```typescript
 // WebDAV Cloud Sync Types
 export interface WebDavConfig {
-  enabled: boolean
-  serverUrl: string
-  username: string
-  password: string
-  syncPassword: string
-  pollIntervalSecs: number
-  syncImages: boolean
-  syncSensitive: boolean
-  rateLimitCapacity: number
-  rateLimitRefillMinutes: number
-  remotePath: string
-  maxCloudEntries: number
+  enabled: boolean;
+  serverUrl: string;
+  username: string;
+  password: string;
+  syncPassword: string;
+  pollIntervalSecs: number;
+  syncImages: boolean;
+  syncSensitive: boolean;
+  rateLimitCapacity: number;
+  rateLimitRefillMinutes: number;
+  remotePath: string;
+  maxCloudEntries: number;
 }
 
 export interface WebDavDevice {
-  deviceId: string
-  deviceName: string
-  publicKey: string
-  registeredAt: string
-  lastSyncAt: string | null
+  deviceId: string;
+  deviceName: string;
+  publicKey: string;
+  registeredAt: string;
+  lastSyncAt: string | null;
 }
 
 export interface WebDavSyncStatus {
-  status: 'disconnected' | 'connecting' | 'connected' | 'error'
-  lastSyncAt: string | null
-  cloudEntryCount: number
-  registeredDevices: WebDavDevice[]
-  rateLimitAvailable: number
-  rateLimitCapacity: number
-  error: string | null
+  status: 'disconnected' | 'connecting' | 'connected' | 'error';
+  lastSyncAt: string | null;
+  cloudEntryCount: number;
+  registeredDevices: WebDavDevice[];
+  rateLimitAvailable: number;
+  rateLimitCapacity: number;
+  error: string | null;
 }
 ```
 
@@ -1988,6 +2003,7 @@ git commit -m "feat(webdav): add WebDAV TypeScript types"
 ### Task 12: Add i18n Translations
 
 **Files:**
+
 - Modify: `src/i18n/locales/en.ts`
 - Modify: `src/i18n/locales/zh-CN.ts`
 
@@ -2105,6 +2121,7 @@ git commit -m "feat(webdav): add i18n translations for WebDAV sync"
 ### Task 13: Create webdavStore.ts
 
 **Files:**
+
 - Create: `src/stores/webdavStore.ts`
 
 - [ ] **Step 1: Create the Pinia store**
@@ -2112,10 +2129,10 @@ git commit -m "feat(webdav): add i18n translations for WebDAV sync"
 Create `src/stores/webdavStore.ts`:
 
 ```typescript
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import type { WebDavConfig, WebDavSyncStatus } from '@/types'
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
+import type { WebDavConfig, WebDavSyncStatus } from '@/types';
 
 export const useWebDavStore = defineStore('webdav', () => {
   const status = ref<WebDavSyncStatus>({
@@ -2126,7 +2143,7 @@ export const useWebDavStore = defineStore('webdav', () => {
     rateLimitAvailable: 0,
     rateLimitCapacity: 0,
     error: null,
-  })
+  });
 
   const config = ref<WebDavConfig>({
     enabled: false,
@@ -2141,13 +2158,13 @@ export const useWebDavStore = defineStore('webdav', () => {
     rateLimitRefillMinutes: 30,
     remotePath: '/SmartClipboard',
     maxCloudEntries: 2000,
-  })
+  });
 
-  const isConnected = computed(() => status.value.status === 'connected')
-  const isConnecting = computed(() => status.value.status === 'connecting')
-  const hasError = computed(() => status.value.status === 'error')
+  const isConnected = computed(() => status.value.status === 'connected');
+  const isConnecting = computed(() => status.value.status === 'connecting');
+  const hasError = computed(() => status.value.status === 'error');
 
-  let pollTimer: ReturnType<typeof setInterval> | null = null
+  let pollTimer: ReturnType<typeof setInterval> | null = null;
 
   async function connect(
     serverUrl: string,
@@ -2161,43 +2178,43 @@ export const useWebDavStore = defineStore('webdav', () => {
         username,
         password,
         syncPassword,
-      })
-      await refreshStatus()
-      startStatusPolling()
+      });
+      await refreshStatus();
+      startStatusPolling();
     } catch (error) {
-      await refreshStatus()
-      throw error
+      await refreshStatus();
+      throw error;
     }
   }
 
   async function disconnect() {
-    stopStatusPolling()
-    await invoke('webdav_disconnect')
-    await refreshStatus()
+    stopStatusPolling();
+    await invoke('webdav_disconnect');
+    await refreshStatus();
   }
 
   async function refreshStatus() {
     try {
-      status.value = await invoke<WebDavSyncStatus>('webdav_get_status')
+      status.value = await invoke<WebDavSyncStatus>('webdav_get_status');
     } catch (error) {
-      console.error('Failed to refresh WebDAV status:', error)
+      console.error('Failed to refresh WebDAV status:', error);
     }
   }
 
   async function triggerSync(): Promise<number> {
-    const count = await invoke<number>('webdav_trigger_sync')
-    await refreshStatus()
-    return count
+    const count = await invoke<number>('webdav_trigger_sync');
+    await refreshStatus();
+    return count;
   }
 
   async function updateConfig(newConfig: WebDavConfig) {
-    config.value = newConfig
-    await invoke('webdav_update_config', { config: newConfig })
+    config.value = newConfig;
+    await invoke('webdav_update_config', { config: newConfig });
   }
 
   async function removeDevice(deviceId: string) {
-    await invoke('webdav_remove_device', { deviceId })
-    await refreshStatus()
+    await invoke('webdav_remove_device', { deviceId });
+    await refreshStatus();
   }
 
   async function testConnection(
@@ -2209,18 +2226,18 @@ export const useWebDavStore = defineStore('webdav', () => {
       serverUrl,
       username,
       password,
-    })
+    });
   }
 
   function startStatusPolling() {
-    stopStatusPolling()
-    pollTimer = setInterval(refreshStatus, 10000)
+    stopStatusPolling();
+    pollTimer = setInterval(refreshStatus, 10000);
   }
 
   function stopStatusPolling() {
     if (pollTimer) {
-      clearInterval(pollTimer)
-      pollTimer = null
+      clearInterval(pollTimer);
+      pollTimer = null;
     }
   }
 
@@ -2239,8 +2256,8 @@ export const useWebDavStore = defineStore('webdav', () => {
     testConnection,
     startStatusPolling,
     stopStatusPolling,
-  }
-})
+  };
+});
 ```
 
 - [ ] **Step 2: Commit**
@@ -2255,6 +2272,7 @@ git commit -m "feat(webdav): create Pinia store for WebDAV sync"
 ### Task 14: Create WebDavPanel.vue and Update SyncPanel.vue
 
 **Files:**
+
 - Create: `src/components/WebDavPanel.vue`
 - Modify: `src/components/SyncPanel.vue`
 
@@ -2264,85 +2282,80 @@ Create `src/components/WebDavPanel.vue`:
 
 ```vue
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { useWebDavStore } from '@/stores/webdavStore'
+import { ref, onMounted, onUnmounted } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useWebDavStore } from '@/stores/webdavStore';
 
-const { t } = useI18n()
-const store = useWebDavStore()
+const { t } = useI18n();
+const store = useWebDavStore();
 
-const serverUrl = ref('')
-const username = ref('')
-const password = ref('')
-const syncPassword = ref('')
-const showAdvanced = ref(false)
-const testLoading = ref(false)
-const testResult = ref<{ success: boolean; message: string } | null>(null)
-const connectLoading = ref(false)
-const syncLoading = ref(false)
+const serverUrl = ref('');
+const username = ref('');
+const password = ref('');
+const syncPassword = ref('');
+const showAdvanced = ref(false);
+const testLoading = ref(false);
+const testResult = ref<{ success: boolean; message: string } | null>(null);
+const connectLoading = ref(false);
+const syncLoading = ref(false);
 
 onMounted(async () => {
-  await store.refreshStatus()
+  await store.refreshStatus();
   if (store.isConnected) {
-    store.startStatusPolling()
+    store.startStatusPolling();
   }
-})
+});
 
 onUnmounted(() => {
-  store.stopStatusPolling()
-})
+  store.stopStatusPolling();
+});
 
 async function handleTestConnection() {
-  testLoading.value = true
-  testResult.value = null
+  testLoading.value = true;
+  testResult.value = null;
   try {
-    await store.testConnection(serverUrl.value, username.value, password.value)
-    testResult.value = { success: true, message: t('webdav.testSuccess') }
+    await store.testConnection(serverUrl.value, username.value, password.value);
+    testResult.value = { success: true, message: t('webdav.testSuccess') };
   } catch (error) {
     testResult.value = {
       success: false,
       message: `${t('webdav.testFailed')}: ${error}`,
-    }
+    };
   } finally {
-    testLoading.value = false
+    testLoading.value = false;
   }
 }
 
 async function handleConnect() {
-  connectLoading.value = true
+  connectLoading.value = true;
   try {
-    await store.connect(
-      serverUrl.value,
-      username.value,
-      password.value,
-      syncPassword.value,
-    )
+    await store.connect(serverUrl.value, username.value, password.value, syncPassword.value);
   } catch (error) {
-    console.error('WebDAV connect failed:', error)
+    console.error('WebDAV connect failed:', error);
   } finally {
-    connectLoading.value = false
+    connectLoading.value = false;
   }
 }
 
 async function handleDisconnect() {
-  await store.disconnect()
+  await store.disconnect();
 }
 
 async function handleTriggerSync() {
-  syncLoading.value = true
+  syncLoading.value = true;
   try {
-    const count = await store.triggerSync()
-    console.log(`Synced ${count} entries`)
+    const count = await store.triggerSync();
+    console.log(`Synced ${count} entries`);
   } catch (error) {
-    console.error('Sync failed:', error)
+    console.error('Sync failed:', error);
   } finally {
-    syncLoading.value = false
+    syncLoading.value = false;
   }
 }
 
 async function handleRemoveDevice(deviceId: string, deviceName: string) {
   if (confirm(t('webdav.removeDeviceConfirm', { name: deviceName }))) {
-    await store.removeDevice(deviceId)
+    await store.removeDevice(deviceId);
   }
 }
 </script>
@@ -2395,15 +2408,23 @@ async function handleRemoveDevice(deviceId: string, deviceName: string) {
       </div>
 
       <!-- Test result -->
-      <div v-if="testResult" :class="[
-        'rounded-md px-3 py-2 text-sm',
-        testResult.success ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
-      ]">
+      <div
+        v-if="testResult"
+        :class="[
+          'rounded-md px-3 py-2 text-sm',
+          testResult.success
+            ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+            : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400',
+        ]"
+      >
         {{ testResult.message }}
       </div>
 
       <!-- Error display -->
-      <div v-if="store.hasError && store.status.error" class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
+      <div
+        v-if="store.hasError && store.status.error"
+        class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400"
+      >
         {{ store.status.error }}
       </div>
 
@@ -2417,7 +2438,14 @@ async function handleRemoveDevice(deviceId: string, deviceName: string) {
         </button>
         <button
           @click="handleConnect"
-          :disabled="connectLoading || store.isConnecting || !serverUrl || !username || !password || !syncPassword"
+          :disabled="
+            connectLoading ||
+            store.isConnecting ||
+            !serverUrl ||
+            !username ||
+            !password ||
+            !syncPassword
+          "
           class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           {{ connectLoading || store.isConnecting ? t('webdav.connecting') : t('webdav.connect') }}
@@ -2471,7 +2499,10 @@ async function handleRemoveDevice(deviceId: string, deviceName: string) {
       <!-- Registered Devices -->
       <div class="space-y-2">
         <h4 class="text-sm font-medium">{{ t('webdav.registeredDevices') }}</h4>
-        <div v-if="store.status.registeredDevices.length === 0" class="text-sm text-muted-foreground">
+        <div
+          v-if="store.status.registeredDevices.length === 0"
+          class="text-sm text-muted-foreground"
+        >
           {{ t('webdav.noDevices') }}
         </div>
         <div
@@ -2505,10 +2536,10 @@ In `src/components/SyncPanel.vue`, wrap the existing content in a tab system. Ad
 ```vue
 <script setup lang="ts">
 // Add to existing imports:
-import { ref } from 'vue'
-import WebDavPanel from './WebDavPanel.vue'
+import { ref } from 'vue';
+import WebDavPanel from './WebDavPanel.vue';
 
-const activeTab = ref<'lan' | 'webdav'>('lan')
+const activeTab = ref<'lan' | 'webdav'>('lan');
 </script>
 
 <template>
@@ -2521,7 +2552,7 @@ const activeTab = ref<'lan' | 'webdav'>('lan')
           'px-4 py-2 text-sm font-medium border-b-2 -mb-px',
           activeTab === 'lan'
             ? 'border-primary text-primary'
-            : 'border-transparent text-muted-foreground hover:text-foreground'
+            : 'border-transparent text-muted-foreground hover:text-foreground',
         ]"
       >
         {{ $t('webdav.tab.lan') }}
@@ -2532,7 +2563,7 @@ const activeTab = ref<'lan' | 'webdav'>('lan')
           'px-4 py-2 text-sm font-medium border-b-2 -mb-px',
           activeTab === 'webdav'
             ? 'border-primary text-primary'
-            : 'border-transparent text-muted-foreground hover:text-foreground'
+            : 'border-transparent text-muted-foreground hover:text-foreground',
         ]"
       >
         {{ $t('webdav.tab.webdav') }}
@@ -2551,6 +2582,7 @@ const activeTab = ref<'lan' | 'webdav'>('lan')
 ```
 
 Note: The exact integration depends on the current SyncPanel.vue structure. The key changes are:
+
 1. Import `WebDavPanel` component
 2. Add `activeTab` ref
 3. Wrap existing content in `v-if="activeTab === 'lan'"` block

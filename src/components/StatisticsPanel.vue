@@ -4,13 +4,24 @@
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
     @click.self="close"
   >
-    <div class="bg-card border border-border rounded-lg shadow-lg w-[380px] max-h-[80vh] overflow-y-auto p-5">
+    <div
+      class="bg-card border border-border rounded-lg shadow-lg w-[380px] max-h-[80vh] overflow-y-auto p-5"
+    >
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-base font-semibold">{{ $t('statistics.title') }}</h2>
         <button class="text-muted-foreground hover:text-foreground" @click="close">
-          <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+          <svg
+            class="h-4 w-4"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
           </svg>
         </button>
       </div>
@@ -25,15 +36,23 @@
         <div class="grid grid-cols-3 gap-2">
           <div class="bg-muted/50 rounded-md p-2.5 text-center">
             <div class="text-lg font-bold text-foreground">{{ stats.total_entries }}</div>
-            <div class="text-[10px] text-muted-foreground mt-0.5">{{ $t('statistics.totalEntries') }}</div>
+            <div class="text-[10px] text-muted-foreground mt-0.5">
+              {{ $t('statistics.totalEntries') }}
+            </div>
           </div>
           <div class="bg-muted/50 rounded-md p-2.5 text-center">
             <div class="text-lg font-bold text-foreground">{{ stats.total_favorites }}</div>
-            <div class="text-[10px] text-muted-foreground mt-0.5">{{ $t('statistics.totalFavorites') }}</div>
+            <div class="text-[10px] text-muted-foreground mt-0.5">
+              {{ $t('statistics.totalFavorites') }}
+            </div>
           </div>
           <div class="bg-muted/50 rounded-md p-2.5 text-center">
-            <div class="text-lg font-bold text-foreground">{{ formatBytes(stats.storage_size_bytes) }}</div>
-            <div class="text-[10px] text-muted-foreground mt-0.5">{{ $t('statistics.storageSize') }}</div>
+            <div class="text-lg font-bold text-foreground">
+              {{ formatBytes(stats.storage_size_bytes) }}
+            </div>
+            <div class="text-[10px] text-muted-foreground mt-0.5">
+              {{ $t('statistics.storageSize') }}
+            </div>
           </div>
         </div>
 
@@ -46,15 +65,23 @@
             {{ $t('statistics.noData') }}
           </div>
           <div v-else class="flex flex-col gap-1.5">
-            <div v-for="cat in stats.entries_by_category" :key="cat.category" class="flex items-center gap-2">
-              <span class="w-12 text-xs text-right text-muted-foreground truncate">{{ cat.category }}</span>
+            <div
+              v-for="cat in stats.entries_by_category"
+              :key="cat.category"
+              class="flex items-center gap-2"
+            >
+              <span class="w-12 text-xs text-right text-muted-foreground truncate">{{
+                cat.category
+              }}</span>
               <div class="flex-1 h-4 bg-muted rounded overflow-hidden">
                 <div
                   class="h-full bg-primary rounded transition-all"
                   :style="{ width: categoryBarWidth(cat.count) }"
                 />
               </div>
-              <span class="w-8 text-xs text-right text-muted-foreground tabular-nums">{{ cat.count }}</span>
+              <span class="w-8 text-xs text-right text-muted-foreground tabular-nums">{{
+                cat.count
+              }}</span>
             </div>
           </div>
         </div>
@@ -78,7 +105,9 @@
           </div>
           <div v-if="stats.entries_by_day.length > 0" class="flex justify-between mt-1">
             <span class="text-[10px] text-muted-foreground">{{ reversedDays[0]?.date }}</span>
-            <span class="text-[10px] text-muted-foreground">{{ reversedDays[reversedDays.length - 1]?.date }}</span>
+            <span class="text-[10px] text-muted-foreground">{{
+              reversedDays[reversedDays.length - 1]?.date
+            }}</span>
           </div>
         </div>
 
@@ -96,7 +125,9 @@
               :key="entry.id"
               class="flex items-center gap-2 px-2 py-1 rounded hover:bg-muted/50"
             >
-              <span class="text-xs text-muted-foreground w-4 text-right shrink-0">{{ idx + 1 }}.</span>
+              <span class="text-xs text-muted-foreground w-4 text-right shrink-0"
+                >{{ idx + 1 }}.</span
+              >
               <span class="text-xs truncate flex-1">
                 {{ entry.content_type === 'image' ? '[Image]' : truncateContent(entry.content) }}
               </span>
@@ -112,9 +143,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
-import { invoke } from "@tauri-apps/api/core";
-import { Separator } from "@/components/ui/separator";
+import { ref, computed, watch } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
+import { Separator } from '@/components/ui/separator';
 
 interface CategoryCount {
   category: string;
@@ -157,15 +188,15 @@ watch(
       stats.value = null;
       loading.value = false;
     }
-  }
+  },
 );
 
 async function loadStatistics() {
   loading.value = true;
   try {
-    stats.value = await invoke<Statistics>("get_statistics");
+    stats.value = await invoke<Statistics>('get_statistics');
   } catch (e) {
-    console.error("Failed to load statistics:", e);
+    console.error('Failed to load statistics:', e);
   } finally {
     loading.value = false;
   }
@@ -197,17 +228,17 @@ function dayBarHeight(count: number): string {
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / 1048576).toFixed(1) + " MB";
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
 }
 
 function truncateContent(content: string): string {
-  const single = content.replace(/\s+/g, " ").trim();
-  return single.length > 50 ? single.slice(0, 50) + "..." : single;
+  const single = content.replace(/\s+/g, ' ').trim();
+  return single.length > 50 ? single.slice(0, 50) + '...' : single;
 }
 
 function close() {
-  emit("close");
+  emit('close');
 }
 </script>

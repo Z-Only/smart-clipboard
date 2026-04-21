@@ -5,8 +5,16 @@
       @click.stop="togglePicker"
       :title="t('tags.addTag')"
     >
-      <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg
+        class="h-3.5 w-3.5"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
         <path d="M12 5v14M5 12h14" />
       </svg>
     </button>
@@ -55,10 +63,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from "vue";
-import { useI18n } from "vue-i18n";
-import { invoke } from "@tauri-apps/api/core";
-import type { Tag } from "@/types";
+import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { invoke } from '@tauri-apps/api/core';
+import type { Tag } from '@/types';
 
 const { t } = useI18n();
 
@@ -73,7 +81,7 @@ const emit = defineEmits<{
 const isOpen = ref(false);
 const pickerRef = ref<HTMLElement | null>(null);
 const inputRef = ref<HTMLInputElement | null>(null);
-const newTagName = ref("");
+const newTagName = ref('');
 const allTags = ref<Tag[]>([]);
 const entryTagIds = ref<Set<number>>(new Set());
 
@@ -83,38 +91,38 @@ function isTagAssociated(tagId: number): boolean {
 
 async function loadTags() {
   try {
-    allTags.value = await invoke<Tag[]>("get_all_tags");
+    allTags.value = await invoke<Tag[]>('get_all_tags');
   } catch (e) {
-    console.error("Failed to load tags:", e);
+    console.error('Failed to load tags:', e);
   }
 }
 
 async function loadEntryTags() {
   try {
-    const tags = await invoke<Tag[]>("get_entry_tags", { entryId: props.entryId });
+    const tags = await invoke<Tag[]>('get_entry_tags', { entryId: props.entryId });
     entryTagIds.value = new Set(tags.map((t) => t.id));
-    emit("tagsChanged", tags);
+    emit('tagsChanged', tags);
   } catch (e) {
-    console.error("Failed to load entry tags:", e);
+    console.error('Failed to load entry tags:', e);
   }
 }
 
 async function toggleTag(tagId: number) {
   try {
     if (entryTagIds.value.has(tagId)) {
-      await invoke("remove_tag_from_entry", { entryId: props.entryId, tagId });
+      await invoke('remove_tag_from_entry', { entryId: props.entryId, tagId });
       entryTagIds.value.delete(tagId);
     } else {
-      await invoke("add_tag_to_entry", { entryId: props.entryId, tagId });
+      await invoke('add_tag_to_entry', { entryId: props.entryId, tagId });
       entryTagIds.value.add(tagId);
     }
     // Force reactivity
     entryTagIds.value = new Set(entryTagIds.value);
     // Emit updated tags
     const currentTags = allTags.value.filter((t) => entryTagIds.value.has(t.id));
-    emit("tagsChanged", currentTags);
+    emit('tagsChanged', currentTags);
   } catch (e) {
-    console.error("Failed to toggle tag:", e);
+    console.error('Failed to toggle tag:', e);
   }
 }
 
@@ -122,17 +130,17 @@ async function handleCreateTag() {
   const name = newTagName.value.trim();
   if (!name) return;
   try {
-    const tag = await invoke<Tag>("create_tag", { name });
+    const tag = await invoke<Tag>('create_tag', { name });
     allTags.value.push(tag);
     // Auto-associate with current entry
-    await invoke("add_tag_to_entry", { entryId: props.entryId, tagId: tag.id });
+    await invoke('add_tag_to_entry', { entryId: props.entryId, tagId: tag.id });
     entryTagIds.value.add(tag.id);
     entryTagIds.value = new Set(entryTagIds.value);
-    newTagName.value = "";
+    newTagName.value = '';
     const currentTags = allTags.value.filter((t) => entryTagIds.value.has(t.id));
-    emit("tagsChanged", currentTags);
+    emit('tagsChanged', currentTags);
   } catch (e) {
-    console.error("Failed to create tag:", e);
+    console.error('Failed to create tag:', e);
   }
 }
 
@@ -151,10 +159,10 @@ function handleClickOutside(event: MouseEvent) {
 }
 
 onMounted(() => {
-  document.addEventListener("click", handleClickOutside);
+  document.addEventListener('click', handleClickOutside);
 });
 
 onUnmounted(() => {
-  document.removeEventListener("click", handleClickOutside);
+  document.removeEventListener('click', handleClickOutside);
 });
 </script>
