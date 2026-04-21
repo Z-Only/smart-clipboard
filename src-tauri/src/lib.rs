@@ -40,6 +40,8 @@ pub fn run() {
             commands::get_entries,
             commands::search_entries,
             commands::delete_entry,
+            commands::delete_entries,
+            commands::copy_entries,
             commands::toggle_favorite,
             commands::get_entry_count,
             commands::get_statistics,

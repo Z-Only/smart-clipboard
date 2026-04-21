@@ -32,7 +32,7 @@
     </div>
 
     <div class="flex items-center justify-between gap-3 border-b border-border px-3 py-2 text-xs text-muted-foreground">
-      <span>{{ $t('list.virtualizedHint') }}</span>
+      <span>{{ stickyGroupLabel || $t('list.virtualizedHint') }}</span>
       <button
         class="rounded-md border border-border px-2.5 py-1 transition-colors hover:bg-accent"
         @click="toggleMultiSelect"
@@ -59,12 +59,14 @@
       <span class="text-xs mt-1">{{ $t('list.noEntriesHint') }}</span>
     </div>
 
-    <div
-      v-else
-      ref="viewportRef"
-      class="flex-1 overflow-y-auto"
-      @scroll="handleScroll"
-    >
+    <div v-else ref="viewportRef" class="relative flex-1 overflow-y-auto" @scroll="handleScroll">
+      <div
+        v-if="stickyGroupLabel"
+        class="pointer-events-none sticky top-0 z-20 bg-background/95 px-3 py-1.5 backdrop-blur-sm"
+      >
+        <span class="text-xs font-medium text-muted-foreground">{{ stickyGroupLabel }}</span>
+      </div>
+
       <div :style="{ height: `${totalHeight}px`, position: 'relative' }">
         <div
           v-for="item in visibleItems"
@@ -73,7 +75,7 @@
         >
           <div
             v-if="item.type === 'group'"
-            class="sticky top-0 z-10 bg-background/95 px-3 py-1.5 backdrop-blur-sm"
+            class="px-3 py-1.5"
           >
             <span class="text-xs font-medium text-muted-foreground">{{ item.group.label }}</span>
           </div>
@@ -140,7 +142,7 @@ const layoutItems = computed(() => {
 
 const totalHeight = computed(() => {
   const items = layoutItems.value;
-  if (items.length === 0) return 0;
+  if (!items.length) return 0;
   const last = items[items.length - 1];
   return last.offset + last.height;
 });
@@ -149,6 +151,13 @@ const visibleItems = computed(() => {
   const start = Math.max(0, scrollTop.value - OVERSCAN * ENTRY_HEIGHT);
   const end = scrollTop.value + viewportHeight.value + OVERSCAN * ENTRY_HEIGHT;
   return layoutItems.value.filter((item) => item.offset + item.height >= start && item.offset <= end) as Array<ClipboardListItem & { offset: number; height: number }>;
+});
+
+const stickyGroupLabel = computed(() => {
+  const current = [...layoutItems.value]
+    .reverse()
+    .find((item) => item.type === "group" && item.offset <= scrollTop.value + 1);
+  return current?.type === "group" ? current.group.label : groupedEntryItems.value[0]?.type === "group" ? groupedEntryItems.value[0].group.label : "";
 });
 
 function updateViewportMetrics() {
@@ -164,24 +173,17 @@ function ensureActiveVisible() {
   const bottom = top + target.height;
   const viewTop = viewportRef.value.scrollTop;
   const viewBottom = viewTop + viewportRef.value.clientHeight;
-
-  if (top < viewTop) {
-    viewportRef.value.scrollTop = top;
-  } else if (bottom > viewBottom) {
-    viewportRef.value.scrollTop = bottom - viewportRef.value.clientHeight;
-  }
+  if (top < viewTop) viewportRef.value.scrollTop = top;
+  else if (bottom > viewBottom) viewportRef.value.scrollTop = bottom - viewportRef.value.clientHeight;
 }
 
-function handleSelect(id: number) {
-  store.handleEntryPrimaryAction(id);
+function handleSelect(id: number, range = false) {
+  store.handleEntryPrimaryAction(id, { range });
 }
 
 function toggleMultiSelect() {
-  if (isMultiSelectMode.value) {
-    store.exitMultiSelectMode();
-    return;
-  }
-  store.enterMultiSelectMode(activeEntryId.value ?? entries.value[0]?.id);
+  if (isMultiSelectMode.value) store.exitMultiSelectMode();
+  else store.enterMultiSelectMode(activeEntryId.value ?? entries.value[0]?.id);
 }
 
 function handleScroll() {
@@ -191,30 +193,28 @@ function handleScroll() {
 
 function handleKeydown(e: KeyboardEvent) {
   if (entries.value.length === 0) return;
-
   const currentIndex = entries.value.findIndex((entry) => entry.id === activeEntryId.value);
 
   if (e.key === "ArrowDown") {
     e.preventDefault();
     const nextIndex = Math.min((currentIndex >= 0 ? currentIndex : -1) + 1, entries.value.length - 1);
-    store.setActiveEntry(entries.value[nextIndex]?.id ?? null);
+    const nextId = entries.value[nextIndex]?.id ?? null;
+    if (nextId !== null && e.shiftKey && isMultiSelectMode.value) store.selectRangeTo(nextId);
+    store.setActiveEntry(nextId);
     ensureActiveVisible();
   } else if (e.key === "ArrowUp") {
     e.preventDefault();
     const nextIndex = Math.max(currentIndex <= 0 ? 0 : currentIndex - 1, 0);
-    store.setActiveEntry(entries.value[nextIndex]?.id ?? null);
+    const nextId = entries.value[nextIndex]?.id ?? null;
+    if (nextId !== null && e.shiftKey && isMultiSelectMode.value) store.selectRangeTo(nextId);
+    store.setActiveEntry(nextId);
     ensureActiveVisible();
   } else if (e.key === "Enter" && activeEntryId.value !== null) {
     e.preventDefault();
-    store.handleEntryPrimaryAction(activeEntryId.value);
+    store.handleEntryPrimaryAction(activeEntryId.value, { range: e.shiftKey });
   } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "a") {
     e.preventDefault();
-    if (!isMultiSelectMode.value) {
-      store.enterMultiSelectMode();
-    }
-    for (const entry of entries.value) {
-      store.toggleEntrySelection(entry.id, true);
-    }
+    store.selectAllLoadedEntries();
   } else if (e.key === "Escape" && isMultiSelectMode.value) {
     e.preventDefault();
     store.exitMultiSelectMode();
@@ -225,19 +225,10 @@ onMounted(() => {
   updateViewportMetrics();
   window.addEventListener("resize", updateViewportMetrics);
   window.addEventListener("keydown", handleKeydown);
-
-  observer = new IntersectionObserver(
-    (es) => {
-      if (es[0]?.isIntersecting) {
-        store.loadMore();
-      }
-    },
-    { threshold: 0.1 }
-  );
-
-  if (sentinelRef.value) {
-    observer.observe(sentinelRef.value);
-  }
+  observer = new IntersectionObserver((es) => {
+    if (es[0]?.isIntersecting) store.loadMore();
+  }, { threshold: 0.1 });
+  if (sentinelRef.value) observer.observe(sentinelRef.value);
 });
 
 watch(sentinelRef, async (el, prev) => {

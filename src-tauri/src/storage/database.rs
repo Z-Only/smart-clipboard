@@ -11,6 +11,13 @@ use super::models::{
 };
 use super::search_pinyin::{build_pinyin_fields, normalize_search_keyword};
 
+trait Pipe: Sized {
+    fn pipe<T>(self, f: impl FnOnce(Self) -> T) -> T {
+        f(self)
+    }
+}
+impl<T> Pipe for T {}
+
 pub struct Database {
     conn: Mutex<Connection>,
 }
@@ -128,10 +135,8 @@ impl Database {
 
     /// Delete an entry and clean up associated image file if it's an image entry.
     pub fn delete_entry_with_cleanup(&self, id: i64, _app_data_dir: &Path) -> Result<()> {
-        // First, get the entry to check if it's an image
         if let Some(entry) = self.get_entry_by_id(id)? {
             if entry.content_type == "image" {
-                // The content field holds the image file path
                 let image_path = Path::new(&entry.content);
                 if image_path.exists() {
                     if let Err(e) = std::fs::remove_file(image_path) {
@@ -140,8 +145,36 @@ impl Database {
                 }
             }
         }
-        // Delete from database
         self.delete_entry(id)
+    }
+
+    pub fn delete_entries_with_cleanup(&self, ids: &[i64], app_data_dir: &Path) -> Result<i64> {
+        let mut deleted = 0;
+        for id in ids {
+            self.delete_entry_with_cleanup(*id, app_data_dir)?;
+            deleted += 1;
+        }
+        Ok(deleted)
+    }
+
+    pub fn get_entries_by_ids(&self, ids: &[i64]) -> Result<Vec<ClipboardEntry>> {
+        ids.iter()
+            .filter_map(|id| self.get_entry_by_id(*id).ok().flatten())
+            .collect::<Vec<_>>()
+            .pipe(Ok)
+    }
+
+    pub fn merge_entries_content(&self, ids: &[i64]) -> Result<String> {
+        let entries = self.get_entries_by_ids(ids)?;
+        Ok(entries
+            .into_iter()
+            .filter(|entry| entry.content_type != "image")
+            .map(|entry| entry.content.trim().to_string())
+            .filter(|content| !content.is_empty())
+            .collect::<Vec<_>>()
+            .join("
+
+"))
     }
 
     pub fn toggle_favorite(&self, id: i64) -> Result<bool> {
