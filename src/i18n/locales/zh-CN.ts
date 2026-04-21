@@ -55,6 +55,13 @@ export default {
     noEntriesHint: "复制一些内容开始使用",
     today: "今天",
     yesterday: "昨天",
+    multiSelect: "多选",
+    exitMultiSelect: "完成",
+    toggleSelection: "切换选择",
+    selectedCount: "已选 {count} 项",
+    batchDelete: "批量删除",
+    batchCopy: "合并复制",
+    virtualizedHint: "已启用虚拟滚动",
   },
   settings: {
     title: "设置",

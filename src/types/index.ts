@@ -23,6 +23,16 @@ export interface SearchResult {
   total_count: number;
 }
 
+export interface ClipboardListGroupMeta {
+  key: string;
+  label: string;
+  dateKey: string;
+}
+
+export type ClipboardListItem =
+  | { type: "group"; key: string; group: ClipboardListGroupMeta }
+  | { type: "entry"; key: string; entry: ClipboardEntry; groupKey: string };
+
 export interface Template {
   id: number | null;
   name: string;

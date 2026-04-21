@@ -2,12 +2,27 @@
   <div
     class="group flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors"
     :class="[
-      isSelected
-        ? 'bg-accent'
-        : 'hover:bg-accent/50',
+      isChecked
+        ? 'bg-primary/10 ring-1 ring-primary/20'
+        : isSelected
+          ? 'bg-accent'
+          : 'hover:bg-accent/50',
     ]"
     @click="$emit('select', entry.id)"
   >
+    <button
+      v-if="showCheckbox"
+      class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors"
+      :class="isChecked ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-transparent'"
+      @click.stop="$emit('toggle-check', entry.id)"
+      :aria-label="t('list.toggleSelection')"
+    >
+      <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+    </button>
+
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-2 mb-1">
         <Badge variant="secondary" class="text-[10px] px-1.5 py-0 shrink-0">
@@ -30,7 +45,6 @@
           {{ entry.source_app }}
         </span>
       </div>
-      <!-- Image preview for image entries -->
       <div v-if="isImage" class="flex items-center gap-2">
         <img
           :src="imageAssetUrl"
@@ -43,7 +57,6 @@
           {{ t('entry.categoryLabels.image') }}
         </span>
       </div>
-      <!-- Text preview for non-image entries -->
       <div v-else class="text-sm leading-snug break-all line-clamp-3" :class="isCodeLike ? 'font-mono text-xs' : ''">
         {{ truncatedContent }}
       </div>
@@ -57,7 +70,7 @@
         </span>
       </div>
     </div>
-    <div class="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+    <div v-if="!showCheckbox" class="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
       <button
         class="p-1 rounded hover:bg-background/80 text-muted-foreground"
         :class="entry.is_favorite ? 'text-yellow-500 !opacity-100' : ''"
@@ -102,10 +115,13 @@ const { t } = useI18n();
 const props = defineProps<{
   entry: ClipboardEntry;
   isSelected?: boolean;
+  showCheckbox?: boolean;
+  isChecked?: boolean;
 }>();
 
 defineEmits<{
   select: [id: number];
+  "toggle-check": [id: number];
   toggleFavorite: [id: number];
   delete: [id: number];
 }>();
@@ -115,8 +131,8 @@ const entryTags = ref<Tag[]>([]);
 async function loadEntryTags() {
   try {
     entryTags.value = await invoke<Tag[]>("get_entry_tags", { entryId: props.entry.id });
-  } catch (e) {
-    // silently ignore - tags are optional display
+  } catch {
+    // ignore
   }
 }
 
@@ -124,7 +140,6 @@ function onTagsChanged(tags: Tag[]) {
   entryTags.value = tags;
 }
 
-// Load tags when entry changes
 watch(
   () => props.entry.id,
   () => loadEntryTags(),
@@ -132,40 +147,24 @@ watch(
 );
 
 const isImage = computed(() => props.entry.content_type === "image");
-
-const imageAssetUrl = computed(() => {
-  if (!isImage.value) return "";
-  return convertFileSrc(props.entry.content);
-});
-
+const imageAssetUrl = computed(() => (isImage.value ? convertFileSrc(props.entry.content) : ""));
 const categoryLabel = computed(() => {
   const key = `entry.categoryLabels.${props.entry.category}`;
   const translated = t(key);
   return translated !== key ? translated : props.entry.category;
 });
-
-const isCodeLike = computed(() =>
-  ["code", "json", "xml"].includes(props.entry.category)
+const isCodeLike = computed(() => ["code", "json", "xml"].includes(props.entry.category));
+const truncatedContent = computed(() =>
+  props.entry.content.length > 200 ? `${props.entry.content.slice(0, 200)}...` : props.entry.content
 );
-
-const truncatedContent = computed(() => {
-  const content = props.entry.content;
-  if (content.length > 200) {
-    return content.slice(0, 200) + "...";
-  }
-  return content;
-});
-
 const expiryText = computed(() => {
   if (!props.entry.expires_at) return null;
   const now = new Date();
   const expiresAt = new Date(props.entry.expires_at);
   const diffMs = expiresAt.getTime() - now.getTime();
   if (diffMs <= 0) return null;
-  const diffMin = Math.ceil(diffMs / 60000);
-  return t("entry.expiresIn", { n: diffMin });
+  return t("entry.expiresIn", { n: Math.ceil(diffMs / 60000) });
 });
-
 const relativeTime = computed(() => {
   const now = new Date();
   const created = new Date(props.entry.created_at);
@@ -174,7 +173,6 @@ const relativeTime = computed(() => {
   const diffMin = Math.floor(diffSec / 60);
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
-
   if (diffSec < 60) return t("entry.justNow");
   if (diffMin < 60) return t("entry.minutesAgo", { n: diffMin });
   if (diffHour < 24) return t("entry.hoursAgo", { n: diffHour });

@@ -55,6 +55,13 @@ export default {
     noEntriesHint: "Copy something to get started",
     today: "Today",
     yesterday: "Yesterday",
+    multiSelect: "Multi-select",
+    exitMultiSelect: "Done",
+    toggleSelection: "Toggle selection",
+    selectedCount: "{count} selected",
+    batchDelete: "Delete selected",
+    batchCopy: "Merge copy",
+    virtualizedHint: "Virtualized list enabled",
   },
   settings: {
     title: "Settings",

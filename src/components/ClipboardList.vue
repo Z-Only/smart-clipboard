@@ -1,5 +1,46 @@
 <template>
-  <ScrollArea class="flex-1">
+  <div class="flex h-full min-h-0 flex-col">
+    <div
+      v-if="isMultiSelectMode"
+      class="flex items-center justify-between gap-3 border-b border-border px-3 py-2 text-sm"
+    >
+      <div class="flex items-center gap-2">
+        <span class="font-medium">{{ $t('list.selectedCount', { count: selectedCount }) }}</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          class="rounded-md border border-border px-2.5 py-1 text-xs transition-colors hover:bg-accent disabled:opacity-50"
+          :disabled="!canBatchCopy"
+          @click="store.copySelectedEntries"
+        >
+          {{ $t('list.batchCopy') }}
+        </button>
+        <button
+          class="rounded-md border border-destructive/20 px-2.5 py-1 text-xs text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+          :disabled="selectedCount === 0"
+          @click="store.deleteSelectedEntries"
+        >
+          {{ $t('list.batchDelete') }}
+        </button>
+        <button
+          class="rounded-md border border-border px-2.5 py-1 text-xs transition-colors hover:bg-accent"
+          @click="store.exitMultiSelectMode"
+        >
+          {{ $t('list.exitMultiSelect') }}
+        </button>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between gap-3 border-b border-border px-3 py-2 text-xs text-muted-foreground">
+      <span>{{ $t('list.virtualizedHint') }}</span>
+      <button
+        class="rounded-md border border-border px-2.5 py-1 transition-colors hover:bg-accent"
+        @click="toggleMultiSelect"
+      >
+        {{ isMultiSelectMode ? $t('list.exitMultiSelect') : $t('list.multiSelect') }}
+      </button>
+    </div>
+
     <div v-if="isLoading && entries.length === 0" class="flex items-center justify-center h-40 text-muted-foreground">
       <svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
@@ -18,107 +59,173 @@
       <span class="text-xs mt-1">{{ $t('list.noEntriesHint') }}</span>
     </div>
 
-    <div v-else ref="listRef" class="flex flex-col">
-      <template v-for="(group, date) in groupedEntries" :key="date">
-        <div class="sticky top-0 z-10 bg-background/95 backdrop-blur-sm px-3 py-1.5">
-          <span class="text-xs font-medium text-muted-foreground">{{ date }}</span>
+    <div
+      v-else
+      ref="viewportRef"
+      class="flex-1 overflow-y-auto"
+      @scroll="handleScroll"
+    >
+      <div :style="{ height: `${totalHeight}px`, position: 'relative' }">
+        <div
+          v-for="item in visibleItems"
+          :key="item.key"
+          :style="{ position: 'absolute', top: `${item.offset}px`, left: '0', right: '0' }"
+        >
+          <div
+            v-if="item.type === 'group'"
+            class="sticky top-0 z-10 bg-background/95 px-3 py-1.5 backdrop-blur-sm"
+          >
+            <span class="text-xs font-medium text-muted-foreground">{{ item.group.label }}</span>
+          </div>
+          <EntryCard
+            v-else
+            :entry="item.entry"
+            :is-selected="activeEntryId === item.entry.id"
+            :show-checkbox="isMultiSelectMode"
+            :is-checked="selectedEntryIdSet.has(item.entry.id)"
+            @select="handleSelect"
+            @toggle-check="store.toggleEntrySelection"
+            @toggle-favorite="store.toggleFavorite"
+            @delete="store.deleteEntry"
+          />
         </div>
-        <EntryCard
-          v-for="entry in group"
-          :key="entry.id"
-          :entry="entry"
-          :is-selected="selectedIndex >= 0 && entries[selectedIndex]?.id === entry.id"
-          @select="handleSelect"
-          @toggle-favorite="store.toggleFavorite"
-          @delete="store.deleteEntry"
-        />
-      </template>
-
-      <div v-if="hasMore" ref="sentinelRef" class="flex items-center justify-center py-4 text-muted-foreground text-xs">
-        <span v-if="isLoading">{{ $t('list.loadingMore') }}</span>
-        <span v-else>&nbsp;</span>
+      </div>
+      <div v-if="hasMore" ref="sentinelRef" class="h-6" />
+      <div v-if="isLoading && entries.length > 0" class="py-3 text-center text-xs text-muted-foreground">
+        {{ $t('list.loadingMore') }}
       </div>
     </div>
-  </ScrollArea>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from "vue";
-import { useI18n } from "vue-i18n";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import EntryCard from "./EntryCard.vue";
 import { useClipboardStore } from "@/stores/clipboardStore";
+import type { ClipboardListItem } from "@/types";
 
-const { t } = useI18n();
 const store = useClipboardStore();
-const { entries, isLoading, hasMore } = storeToRefs(store);
+const {
+  entries,
+  isLoading,
+  hasMore,
+  activeEntryId,
+  isMultiSelectMode,
+  selectedCount,
+  selectedEntryIdSet,
+  canBatchCopy,
+  groupedEntryItems,
+} = storeToRefs(store);
 
-const selectedIndex = ref(-1);
+const viewportRef = ref<HTMLElement | null>(null);
 const sentinelRef = ref<HTMLElement | null>(null);
+const scrollTop = ref(0);
+const viewportHeight = ref(0);
 let observer: IntersectionObserver | null = null;
 
-const groupedEntries = computed(() => {
-  const groups: Record<string, typeof entries.value> = {};
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
+const GROUP_HEIGHT = 34;
+const ENTRY_HEIGHT = 112;
+const OVERSCAN = 8;
 
-  for (const entry of entries.value) {
-    const date = new Date(entry.created_at);
-    let label: string;
-
-    if (isSameDay(date, today)) {
-      label = t("list.today");
-    } else if (isSameDay(date, yesterday)) {
-      label = t("list.yesterday");
-    } else {
-      label = date.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
-      });
-    }
-
-    if (!groups[label]) groups[label] = [];
-    groups[label].push(entry);
-  }
-
-  return groups;
+const layoutItems = computed(() => {
+  let offset = 0;
+  return groupedEntryItems.value.map((item) => {
+    const height = item.type === "group" ? GROUP_HEIGHT : ENTRY_HEIGHT;
+    const laidOut = { ...item, height, offset };
+    offset += height;
+    return laidOut;
+  });
 });
 
-function isSameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
+const totalHeight = computed(() => {
+  const items = layoutItems.value;
+  if (items.length === 0) return 0;
+  const last = items[items.length - 1];
+  return last.offset + last.height;
+});
+
+const visibleItems = computed(() => {
+  const start = Math.max(0, scrollTop.value - OVERSCAN * ENTRY_HEIGHT);
+  const end = scrollTop.value + viewportHeight.value + OVERSCAN * ENTRY_HEIGHT;
+  return layoutItems.value.filter((item) => item.offset + item.height >= start && item.offset <= end) as Array<ClipboardListItem & { offset: number; height: number }>;
+});
+
+function updateViewportMetrics() {
+  if (!viewportRef.value) return;
+  viewportHeight.value = viewportRef.value.clientHeight;
+}
+
+function ensureActiveVisible() {
+  if (!viewportRef.value || activeEntryId.value === null) return;
+  const target = layoutItems.value.find((item) => item.type === "entry" && item.entry.id === activeEntryId.value);
+  if (!target) return;
+  const top = target.offset;
+  const bottom = top + target.height;
+  const viewTop = viewportRef.value.scrollTop;
+  const viewBottom = viewTop + viewportRef.value.clientHeight;
+
+  if (top < viewTop) {
+    viewportRef.value.scrollTop = top;
+  } else if (bottom > viewBottom) {
+    viewportRef.value.scrollTop = bottom - viewportRef.value.clientHeight;
+  }
 }
 
 function handleSelect(id: number) {
-  store.pasteEntry(id);
+  store.handleEntryPrimaryAction(id);
+}
+
+function toggleMultiSelect() {
+  if (isMultiSelectMode.value) {
+    store.exitMultiSelectMode();
+    return;
+  }
+  store.enterMultiSelectMode(activeEntryId.value ?? entries.value[0]?.id);
+}
+
+function handleScroll() {
+  if (!viewportRef.value) return;
+  scrollTop.value = viewportRef.value.scrollTop;
 }
 
 function handleKeydown(e: KeyboardEvent) {
   if (entries.value.length === 0) return;
 
+  const currentIndex = entries.value.findIndex((entry) => entry.id === activeEntryId.value);
+
   if (e.key === "ArrowDown") {
     e.preventDefault();
-    selectedIndex.value = Math.min(selectedIndex.value + 1, entries.value.length - 1);
+    const nextIndex = Math.min((currentIndex >= 0 ? currentIndex : -1) + 1, entries.value.length - 1);
+    store.setActiveEntry(entries.value[nextIndex]?.id ?? null);
+    ensureActiveVisible();
   } else if (e.key === "ArrowUp") {
     e.preventDefault();
-    selectedIndex.value = Math.max(selectedIndex.value - 1, 0);
-  } else if (e.key === "Enter" && selectedIndex.value >= 0) {
+    const nextIndex = Math.max(currentIndex <= 0 ? 0 : currentIndex - 1, 0);
+    store.setActiveEntry(entries.value[nextIndex]?.id ?? null);
+    ensureActiveVisible();
+  } else if (e.key === "Enter" && activeEntryId.value !== null) {
     e.preventDefault();
-    const entry = entries.value[selectedIndex.value];
-    if (entry) store.pasteEntry(entry.id);
+    store.handleEntryPrimaryAction(activeEntryId.value);
+  } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "a") {
+    e.preventDefault();
+    if (!isMultiSelectMode.value) {
+      store.enterMultiSelectMode();
+    }
+    for (const entry of entries.value) {
+      store.toggleEntrySelection(entry.id, true);
+    }
+  } else if (e.key === "Escape" && isMultiSelectMode.value) {
+    e.preventDefault();
+    store.exitMultiSelectMode();
   }
 }
 
 onMounted(() => {
+  updateViewportMetrics();
+  window.addEventListener("resize", updateViewportMetrics);
   window.addEventListener("keydown", handleKeydown);
 
-  // Infinite scroll observer
   observer = new IntersectionObserver(
     (es) => {
       if (es[0]?.isIntersecting) {
@@ -133,10 +240,20 @@ onMounted(() => {
   }
 });
 
+watch(sentinelRef, async (el, prev) => {
+  if (prev) observer?.unobserve(prev);
+  await nextTick();
+  if (el) observer?.observe(el);
+});
+
+watch(() => groupedEntryItems.value.length, async () => {
+  await nextTick();
+  updateViewportMetrics();
+});
+
 onUnmounted(() => {
+  window.removeEventListener("resize", updateViewportMetrics);
   window.removeEventListener("keydown", handleKeydown);
   observer?.disconnect();
 });
-
-defineExpose({ selectedIndex });
 </script>
