@@ -23,6 +23,12 @@ export default defineConfig(async () => ({
       reportsDirectory: './coverage',
       include: ['src/**/*.{ts,vue}'],
       exclude: ['src/main.ts', 'src/vite-env.d.ts', 'src/types/**'],
+      thresholds: {
+        statements: 6,
+        branches: 5,
+        functions: 7,
+        lines: 7,
+      },
     },
   },
   server: {
