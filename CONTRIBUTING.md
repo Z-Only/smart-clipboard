@@ -57,3 +57,11 @@ Before opening a PR, make sure:
 - Keep UI tests focused and stable
 - For Rust changes, run `pnpm run test:rust`
 - For frontend changes, run `pnpm run test:web`
+
+## Pull request titles
+
+Pull request titles should also follow a conventional format, for example:
+
+- `feat: add clipboard grouping`
+- `fix: handle sync reconnect edge case`
+- `ci: speed up quality workflow`
