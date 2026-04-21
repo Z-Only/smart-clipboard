@@ -110,7 +110,8 @@ async function loadTags() {
 }
 function toggleTag(tagId: number) {
   const next = new Set(selectedTagIds.value);
-  next.has(tagId) ? next.delete(tagId) : next.add(tagId);
+  if (next.has(tagId)) next.delete(tagId);
+  else next.add(tagId);
   selectedTagIds.value = next;
 }
 async function handleCreate() {

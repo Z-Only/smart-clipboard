@@ -1,4 +1,4 @@
-import { watch, type Ref } from 'vue';
+import type { Ref } from 'vue';
 import { watchDebounced } from '@vueuse/core';
 import { useClipboardStore } from '@/stores/clipboardStore';
 

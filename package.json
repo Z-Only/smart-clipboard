@@ -14,7 +14,13 @@
     "format:check": "pnpm run format:web:check && pnpm run format:rust:check",
     "format:web:check": "prettier --check src src-tauri .github *.json *.md docs index.html vite.config.ts tsconfig*.json",
     "format:rust:check": "cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check",
-    "prepare": "husky"
+    "prepare": "husky",
+    "lint": "pnpm run lint:web && pnpm run lint:rust",
+    "lint:web": "eslint . --max-warnings=0",
+    "lint:rust": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets",
+    "check": "pnpm run format:check && pnpm run lint:web && pnpm run typecheck && pnpm run test:rust",
+    "typecheck": "vue-tsc --noEmit",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml"
   },
   "keywords": [],
   "author": "",
@@ -37,16 +43,21 @@
     "vue-i18n": "^11.3.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.2.2",
     "@tauri-apps/cli": "^2.10.1",
     "@vitejs/plugin-vue": "^6.0.6",
-    "tailwindcss": "^4.2.2",
-    "typescript": "^6.0.3",
-    "vite": "^8.0.8",
-    "vue-tsc": "^3.2.7",
+    "eslint": "^10.2.1",
+    "eslint-plugin-vue": "^10.8.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.1",
-    "prettier": "^3.8.3"
+    "prettier": "^3.8.3",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.0",
+    "vite": "^8.0.8",
+    "vue-eslint-parser": "^10.4.0",
+    "vue-tsc": "^3.2.7"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,vue,json,md,yml,yaml,css,html}": "prettier --write",

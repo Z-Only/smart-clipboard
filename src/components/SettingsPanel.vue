@@ -263,7 +263,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { setLocale, getLocale } from '@/i18n';
+import { setLocale } from '@/i18n';
 import { useTheme, type AppearanceMode, type ThemeColor } from '@/composables/useTheme';
 import { useSecurityStore } from '@/stores/securityStore';
 

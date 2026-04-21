@@ -246,7 +246,8 @@ export const useClipboardStore = defineStore('clipboard', () => {
   function toggleEntrySelection(id: number, force?: boolean) {
     const current = new Set(selectedEntryIds.value);
     const shouldSelect = typeof force === 'boolean' ? force : !current.has(id);
-    shouldSelect ? current.add(id) : current.delete(id);
+    if (shouldSelect) current.add(id);
+    else current.delete(id);
     selectedEntryIds.value = Array.from(current);
     if (shouldSelect) selectionAnchorId.value = selectionAnchorId.value ?? id;
     if (selectedEntryIds.value.length === 0) {
