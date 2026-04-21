@@ -48,6 +48,10 @@ jobs:
       - name: Frontend tests
         run: pnpm run test:web
 
+      - name: Commit message lint
+        if: github.event_name == 'pull_request'
+        run: pnpm exec commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }}
+
   rust-quality:
     runs-on: ubuntu-22.04
     steps:
