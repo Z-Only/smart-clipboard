@@ -128,6 +128,8 @@ export default {
     batchHint: "为已选的 {count} 项设置标签",
     applyBatch: "应用标签",
     createAction: "创建",
+    batchModeAppend: "追加标签",
+    batchModeReplace: "覆盖标签",
   },
   templates: {
     title: "模板",

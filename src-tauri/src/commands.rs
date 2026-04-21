@@ -220,8 +220,9 @@ pub async fn set_tags_for_entries(
     db: State<'_, Arc<Database>>,
     ids: Vec<i64>,
     tag_ids: Vec<i64>,
+    mode: Option<String>,
 ) -> Result<(), String> {
-    db.set_tags_for_entries(&ids, &tag_ids)
+    db.set_tags_for_entries(&ids, &tag_ids, mode.as_deref().unwrap_or("replace"))
         .map_err(|e| e.to_string())
 }
 

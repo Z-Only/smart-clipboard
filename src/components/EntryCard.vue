@@ -109,8 +109,10 @@ import { Badge } from "@/components/ui/badge";
 import TransformMenu from "@/components/TransformMenu.vue";
 import TagPicker from "@/components/TagPicker.vue";
 import type { ClipboardEntry, Tag } from "@/types";
+import { useClipboardStore } from "@/stores/clipboardStore";
 
 const { t } = useI18n();
+const store = useClipboardStore();
 
 const props = defineProps<{
   entry: ClipboardEntry;
@@ -134,7 +136,13 @@ const entryTags = ref<Tag[]>([]);
 
 async function loadEntryTags() {
   try {
+    const cached = store.entryTagsMap[props.entry.id];
+    if (cached) {
+      entryTags.value = cached;
+      return;
+    }
     entryTags.value = await invoke<Tag[]>("get_entry_tags", { entryId: props.entry.id });
+    store.setEntryTags(props.entry.id, entryTags.value);
   } catch {
     // ignore
   }
@@ -142,6 +150,7 @@ async function loadEntryTags() {
 
 function onTagsChanged(tags: Tag[]) {
   entryTags.value = tags;
+  store.setEntryTags(props.entry.id, tags);
 }
 
 watch(

@@ -128,6 +128,8 @@ export default {
     batchHint: "Apply tags to {count} selected items",
     applyBatch: "Apply tags",
     createAction: "Create",
+    batchModeAppend: "Append tags",
+    batchModeReplace: "Replace tags",
   },
   templates: {
     title: "Templates",

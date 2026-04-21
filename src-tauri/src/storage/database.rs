@@ -543,11 +543,13 @@ impl Database {
         Ok(tags)
     }
 
-    pub fn set_tags_for_entries(&self, ids: &[i64], tag_ids: &[i64]) -> Result<()> {
+    pub fn set_tags_for_entries(&self, ids: &[i64], tag_ids: &[i64], mode: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         let tx = conn.unchecked_transaction()?;
         for entry_id in ids {
-            tx.execute("DELETE FROM entry_tags WHERE entry_id = ?1", params![entry_id])?;
+            if mode == "replace" {
+                tx.execute("DELETE FROM entry_tags WHERE entry_id = ?1", params![entry_id])?;
+            }
             for tag_id in tag_ids {
                 tx.execute(
                     "INSERT OR IGNORE INTO entry_tags (entry_id, tag_id) VALUES (?1, ?2)",
