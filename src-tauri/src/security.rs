@@ -4,12 +4,15 @@ use std::time::{Duration, Instant};
 use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 use crate::config::ConfigManager;
 
 const APP_LOCK_KEYRING_SERVICE: &str = "smart-clipboard";
 const APP_LOCK_KEYRING_ACCOUNT: &str = "app-lock-password-hash";
+
+#[cfg(test)]
+static TEST_BIOMETRIC_RESULT: Mutex<Option<Result<bool, String>>> = Mutex::new(None);
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct AppLockConfig {
@@ -265,6 +268,23 @@ pub fn password_hash_exists() -> bool {
         .unwrap_or(false)
 }
 
+#[cfg(test)]
+pub(crate) fn install_test_keyring_store() {
+    keyring_core::set_default_store(
+        keyring_core::mock::Store::new().expect("failed to create mock keyring store"),
+    );
+}
+
+#[cfg(test)]
+pub(crate) fn reset_test_keyring_store() {
+    let _ = keyring_core::unset_default_store();
+}
+
+#[cfg(test)]
+pub(crate) fn set_test_biometric_result(result: Option<Result<bool, String>>) {
+    *TEST_BIOMETRIC_RESULT.lock().unwrap() = result;
+}
+
 fn keyring_entry() -> Result<keyring_core::Entry, String> {
     init_keyring()?;
     keyring_core::Entry::new(APP_LOCK_KEYRING_SERVICE, APP_LOCK_KEYRING_ACCOUNT)
@@ -318,6 +338,11 @@ pub fn biometric_available() -> bool {
 }
 
 pub fn try_biometric_unlock() -> Result<bool, String> {
+    #[cfg(test)]
+    if let Some(result) = TEST_BIOMETRIC_RESULT.lock().unwrap().clone() {
+        return result;
+    }
+
     #[cfg(target_os = "macos")]
     {
         use std::process::Command;
@@ -346,7 +371,7 @@ end try
     }
 }
 
-pub fn emit_lock_state(app: &AppHandle, manager: &AppLockManager) {
+pub fn emit_lock_state<R: Runtime>(app: &AppHandle<R>, manager: &AppLockManager) {
     let _ = app.emit(
         "app-lock-status",
         AppLockEventPayload {
@@ -355,7 +380,11 @@ pub fn emit_lock_state(app: &AppHandle, manager: &AppLockManager) {
     );
 }
 
-pub fn enforce_window_access(app: &AppHandle, manager: &AppLockManager, source: &str) {
+pub fn enforce_window_access<R: Runtime>(
+    app: &AppHandle<R>,
+    manager: &AppLockManager,
+    source: &str,
+) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.set_focus();
@@ -368,7 +397,7 @@ pub fn enforce_window_access(app: &AppHandle, manager: &AppLockManager, source: 
     }
 }
 
-pub fn attach_lock_runtime(app: &AppHandle, manager: Arc<AppLockManager>) {
+pub fn attach_lock_runtime<R: Runtime>(app: &AppHandle<R>, manager: Arc<AppLockManager>) {
     let app_handle = app.clone();
     let manager_for_task = manager.clone();
     tauri::async_runtime::spawn(async move {
@@ -399,6 +428,15 @@ pub fn attach_lock_runtime(app: &AppHandle, manager: Arc<AppLockManager>) {
     }
 }
 
+#[cfg(test)]
+fn init_keyring() -> Result<(), String> {
+    if keyring_core::get_default_store().is_none() {
+        install_test_keyring_store();
+    }
+    Ok(())
+}
+
+#[cfg(not(test))]
 fn init_keyring() -> Result<(), String> {
     keyring::use_native_store(false).map_err(|e| format!("Failed to initialize keyring store: {e}"))
 }

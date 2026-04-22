@@ -50,3 +50,6 @@ keyring = "4.0.0-rc.3"
 keyring-core = "0.7.2"
 urlencoding = "2"
 html-escape = "0.2"
+
+[dev-dependencies]
+tauri = { version = "2", features = ["test"] }
