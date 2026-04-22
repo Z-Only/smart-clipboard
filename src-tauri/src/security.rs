@@ -436,11 +436,10 @@ pub fn attach_lock_runtime<R: Runtime>(app: &AppHandle<R>, manager: Arc<AppLockM
     if let Some(window) = app.get_webview_window("main") {
         let app_handle = app.clone();
         let manager_for_event = manager.clone();
-        window.on_window_event(move |event| match event {
-            tauri::WindowEvent::Focused(focused) => {
+        window.on_window_event(move |event| {
+            if let tauri::WindowEvent::Focused(focused) = event {
                 handle_focus_event(&app_handle, manager_for_event.as_ref(), *focused);
             }
-            _ => {}
         });
     }
 }
