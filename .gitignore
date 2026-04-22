@@ -27,3 +27,6 @@ coverage
 
 # Raw screenshots (too large for git)
 docs-assets/screenshots/raw/
+
+# Local worktrees
+.worktrees/
