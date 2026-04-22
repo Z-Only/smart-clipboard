@@ -231,6 +231,14 @@ impl AppLockManager {
         runtime.last_activity_at = Instant::now();
     }
 
+    #[cfg(test)]
+    pub(crate) fn rewind_last_activity_for_test(&self, duration: Duration) {
+        let mut runtime = self.runtime.lock().unwrap();
+        runtime.last_activity_at = Instant::now()
+            .checked_sub(duration)
+            .unwrap_or_else(Instant::now);
+    }
+
     pub fn check_auto_lock(&self) -> Option<AppLockStatus> {
         let cfg = self.config.get().app_lock;
         if !cfg.enabled || cfg.auto_lock_seconds == 0 || !password_hash_exists() {
@@ -397,15 +405,31 @@ pub fn enforce_window_access<R: Runtime>(
     }
 }
 
+pub(crate) fn emit_auto_lock_if_needed<R: Runtime>(app: &AppHandle<R>, manager: &AppLockManager) {
+    if let Some(status) = manager.check_auto_lock() {
+        let _ = app.emit("app-lock-status", AppLockEventPayload { status });
+    }
+}
+
+pub(crate) fn handle_focus_event<R: Runtime>(
+    app: &AppHandle<R>,
+    manager: &AppLockManager,
+    focused: bool,
+) {
+    manager.record_activity();
+    if focused && !manager.should_allow_window() {
+        let status = manager.lock("focus");
+        let _ = app.emit("app-lock-status", AppLockEventPayload { status });
+    }
+}
+
 pub fn attach_lock_runtime<R: Runtime>(app: &AppHandle<R>, manager: Arc<AppLockManager>) {
     let app_handle = app.clone();
     let manager_for_task = manager.clone();
     tauri::async_runtime::spawn(async move {
         loop {
             tokio::time::sleep(Duration::from_secs(1)).await;
-            if let Some(status) = manager_for_task.check_auto_lock() {
-                let _ = app_handle.emit("app-lock-status", AppLockEventPayload { status });
-            }
+            emit_auto_lock_if_needed(&app_handle, manager_for_task.as_ref());
         }
     });
 
@@ -413,15 +437,8 @@ pub fn attach_lock_runtime<R: Runtime>(app: &AppHandle<R>, manager: Arc<AppLockM
         let app_handle = app.clone();
         let manager_for_event = manager.clone();
         window.on_window_event(move |event| match event {
-            tauri::WindowEvent::Focused(true) => {
-                manager_for_event.record_activity();
-                if !manager_for_event.should_allow_window() {
-                    let status = manager_for_event.lock("focus");
-                    let _ = app_handle.emit("app-lock-status", AppLockEventPayload { status });
-                }
-            }
-            tauri::WindowEvent::Focused(false) => {
-                manager_for_event.record_activity();
+            tauri::WindowEvent::Focused(focused) => {
+                handle_focus_event(&app_handle, manager_for_event.as_ref(), *focused);
             }
             _ => {}
         });
@@ -444,7 +461,138 @@ fn init_keyring() -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::ConfigManager;
+    use serde::Deserialize;
+    use std::path::PathBuf;
+    use std::sync::mpsc::Receiver;
+    use std::sync::Arc;
     use std::time::Duration;
+    use std::time::{SystemTime, UNIX_EPOCH};
+    use tauri::test::{self, MockRuntime};
+    use tauri::{App, Listener, WebviewWindow, WebviewWindowBuilder};
+
+    static TEST_SERIAL: Mutex<()> = Mutex::new(());
+
+    struct TestDir {
+        path: PathBuf,
+    }
+
+    impl TestDir {
+        fn new() -> Self {
+            let unique = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock should move forward")
+                .as_nanos();
+            let path = std::env::temp_dir().join(format!(
+                "smart-clipboard-security-tests-{}-{}",
+                std::process::id(),
+                unique
+            ));
+            std::fs::create_dir_all(&path).expect("failed to create temp test dir");
+            Self { path }
+        }
+    }
+
+    impl Drop for TestDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.path);
+        }
+    }
+
+    struct TestKeyringGuard;
+
+    impl TestKeyringGuard {
+        fn new() -> Self {
+            install_test_keyring_store();
+            set_test_biometric_result(None);
+            Self
+        }
+    }
+
+    impl Drop for TestKeyringGuard {
+        fn drop(&mut self) {
+            set_test_biometric_result(None);
+            reset_test_keyring_store();
+        }
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct LockStatusEventPayload {
+        status: AppLockStatus,
+    }
+
+    struct TestHarness {
+        _app: App<MockRuntime>,
+        window: WebviewWindow<MockRuntime>,
+        lock: Arc<AppLockManager>,
+        app_lock_status_rx: Receiver<AppLockStatus>,
+    }
+
+    impl TestHarness {
+        fn new(base_dir: PathBuf) -> Self {
+            let config = Arc::new(ConfigManager::new(base_dir));
+            let lock = Arc::new(AppLockManager::new(config));
+
+            let app = test::mock_builder()
+                .manage(lock.clone())
+                .build(test::mock_context(test::noop_assets()))
+                .expect("failed to build mock app");
+
+            let window = WebviewWindowBuilder::new(&app, "main", Default::default())
+                .build()
+                .expect("failed to build mock webview");
+
+            let (app_lock_tx, app_lock_status_rx) = std::sync::mpsc::sync_channel(8);
+
+            app.listen_any("app-lock-status", move |event| {
+                let payload: LockStatusEventPayload =
+                    serde_json::from_str(event.payload()).expect("lock payload should be json");
+                let _ = app_lock_tx.send(payload.status);
+            });
+
+            Self {
+                _app: app,
+                window,
+                lock,
+                app_lock_status_rx,
+            }
+        }
+
+        fn configure_password(&self) {
+            self.lock
+                .set_password(SetPasswordPayload {
+                    current_password: None,
+                    new_password: "phase4-pass".to_string(),
+                })
+                .expect("setting password should succeed");
+        }
+
+        fn configure_auto_lock(&self, enabled: bool, auto_lock_seconds: u64) {
+            self.lock
+                .update_settings(UpdateAppLockSettingsPayload {
+                    enabled,
+                    auto_lock_seconds,
+                    biometric_enabled: false,
+                })
+                .expect("updating app lock settings should succeed");
+        }
+
+        fn app_handle(&self) -> tauri::AppHandle<MockRuntime> {
+            self.window.app_handle().clone()
+        }
+    }
+
+    fn recv_lock_status(rx: &Receiver<AppLockStatus>) -> AppLockStatus {
+        rx.recv_timeout(Duration::from_millis(200))
+            .expect("expected lock status event")
+    }
+
+    fn assert_no_lock_status(rx: &Receiver<AppLockStatus>) {
+        assert!(
+            rx.recv_timeout(Duration::from_millis(50)).is_err(),
+            "did not expect lock status event"
+        );
+    }
 
     #[test]
     fn password_strength_validation_works() {
@@ -478,5 +626,77 @@ mod tests {
             .checked_duration_since(now - Duration::from_secs(5))
             .unwrap_or(Duration::from_secs(5));
         assert!(idle_for >= Duration::from_secs(5));
+    }
+
+    #[test]
+    fn focus_event_emits_lock_status_when_locked() {
+        let _serial = TEST_SERIAL.lock().unwrap();
+        let _keyring = TestKeyringGuard::new();
+        let temp_dir = TestDir::new();
+        let harness = TestHarness::new(temp_dir.path.clone());
+        harness.configure_password();
+        harness.lock.lock("manual");
+
+        handle_focus_event(&harness.app_handle(), &harness.lock, true);
+
+        let status = recv_lock_status(&harness.app_lock_status_rx);
+        assert!(status.locked);
+        assert_eq!(status.unlock_reason.as_deref(), Some("focus"));
+    }
+
+    #[test]
+    fn focus_loss_refreshes_activity_before_auto_lock_check() {
+        let _serial = TEST_SERIAL.lock().unwrap();
+        let _keyring = TestKeyringGuard::new();
+        let temp_dir = TestDir::new();
+        let harness = TestHarness::new(temp_dir.path.clone());
+        harness.configure_password();
+        harness.configure_auto_lock(true, 1);
+        harness
+            .lock
+            .rewind_last_activity_for_test(Duration::from_secs(2));
+
+        handle_focus_event(&harness.app_handle(), &harness.lock, false);
+        emit_auto_lock_if_needed(&harness.app_handle(), &harness.lock);
+
+        assert_no_lock_status(&harness.app_lock_status_rx);
+        assert!(!harness.lock.status().locked);
+    }
+
+    #[test]
+    fn auto_lock_emits_lock_status_after_idle_timeout() {
+        let _serial = TEST_SERIAL.lock().unwrap();
+        let _keyring = TestKeyringGuard::new();
+        let temp_dir = TestDir::new();
+        let harness = TestHarness::new(temp_dir.path.clone());
+        harness.configure_password();
+        harness.configure_auto_lock(true, 1);
+        harness
+            .lock
+            .rewind_last_activity_for_test(Duration::from_secs(2));
+
+        emit_auto_lock_if_needed(&harness.app_handle(), &harness.lock);
+
+        let status = recv_lock_status(&harness.app_lock_status_rx);
+        assert!(status.locked);
+        assert_eq!(status.unlock_reason.as_deref(), Some("auto_lock"));
+    }
+
+    #[test]
+    fn auto_lock_does_not_emit_when_app_lock_disabled() {
+        let _serial = TEST_SERIAL.lock().unwrap();
+        let _keyring = TestKeyringGuard::new();
+        let temp_dir = TestDir::new();
+        let harness = TestHarness::new(temp_dir.path.clone());
+        harness.configure_password();
+        harness.configure_auto_lock(false, 1);
+        harness
+            .lock
+            .rewind_last_activity_for_test(Duration::from_secs(2));
+
+        emit_auto_lock_if_needed(&harness.app_handle(), &harness.lock);
+
+        assert_no_lock_status(&harness.app_lock_status_rx);
+        assert!(!harness.lock.status().locked);
     }
 }

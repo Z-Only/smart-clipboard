@@ -616,7 +616,7 @@ mod command_guard_tests {
     use super::{get_app_lock_status, get_entries, lock_app, set_app_lock_password, unlock_app};
     use crate::config::ConfigManager;
     use crate::security::{self, AppLockStatus};
-    use crate::storage::{ClipboardEntry, Database, SearchResult};
+    use crate::storage::{ClipboardEntry, Database, SearchResult, Template};
     use chrono::Local;
     use serde::de::DeserializeOwned;
     use serde_json::{json, Value};
@@ -714,7 +714,9 @@ mod command_guard_tests {
                 set_app_lock_password,
                 lock_app,
                 unlock_app,
-                get_entries
+                get_entries,
+                crate::templates::commands::create_template,
+                crate::templates::commands::get_templates
             ])
             .build(test::mock_context(test::noop_assets()))
             .expect("failed to build mock app");
@@ -951,5 +953,102 @@ mod command_guard_tests {
         .expect("fallback unlock should restore access");
 
         assert_eq!(result.total_count, 1);
+    }
+
+    #[test]
+    fn locked_template_command_is_rejected_via_invoke() {
+        let _serial = TEST_SERIAL.lock().unwrap();
+        let _keyring = TestKeyringGuard::new();
+        let temp_dir = TestDir::new();
+        let harness = create_harness(&temp_dir.path);
+
+        let _: AppLockStatus = invoke(
+            &harness,
+            "set_app_lock_password",
+            json!({
+                "payload": {
+                    "current_password": null,
+                    "new_password": "phase4-pass"
+                }
+            }),
+        )
+        .expect("setting password should succeed");
+        let _: AppLockStatus =
+            invoke(&harness, "lock_app", json!({})).expect("manual lock should succeed");
+
+        let error = invoke::<Template>(
+            &harness,
+            "create_template",
+            json!({
+                "name": "Greeting",
+                "content": "Hello {{name}}",
+                "category": "general"
+            }),
+        )
+        .expect_err("locked app should reject template commands");
+
+        assert_eq!(error, json!("App is locked"));
+    }
+
+    #[test]
+    fn unlock_restores_template_command_access() {
+        let _serial = TEST_SERIAL.lock().unwrap();
+        let _keyring = TestKeyringGuard::new();
+        let temp_dir = TestDir::new();
+        let harness = create_harness(&temp_dir.path);
+
+        let _: AppLockStatus = invoke(
+            &harness,
+            "set_app_lock_password",
+            json!({
+                "payload": {
+                    "current_password": null,
+                    "new_password": "phase4-pass"
+                }
+            }),
+        )
+        .expect("setting password should succeed");
+        let _: AppLockStatus =
+            invoke(&harness, "lock_app", json!({})).expect("manual lock should succeed");
+
+        let _: AppLockStatus = invoke(
+            &harness,
+            "unlock_app",
+            json!({
+                "payload": {
+                    "password": "phase4-pass",
+                    "prefer_biometric": false
+                }
+            }),
+        )
+        .expect("unlock should succeed");
+
+        let created: Template = invoke(
+            &harness,
+            "create_template",
+            json!({
+                "name": "Greeting",
+                "content": "Hello {{name}}",
+                "category": "general"
+            }),
+        )
+        .expect("unlocked app should allow creating templates");
+
+        assert_eq!(created.name, "Greeting");
+        assert_eq!(created.content, "Hello {{name}}");
+        assert_eq!(created.category, "general");
+
+        let templates: Vec<Template> = invoke(
+            &harness,
+            "get_templates",
+            json!({
+                "category": null
+            }),
+        )
+        .expect("unlocked app should allow listing templates");
+
+        assert_eq!(templates.len(), 1);
+        assert_eq!(templates[0].name, "Greeting");
+        assert_eq!(templates[0].content, "Hello {{name}}");
     }
 }

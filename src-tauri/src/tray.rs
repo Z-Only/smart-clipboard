@@ -2,13 +2,13 @@ use tauri::{
     image::Image,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    AppHandle, Emitter, Manager,
+    AppHandle, Emitter, Manager, Runtime,
 };
 
 use crate::hotkey::toggle_window;
 use crate::security::{enforce_window_access, AppLockManager};
 
-pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+pub fn setup_tray<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error>> {
     let show_i = MenuItem::with_id(app, "show", "Show Clipboard", true, None::<&str>)?;
     let settings_i = MenuItem::with_id(app, "settings", "Settings...", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
@@ -23,21 +23,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         .tooltip("Smart Clipboard")
         .menu(&menu)
         .show_menu_on_left_click(false)
-        .on_menu_event(|app_handle, event| match event.id().as_ref() {
-            "show" => {
-                if let Some(lock_manager) = app_handle.try_state::<std::sync::Arc<AppLockManager>>()
-                {
-                    enforce_window_access(app_handle, &lock_manager, "tray_menu");
-                }
-            }
-            "settings" => {
-                let _ = app_handle.emit("open-settings", ());
-            }
-            "quit" => {
-                app_handle.exit(0);
-            }
-            _ => {}
-        })
+        .on_menu_event(|app_handle, event| handle_tray_menu_event(app_handle, event.id().as_ref()))
         .on_tray_icon_event(|tray, event| {
             if let tauri::tray::TrayIconEvent::Click {
                 button: tauri::tray::MouseButton::Left,
@@ -50,4 +36,21 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         .build(app)?;
 
     Ok(())
+}
+
+pub(crate) fn handle_tray_menu_event<R: Runtime>(app_handle: &AppHandle<R>, menu_id: &str) {
+    match menu_id {
+        "show" => {
+            if let Some(lock_manager) = app_handle.try_state::<std::sync::Arc<AppLockManager>>() {
+                enforce_window_access(app_handle, &lock_manager, "tray_menu");
+            }
+        }
+        "settings" => {
+            let _ = app_handle.emit("open-settings", ());
+        }
+        "quit" => {
+            app_handle.exit(0);
+        }
+        _ => {}
+    }
 }
