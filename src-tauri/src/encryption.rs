@@ -322,7 +322,7 @@ mod tests {
         crate::security::install_test_keyring_store();
         ensure_encryption_key().unwrap();
 
-        let config = Arc::new(ConfigManager::new(tempfile::tempdir().unwrap().into_path()));
+        let config = Arc::new(ConfigManager::new(tempfile::tempdir().unwrap().keep()));
         let manager = EncryptionManager::new(config);
 
         let plaintext = "not encrypted";

@@ -125,6 +125,7 @@ pub async fn get_entries(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn search_entries(
     lock: State<'_, Arc<AppLockManager>>,
     encryption: State<'_, Arc<EncryptionManager>>,
