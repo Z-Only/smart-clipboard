@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.4.0] - 2026-04-25
+
+### Added
+
+- **Database-at-rest encryption**: Optional AES-256-GCM application-layer encryption for clipboard entry content, with encryption keys stored securely in the OS keyring (macOS Keychain / Windows Credential Manager / Linux Secret Service)
+- **Encryption engine module**: New `src-tauri/src/encryption.rs` with key management, transparent encrypt/decrypt, and batch data migration support
+- **Encryption Tauri commands**: `get_encryption_status`, `enable_encryption`, `disable_encryption` with automatic migration of all existing entries
+- **Encryption settings UI**: Toggle switch in Settings panel with real-time status display (encrypted/unencrypted entry counts, migration progress)
+- **Encryption i18n**: English and Chinese translations for all encryption-related labels and messages
+
+### Changed
+
+- **Version bump to 2.4.0**: Database-at-rest encryption as a minor release
+- **commands.rs**: All read-path commands (`get_entries`, `search_entries`, `paste_entry`, `copy_entries`, `get_entries_by_tag`, `get_statistics`) now transparently decrypt encrypted entries
+- **Clipboard write path**: New entries are automatically encrypted when encryption is enabled
+
 ## [2.3.0] - 2026-04-24
 
 ### Added

@@ -7,16 +7,17 @@ A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + *
 - Website / Docs: https://z-only.github.io/smart-clipboard/
 - Repository: https://github.com/Z-Only/smart-clipboard
 
-## Release Status — v2.3.0 Native Biometric Integration
+## Release Status — v2.4.0 Database-at-rest Encryption
 
-This repository now includes **Native Biometric Integration** on top of clipboard history, smart enhancements, templates, LAN sync, WebDAV cloud sync, Phase 4 access security, and the managed updater.
+This repository now includes **Database-at-rest Encryption** on top of clipboard history, smart enhancements, templates, LAN sync, WebDAV cloud sync, Phase 4 access security, native biometric integration, and the managed updater.
 
-### v2.3.0 highlights
+### v2.4.0 highlights
 
-- **Native Touch ID unlock (macOS)**: Real biometric authentication via the LocalAuthentication framework, replacing the previous `osascript`-based convenience path
-- **Native Windows Hello unlock (Windows)**: Biometric authentication via `UserConsentVerifier` (fingerprint, face, PIN)
-- **Platform-specific biometric module**: New `biometric.rs` encapsulating all platform FFI with `#[cfg(target_os)]` conditional compilation
-- **Biometric unit tests**: 5 new tests covering availability injection, successful unlock, user cancel, error handling, and settings auto-downgrade
+- **Optional database encryption**: AES-256-GCM application-layer encryption for clipboard entry content
+- **Secure key management**: Encryption keys stored in the OS keyring (macOS Keychain / Windows Credential Manager / Linux Secret Service)
+- **Transparent encrypt/decrypt**: Data is encrypted on write and decrypted on read — the frontend is unaware of encryption
+- **One-click migration**: Enable or disable encryption at any time; all existing entries are migrated automatically
+- **Encryption settings UI**: Toggle encryption and monitor migration status from the Settings panel
 
 ## Features
 
@@ -42,6 +43,7 @@ This repository now includes **Native Biometric Integration** on top of clipboar
 - **WebDAV Cloud Sync** -- End-to-end encrypted cloud sync with device registry, polling, and rate limiting
 - **App Access Security** -- Password lock, auto-lock, guarded wakeups, and secure unlock flow
 - **Managed Updater** -- Background update checks, mirror endpoints, artifact download with progress, signature verification, and install handoff
+- **Database Encryption** -- Optional AES-256-GCM encryption for clipboard data at rest, with keys in the OS keyring
 - **Lightweight** -- Small binary with low CPU/memory usage thanks to Rust + native WebView
 
 ## Security Model (Phase 4)
@@ -92,16 +94,16 @@ See the live screenshots and docs site: https://z-only.github.io/smart-clipboard
 
 ## Tech Stack
 
-| Layer          | Technology                                                               |
-| -------------- | ------------------------------------------------------------------------ |
-| Frontend       | Vue 3 + TypeScript + Tailwind CSS + shadcn-vue                           |
-| Backend        | Rust                                                                     |
-| Framework      | Tauri 2                                                                  |
-| Database       | SQLite with FTS5 (via rusqlite)                                          |
-| Clipboard      | arboard                                                                  |
-| Local security | argon2 + keyring + LocalAuthentication (macOS) + Windows Hello (Windows) |
-| LAN discovery  | mdns-sd                                                                  |
-| i18n           | vue-i18n                                                                 |
+| Layer          | Technology                                                                         |
+| -------------- | ---------------------------------------------------------------------------------- |
+| Frontend       | Vue 3 + TypeScript + Tailwind CSS + shadcn-vue                                     |
+| Backend        | Rust                                                                               |
+| Framework      | Tauri 2                                                                            |
+| Database       | SQLite with FTS5 (via rusqlite)                                                    |
+| Clipboard      | arboard                                                                            |
+| Local security | argon2 + aes-gcm + keyring + LocalAuthentication (macOS) + Windows Hello (Windows) |
+| LAN discovery  | mdns-sd                                                                            |
+| i18n           | vue-i18n                                                                           |
 
 ## Getting Started
 
@@ -210,6 +212,7 @@ smart-clipboard/
 │       ├── sync/                 # LAN sync + WebDAV cloud sync
 │       ├── templates/            # Clipboard template engine and commands
 │       ├── security.rs           # App lock, unlock, and access-control runtime
+│       ├── encryption.rs         # AES-256-GCM database encryption engine
 │       ├── commands.rs           # Main Tauri IPC commands
 │       ├── config.rs             # Settings management
 │       ├── hotkey.rs             # Global shortcut handling
@@ -232,7 +235,7 @@ smart-clipboard/
 
 - [x] **Native biometric integration**: Native Touch ID (macOS) and Windows Hello (Windows) via platform FFI
 - [x] **Deeper runtime integration tests**: Add full invoke-level black-box tests around locked/unlocked command behavior
-- [ ] **Database-at-rest encryption**: Optional encrypted local storage for clipboard data
+- [x] **Database-at-rest encryption**: Optional AES-256-GCM encrypted local storage for clipboard data with OS keyring key management
 - [ ] **Advanced sync conflict handling**: Smarter merge / conflict-resolution behavior
 - [ ] **Plugin / extension system**: User-extensible automations and transformations
 - [ ] **More platform-specific hardening**: Better idle detection and richer OS-native unlock UX

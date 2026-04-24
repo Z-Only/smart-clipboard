@@ -7,16 +7,17 @@
 - 官网 / 文档站：https://z-only.github.io/smart-clipboard/
 - 仓库地址：https://github.com/Z-Only/smart-clipboard
 
-## 发布状态 — v2.3.0 原生生物识别集成
+## 发布状态 — v2.4.0 数据库静态加密
 
-当前仓库在托管更新器、剪贴板历史、智能增强、模板、局域网同步、WebDAV 云同步和 Phase 4 访问安全的基础上，新增了 **原生生物识别集成**。
+当前仓库在托管更新器、剪贴板历史、智能增强、模板、局域网同步、WebDAV 云同步、Phase 4 访问安全和原生生物识别集成的基础上，新增了 **数据库静态加密**。
 
-### v2.3.0 亮点
+### v2.4.0 亮点
 
-- **原生 Touch ID 解锁 (macOS)**：通过 LocalAuthentication 框架实现真正的生物识别认证，替代之前基于 osascript 的便捷路径
-- **原生 Windows Hello 解锁 (Windows)**：通过 UserConsentVerifier 支持指纹、面容、PIN 解锁
-- **平台隔离生物识别模块**：新增 `biometric.rs`，使用 `#[cfg(target_os)]` 条件编译封装所有平台 FFI
-- **生物识别单元测试**：新增 5 个测试覆盖可用性注入、成功解锁、用户取消、错误处理和设置自动降级
+- **可选数据库加密**：使用 AES-256-GCM 对剪贴板条目内容进行应用层加密
+- **安全密钥管理**：加密密钥存储在系统密钥链中（macOS Keychain / Windows 凭据管理器 / Linux Secret Service）
+- **透明加解密**：写入时加密、读取时解密，前端无需感知加密状态
+- **一键迁移**：随时启用或关闭加密，所有现有条目自动迁移
+- **加密设置 UI**：在设置面板中切换加密开关并监控迁移状态
 
 ## 功能特性
 
@@ -42,6 +43,7 @@
 - **WebDAV 云同步** -- 带设备注册表、轮询和限流的端到端加密云同步
 - **访问安全** -- 密码锁、自动锁定、受保护唤起拦截与安全解锁流程
 - **托管更新器** -- 后台检查更新、镜像端点、带进度的安装包下载、签名校验和安装切换
+- **数据库加密** -- 可选的 AES-256-GCM 剪贴板数据静态加密，密钥存储在系统密钥链中
 - **轻量级** -- 得益于 Rust + 原生 WebView，体积小、资源占用低
 
 ## 安全模型（Phase 4）
@@ -92,16 +94,16 @@
 
 ## 技术栈
 
-| 层级       | 技术                                                                     |
-| ---------- | ------------------------------------------------------------------------ |
-| 前端       | Vue 3 + TypeScript + Tailwind CSS + shadcn-vue                           |
-| 后端       | Rust                                                                     |
-| 框架       | Tauri 2                                                                  |
-| 数据库     | SQLite with FTS5（通过 rusqlite）                                        |
-| 剪贴板     | arboard                                                                  |
-| 本地安全   | argon2 + keyring + LocalAuthentication (macOS) + Windows Hello (Windows) |
-| 局域网发现 | mdns-sd                                                                  |
-| 国际化     | vue-i18n                                                                 |
+| 层级       | 技术                                                                               |
+| ---------- | ---------------------------------------------------------------------------------- |
+| 前端       | Vue 3 + TypeScript + Tailwind CSS + shadcn-vue                                     |
+| 后端       | Rust                                                                               |
+| 框架       | Tauri 2                                                                            |
+| 数据库     | SQLite with FTS5（通过 rusqlite）                                                  |
+| 剪贴板     | arboard                                                                            |
+| 本地安全   | argon2 + aes-gcm + keyring + LocalAuthentication (macOS) + Windows Hello (Windows) |
+| 局域网发现 | mdns-sd                                                                            |
+| 国际化     | vue-i18n                                                                           |
 
 ## 快速开始
 
@@ -164,6 +166,7 @@ smart-clipboard/
 │       ├── sync/                 # 局域网同步 + WebDAV 云同步
 │       ├── templates/            # 剪贴板模板引擎与命令
 │       ├── security.rs           # 应用锁、解锁与访问控制运行时
+│       ├── encryption.rs         # AES-256-GCM 数据库加密引擎
 │       ├── commands.rs           # 主要 Tauri IPC 命令
 │       ├── config.rs             # 配置管理
 │       ├── hotkey.rs             # 全局快捷键处理
@@ -185,8 +188,8 @@ smart-clipboard/
 ### 计划中 / 未来预期
 
 - [x] **原生生物识别集成**：原生 Touch ID (macOS) 和 Windows Hello (Windows)，通过平台 FFI 实现
-- [ ] **更深层运行时集成测试**：增加基于 invoke 边界的黑盒测试，验证锁定/解锁状态下的真实命令行为
-- [ ] **本地数据库静态加密**：为剪贴板数据提供可选的本地加密存储
+- [x] **更深层运行时集成测试**：增加基于 invoke 边界的黑盒测试，验证锁定/解锁状态下的真实命令行为
+- [x] **本地数据库静态加密**：使用 AES-256-GCM 加密剪贴板数据，密钥通过系统密钥链安全管理
 - [ ] **高级同步冲突处理**：提供更智能的合并 / 冲突解决策略
 - [ ] **插件 / 扩展系统**：支持用户扩展自动化与转换能力
 - [ ] **更强的平台级安全增强**：例如更准确的系统空闲检测与更好的原生解锁体验
