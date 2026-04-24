@@ -163,3 +163,46 @@ export interface WebDavSyncStatus {
   rateLimitCapacity: number;
   error: string | null;
 }
+
+export interface UpdaterConfig {
+  auto_check_enabled: boolean;
+  check_interval_hours: number;
+  auto_download_enabled: boolean;
+  wifi_only: boolean;
+  mirrors: string[];
+  last_check_at: string | null;
+}
+
+export interface PendingUpdateRecord {
+  version: string;
+  releaseDate: string | null;
+  currentVersion: string;
+  notes: string | null;
+  artifactPath: string;
+  signaturePath: string;
+  canonicalAssetUrl: string;
+  sourceAssetUrl: string;
+  downloadedAt: string;
+}
+
+export type UpdaterPhase =
+  | 'idle'
+  | 'checking'
+  | 'update_available'
+  | 'downloading'
+  | 'ready_to_install'
+  | 'up_to_date'
+  | 'installing'
+  | 'error';
+
+export interface UpdaterStatus {
+  phase: UpdaterPhase;
+  currentVersion: string;
+  availableVersion: string | null;
+  availableNotes: string | null;
+  availableReleaseDate: string | null;
+  pendingUpdate: PendingUpdateRecord | null;
+  downloadProgress: number | null;
+  lastError: string | null;
+  lastCheckSilent: boolean;
+}
