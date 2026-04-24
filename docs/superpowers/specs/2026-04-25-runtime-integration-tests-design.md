@@ -131,15 +131,15 @@ Reuses `hotkey::handle_toggle_request` and `tray::handle_tray_menu_event` direct
 
 ## 4. Error handling & test contracts
 
-| Situation | Expected return | Asserted by |
-|---|---|---|
-| Locked + guarded cmd | `Err(json!("App is locked"))` | locked_rejection.rs (table) |
-| Unlocked + guarded cmd | `Ok(_)` OR `Err(_)` where `err != "App is locked"` | unlock_flow.rs (table) |
-| Wrong password | `Err(json!("Incorrect password"))`; `failed_attempts` increments; `unlock_reason="failed_password"` | already covered by existing `wrong_password_keeps_app_locked_and_tracks_failed_attempts` (kept as-is) |
-| Biometric error + valid password | `Ok(status)` with `unlock_reason="password"`, `failed_attempts==0` | biometric_degradation.rs |
-| Biometric unavailable + biometric_enabled write attempt | `update_settings` downgrades `biometric_enabled` to `false` | biometric_degradation.rs (mirrors security::tests but via invoke) |
-| Auto-lock fired then sensitive cmd | second `get_entries` returns `"App is locked"` | auto_lock.rs |
-| Hotkey while locked | no `window-shown` event; one `app-lock-status` with `unlock_reason="shortcut"` | wakeup_interception.rs |
+| Situation                                               | Expected return                                                                                     | Asserted by                                                                                           |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Locked + guarded cmd                                    | `Err(json!("App is locked"))`                                                                       | locked_rejection.rs (table)                                                                           |
+| Unlocked + guarded cmd                                  | `Ok(_)` OR `Err(_)` where `err != "App is locked"`                                                  | unlock_flow.rs (table)                                                                                |
+| Wrong password                                          | `Err(json!("Incorrect password"))`; `failed_attempts` increments; `unlock_reason="failed_password"` | already covered by existing `wrong_password_keeps_app_locked_and_tracks_failed_attempts` (kept as-is) |
+| Biometric error + valid password                        | `Ok(status)` with `unlock_reason="password"`, `failed_attempts==0`                                  | biometric_degradation.rs                                                                              |
+| Biometric unavailable + biometric_enabled write attempt | `update_settings` downgrades `biometric_enabled` to `false`                                         | biometric_degradation.rs (mirrors security::tests but via invoke)                                     |
+| Auto-lock fired then sensitive cmd                      | second `get_entries` returns `"App is locked"`                                                      | auto_lock.rs                                                                                          |
+| Hotkey while locked                                     | no `window-shown` event; one `app-lock-status` with `unlock_reason="shortcut"`                      | wakeup_interception.rs                                                                                |
 
 ---
 
@@ -153,14 +153,14 @@ Reuses `hotkey::handle_toggle_request` and `tray::handle_tray_menu_event` direct
 
 ## 6. Risks & mitigations
 
-| Risk | Mitigation |
-|---|---|
-| `commands.rs` cyclical visibility — `command_guard_tests` is `#[cfg(test)] mod` *inside* commands.rs, so it sees `super::*`. New `integration_tests/` is a sibling module of `commands` under `lib.rs`, so it must access commands via `crate::commands::xxx`. All command fns are already `pub` — verified. | No code change needed; just import paths in test files. |
-| `template_guard_tests` (FakeTemplateLock) becomes redundant. | Leave it in place. Don't delete in this PR. (Out of scope; the new `template_guard.rs` adds real-AppLockManager invoke coverage *alongside* it.) |
-| WebDAV manager constructor needs a network endpoint? | Constructed with empty `WebDavConfig`; harness asserts only the guard verdict. Confirmed in commands.rs that it doesn't connect at construction time. To be re-verified in Plan Task 0. |
-| Sync manager `set_app_handle` not called → `attach_lock_runtime` never fires the timer. | Intentional — auto-lock tests call `check_auto_lock()` synchronously, no timer needed. |
-| Test count balloons from 30→100+ | Acceptable for a "deeper integration tests" feature. Run-time stays under 30s with `--test-threads=1` because tauri mock builds are cheap. To be measured in Plan Task FINAL. |
-| `lib.rs` exposes private items as `pub(crate)` for tests | The new `mod integration_tests;` is `#[cfg(test)]` and lives under `crate::`, so it already sees `pub(crate)` items. No visibility loosening needed. |
+| Risk                                                                                                                                                                                                                                                                                                         | Mitigation                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `commands.rs` cyclical visibility — `command_guard_tests` is `#[cfg(test)] mod` _inside_ commands.rs, so it sees `super::*`. New `integration_tests/` is a sibling module of `commands` under `lib.rs`, so it must access commands via `crate::commands::xxx`. All command fns are already `pub` — verified. | No code change needed; just import paths in test files.                                                                                                                                 |
+| `template_guard_tests` (FakeTemplateLock) becomes redundant.                                                                                                                                                                                                                                                 | Leave it in place. Don't delete in this PR. (Out of scope; the new `template_guard.rs` adds real-AppLockManager invoke coverage _alongside_ it.)                                        |
+| WebDAV manager constructor needs a network endpoint?                                                                                                                                                                                                                                                         | Constructed with empty `WebDavConfig`; harness asserts only the guard verdict. Confirmed in commands.rs that it doesn't connect at construction time. To be re-verified in Plan Task 0. |
+| Sync manager `set_app_handle` not called → `attach_lock_runtime` never fires the timer.                                                                                                                                                                                                                      | Intentional — auto-lock tests call `check_auto_lock()` synchronously, no timer needed.                                                                                                  |
+| Test count balloons from 30→100+                                                                                                                                                                                                                                                                             | Acceptable for a "deeper integration tests" feature. Run-time stays under 30s with `--test-threads=1` because tauri mock builds are cheap. To be measured in Plan Task FINAL.           |
+| `lib.rs` exposes private items as `pub(crate)` for tests                                                                                                                                                                                                                                                     | The new `mod integration_tests;` is `#[cfg(test)]` and lives under `crate::`, so it already sees `pub(crate)` items. No visibility loosening needed.                                    |
 
 ---
 
