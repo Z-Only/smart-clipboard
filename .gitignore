@@ -18,6 +18,9 @@ Thumbs.db
 .idea/
 *.swp
 
+# Superpowers brainstorming
+.superpowers/
+
 # Environment
 .env
 .env.local
