@@ -130,6 +130,8 @@ impl TestHarness {
         );
 
         let updater_manager = Arc::new(UpdaterManager::new("0.0.0-test".to_string()));
+        let encryption_manager =
+            Arc::new(crate::encryption::EncryptionManager::new(config.clone()));
 
         let app = test::mock_builder()
             .manage(config.clone())
@@ -139,6 +141,7 @@ impl TestHarness {
             .manage(sync_manager)
             .manage(webdav_manager)
             .manage(updater_manager)
+            .manage(encryption_manager)
             .invoke_handler(tauri::generate_handler![
                 crate::commands::get_app_lock_status,
                 crate::commands::set_app_lock_password,

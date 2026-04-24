@@ -868,6 +868,7 @@ mod command_guard_tests {
     fn create_harness(base_dir: &Path) -> TestHarness {
         let config = Arc::new(ConfigManager::new(base_dir.to_path_buf()));
         let lock = Arc::new(crate::security::AppLockManager::new(config.clone()));
+        let encryption = Arc::new(crate::encryption::EncryptionManager::new(config.clone()));
         let db = Arc::new(
             Database::new(&base_dir.join("clipboard.db").to_string_lossy())
                 .expect("failed to initialize database"),
@@ -894,6 +895,7 @@ mod command_guard_tests {
         let app = test::mock_builder()
             .manage(config.clone())
             .manage(lock)
+            .manage(encryption)
             .manage(db)
             .invoke_handler(tauri::generate_handler![
                 get_app_lock_status,
