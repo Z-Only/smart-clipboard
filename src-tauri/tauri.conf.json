@@ -42,7 +42,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "CONFIG-KEY-PLACEHOLDER"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc1OTY2NEM3RjQ1Mjc5NUIKUldSYmVWTDB4MlNXZGE5YUhiWmR4bnM0QUx3dXczY0hhTWNWNWdDV2VCQ3ZhQTN5OHFsWmM4UFkK"
     }
   }
 }
