@@ -9,6 +9,7 @@ pub mod storage;
 pub mod sync;
 pub mod templates;
 pub mod tray;
+pub mod updater;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -26,6 +27,7 @@ use security::AppLockManager;
 use storage::{ClipboardEntry, Database};
 use sync::webdav::WebDavSyncManager;
 use sync::SyncManager;
+use updater::UpdaterManager;
 
 /// Managed state holding the app data directory path.
 pub struct AppDataDir(pub PathBuf);
@@ -74,6 +76,12 @@ pub fn run() {
             commands::get_entry_count,
             commands::get_statistics,
             commands::paste_entry,
+            commands::get_updater_status,
+            commands::check_for_updates_now,
+            commands::download_available_update,
+            commands::install_pending_update,
+            commands::discard_pending_update,
+            commands::quit_app,
             commands::get_config,
             commands::update_config,
             commands::get_autostart_enabled,
@@ -154,6 +162,13 @@ pub fn run() {
             let app_lock_manager = Arc::new(AppLockManager::new(config_manager.clone()));
             app.manage(app_lock_manager.clone());
 
+            let updater_manager =
+                Arc::new(UpdaterManager::new(env!("CARGO_PKG_VERSION").to_string()));
+            updater_manager
+                .restore_from_disk(&app_data_dir, env!("CARGO_PKG_VERSION"))
+                .ok();
+            app.manage(updater_manager.clone());
+
             // Initialize database
             let db_path = app_data_dir.join("clipboard.db");
             let db = Arc::new(
@@ -211,6 +226,7 @@ pub fn run() {
             std::fs::create_dir_all(&images_dir).ok();
 
             emit_initial_lock_state(app.handle(), &app_lock_manager);
+            updater_manager.emit_status(app.handle());
 
             // Start clipboard monitor
             let (tx, mut rx) = mpsc::unbounded_channel();
