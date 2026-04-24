@@ -413,6 +413,49 @@
           <Button variant="outline" size="sm" @click="manualLock">{{ $t('lock.lockNow') }}</Button>
         </div>
 
+        <Separator />
+
+        <!-- Database Encryption -->
+        <div class="space-y-3">
+          <div class="space-y-1">
+            <label class="text-sm font-medium">{{ $t('encryption.settingsTitle') }}</label>
+            <p class="text-xs text-muted-foreground">{{ $t('encryption.settingsHint') }}</p>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <div>
+              <label class="text-sm font-medium">{{ $t('encryption.enabled') }}</label>
+              <p v-if="security.encryption.migrating" class="text-xs text-yellow-600">
+                {{ $t('encryption.migrating') }}
+              </p>
+              <p v-else-if="security.encryption.enabled" class="text-xs text-muted-foreground">
+                {{
+                  $t('encryption.statusEncrypted', { count: security.encryption.encrypted_count })
+                }}
+              </p>
+              <p
+                v-else-if="security.encryption.plaintext_count > 0"
+                class="text-xs text-muted-foreground"
+              >
+                {{
+                  $t('encryption.statusPlaintext', { count: security.encryption.plaintext_count })
+                }}
+              </p>
+            </div>
+            <button
+              class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors"
+              :class="security.encryption.enabled ? 'bg-primary' : 'bg-input'"
+              :disabled="security.encryption.migrating || security.loading"
+              @click="toggleEncryption"
+            >
+              <span
+                class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform"
+                :class="security.encryption.enabled ? 'translate-x-4' : 'translate-x-0'"
+              />
+            </button>
+          </div>
+        </div>
+
         <!-- Action buttons -->
         <div class="flex justify-end gap-2">
           <Button variant="outline" size="sm" @click="resetDefaults">{{
@@ -629,6 +672,25 @@ async function savePassword() {
 async function manualLock() {
   await security.lock();
   close();
+}
+
+async function toggleEncryption() {
+  const { t } = useI18n();
+  if (security.encryption.enabled) {
+    if (!confirm(t('encryption.disableConfirm'))) return;
+    try {
+      await security.disableEncryption();
+    } catch (error) {
+      console.error('Failed to disable encryption:', error);
+    }
+  } else {
+    if (!confirm(t('encryption.enableConfirm'))) return;
+    try {
+      await security.enableEncryption();
+    } catch (error) {
+      console.error('Failed to enable encryption:', error);
+    }
+  }
 }
 
 async function toggleAutostart() {

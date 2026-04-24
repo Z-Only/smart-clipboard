@@ -3,6 +3,7 @@ pub mod biometric;
 pub mod clipboard;
 pub mod commands;
 pub mod config;
+pub mod encryption;
 pub mod hotkey;
 pub mod platform;
 pub mod security;
@@ -27,6 +28,7 @@ use tokio::sync::mpsc;
 use analyzer::{classify, detect_sensitive};
 use clipboard::ClipboardMonitor;
 use config::ConfigManager;
+use encryption::EncryptionManager;
 use security::AppLockManager;
 use storage::{ClipboardEntry, Database};
 use sync::webdav::WebDavSyncManager;
@@ -127,6 +129,9 @@ pub fn run() {
             commands::update_app_lock_settings,
             commands::lock_app,
             commands::unlock_app,
+            commands::get_encryption_status,
+            commands::enable_encryption,
+            commands::disable_encryption,
         ])
         .setup(|app| {
             {
@@ -179,6 +184,10 @@ pub fn run() {
                 Database::new(&db_path.to_string_lossy()).expect("Failed to initialize database"),
             );
             app.manage(db.clone());
+
+            // Initialize encryption manager
+            let encryption_manager = Arc::new(EncryptionManager::new(config_manager.clone()));
+            app.manage(encryption_manager.clone());
 
             let sync_manager = SyncManager::new(db.clone(), config_manager.clone());
             sync_manager.set_app_handle(app.handle().clone());
@@ -244,6 +253,7 @@ pub fn run() {
             let images_dir_for_rx = images_dir.clone();
             let sync_for_rx = sync_manager.clone();
             let webdav_for_rx = webdav_manager.clone();
+            let encryption_for_rx = encryption_manager.clone();
 
             tauri::async_runtime::spawn(async move {
                 while let Some(change) = rx.recv().await {
@@ -338,9 +348,23 @@ pub fn run() {
                         )
                     };
 
+                    // Encrypt content if encryption is enabled (skip images)
+                    let (stored_content, is_encrypted) =
+                        if !is_image && encryption_for_rx.is_enabled() {
+                            match encryption_for_rx.encrypt_content(&content) {
+                                Ok(encrypted) => (encrypted, true),
+                                Err(e) => {
+                                    log::error!("Failed to encrypt clipboard content: {}", e);
+                                    (content.clone(), false)
+                                }
+                            }
+                        } else {
+                            (content.clone(), false)
+                        };
+
                     let entry = ClipboardEntry {
                         id: None,
-                        content,
+                        content: stored_content,
                         content_type: change.content_type,
                         category,
                         hash,
@@ -354,10 +378,14 @@ pub fn run() {
                         source_device: None,
                     };
 
-                    match db_for_rx.insert_entry(&entry) {
+                    match db_for_rx.insert_entry_with_encrypted_flag(&entry, is_encrypted) {
                         Ok(id) => {
-                            let mut stored_entry = entry;
+                            // Emit the decrypted version to the frontend
+                            let mut stored_entry = entry.clone();
                             stored_entry.id = Some(id);
+                            if is_encrypted {
+                                stored_entry.content = content;
+                            }
                             let _ = app_handle.emit("clipboard-changed", &stored_entry);
                             // Broadcast to paired devices via sync pipeline
                             sync_for_rx.broadcast_entry(&stored_entry);

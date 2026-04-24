@@ -4,6 +4,7 @@ use std::sync::Arc;
 use tauri::State;
 
 use crate::config::{AppConfig, ConfigManager};
+use crate::encryption::{EncryptionManager, EncryptionStatus};
 use crate::security::{
     self, AppLockManager, AppLockStatus, SetPasswordPayload, UnlockPayload,
     UpdateAppLockSettingsPayload,
@@ -16,6 +17,18 @@ use crate::AppDataDir;
 
 fn require_unlocked(lock: &State<'_, Arc<AppLockManager>>) -> Result<(), String> {
     lock.ensure_unlocked()
+}
+
+fn decrypt_entries(encryption: &EncryptionManager, entries: &mut [crate::storage::ClipboardEntry]) {
+    for entry in entries.iter_mut() {
+        if let Ok(decrypted) = encryption.decrypt_content(&entry.content) {
+            entry.content = decrypted;
+        }
+    }
+}
+
+fn decrypt_search_result(encryption: &EncryptionManager, result: &mut SearchResult) {
+    decrypt_entries(encryption, &mut result.entries);
 }
 
 #[tauri::command]
@@ -96,6 +109,7 @@ pub async fn unlock_app<R: tauri::Runtime>(
 #[tauri::command]
 pub async fn get_entries(
     lock: State<'_, Arc<AppLockManager>>,
+    encryption: State<'_, Arc<EncryptionManager>>,
     db: State<'_, Arc<Database>>,
     limit: i64,
     offset: i64,
@@ -103,13 +117,17 @@ pub async fn get_entries(
     is_favorite: Option<bool>,
 ) -> Result<SearchResult, String> {
     require_unlocked(&lock)?;
-    db.get_entries(limit, offset, category.as_deref(), is_favorite)
-        .map_err(|e| e.to_string())
+    let mut result = db
+        .get_entries(limit, offset, category.as_deref(), is_favorite)
+        .map_err(|e| e.to_string())?;
+    decrypt_search_result(&encryption, &mut result);
+    Ok(result)
 }
 
 #[tauri::command]
 pub async fn search_entries(
     lock: State<'_, Arc<AppLockManager>>,
+    encryption: State<'_, Arc<EncryptionManager>>,
     db: State<'_, Arc<Database>>,
     keyword: String,
     category: Option<String>,
@@ -125,7 +143,9 @@ pub async fn search_entries(
         limit,
         offset,
     };
-    db.search(&query).map_err(|e| e.to_string())
+    let mut result = db.search(&query).map_err(|e| e.to_string())?;
+    decrypt_search_result(&encryption, &mut result);
+    Ok(result)
 }
 
 #[tauri::command]
@@ -155,11 +175,21 @@ pub async fn delete_entries(
 #[tauri::command]
 pub async fn copy_entries(
     lock: State<'_, Arc<AppLockManager>>,
+    encryption: State<'_, Arc<EncryptionManager>>,
     db: State<'_, Arc<Database>>,
     ids: Vec<i64>,
 ) -> Result<String, String> {
     require_unlocked(&lock)?;
-    let merged = db.merge_entries_content(&ids).map_err(|e| e.to_string())?;
+    let mut entries = db.get_entries_by_ids(&ids).map_err(|e| e.to_string())?;
+    decrypt_entries(&encryption, &mut entries);
+
+    let merged = entries
+        .into_iter()
+        .filter(|entry| entry.content_type != "image")
+        .map(|entry| entry.content.trim().to_string())
+        .filter(|content| !content.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n\n");
 
     if merged.trim().is_empty() {
         return Ok(String::new());
@@ -207,11 +237,13 @@ pub async fn get_entry_count(
 #[tauri::command]
 pub async fn get_statistics(
     lock: State<'_, Arc<AppLockManager>>,
+    encryption: State<'_, Arc<EncryptionManager>>,
     db: State<'_, Arc<Database>>,
     app_data_dir: State<'_, Arc<AppDataDir>>,
 ) -> Result<Statistics, String> {
     require_unlocked(&lock)?;
     let mut stats = db.get_statistics().map_err(|e| e.to_string())?;
+    decrypt_entries(&encryption, &mut stats.most_used);
 
     let db_path = app_data_dir.0.join("clipboard.db");
     stats.storage_size_bytes = std::fs::metadata(&db_path).map(|m| m.len()).unwrap_or(0);
@@ -222,14 +254,20 @@ pub async fn get_statistics(
 #[tauri::command]
 pub async fn paste_entry(
     lock: State<'_, Arc<AppLockManager>>,
+    encryption: State<'_, Arc<EncryptionManager>>,
     db: State<'_, Arc<Database>>,
     id: i64,
 ) -> Result<(), String> {
     require_unlocked(&lock)?;
-    let entry = db
+    let mut entry = db
         .get_entry_by_id(id)
         .map_err(|e| e.to_string())?
         .ok_or_else(|| "Entry not found".to_string())?;
+
+    // Decrypt content if encrypted
+    if let Ok(decrypted) = encryption.decrypt_content(&entry.content) {
+        entry.content = decrypted;
+    }
 
     let mut clipboard = arboard::Clipboard::new().map_err(|e| format!("Clipboard error: {}", e))?;
 
@@ -477,11 +515,14 @@ pub async fn get_entry_tags(
 #[tauri::command]
 pub async fn get_entries_by_tag(
     lock: State<'_, Arc<AppLockManager>>,
+    encryption: State<'_, Arc<EncryptionManager>>,
     db: State<'_, Arc<Database>>,
     tag_id: i64,
 ) -> Result<Vec<crate::storage::ClipboardEntry>, String> {
     require_unlocked(&lock)?;
-    db.get_entries_by_tag(tag_id).map_err(|e| e.to_string())
+    let mut entries = db.get_entries_by_tag(tag_id).map_err(|e| e.to_string())?;
+    decrypt_entries(&encryption, &mut entries);
+    Ok(entries)
 }
 
 #[tauri::command]
@@ -721,6 +762,38 @@ pub async fn webdav_remove_device(
 ) -> Result<(), String> {
     require_unlocked(&lock)?;
     manager.remove_device(&device_id).await
+}
+
+// --- Database encryption commands ---
+
+#[tauri::command]
+pub async fn get_encryption_status(
+    lock: State<'_, Arc<AppLockManager>>,
+    encryption: State<'_, Arc<EncryptionManager>>,
+    db: State<'_, Arc<Database>>,
+) -> Result<EncryptionStatus, String> {
+    require_unlocked(&lock)?;
+    Ok(encryption.status(&db))
+}
+
+#[tauri::command]
+pub async fn enable_encryption(
+    lock: State<'_, Arc<AppLockManager>>,
+    encryption: State<'_, Arc<EncryptionManager>>,
+    db: State<'_, Arc<Database>>,
+) -> Result<EncryptionStatus, String> {
+    require_unlocked(&lock)?;
+    encryption.enable(&db)
+}
+
+#[tauri::command]
+pub async fn disable_encryption(
+    lock: State<'_, Arc<AppLockManager>>,
+    encryption: State<'_, Arc<EncryptionManager>>,
+    db: State<'_, Arc<Database>>,
+) -> Result<EncryptionStatus, String> {
+    require_unlocked(&lock)?;
+    encryption.disable(&db)
 }
 
 #[cfg(test)]

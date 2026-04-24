@@ -327,4 +327,16 @@ export default {
     reasonProtected: 'Unlock required before showing protected content',
     reasonDefault: 'Enter your password to continue',
   },
+  encryption: {
+    settingsTitle: 'Database Encryption',
+    settingsHint: 'Encrypt clipboard data stored on disk using AES-256-GCM',
+    enabled: 'Encryption enabled',
+    enable: 'Enable encryption',
+    disable: 'Disable encryption',
+    migrating: 'Migrating data...',
+    statusEncrypted: '{count} entries encrypted',
+    statusPlaintext: '{count} entries unencrypted',
+    enableConfirm: 'This will encrypt all existing clipboard entries. Continue?',
+    disableConfirm: 'This will decrypt all entries and remove the encryption key. Continue?',
+  },
 };

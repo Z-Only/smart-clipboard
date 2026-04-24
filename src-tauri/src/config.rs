@@ -1,3 +1,4 @@
+use crate::encryption::EncryptionConfig;
 use crate::security::AppLockConfig;
 use crate::sync::webdav::WebDavConfig;
 use crate::sync::SyncConfig;
@@ -46,6 +47,8 @@ pub struct AppConfig {
     #[serde(default)]
     pub app_lock: AppLockConfig,
     #[serde(default)]
+    pub encryption: EncryptionConfig,
+    #[serde(default)]
     pub updater: UpdaterConfig,
 }
 
@@ -62,6 +65,7 @@ impl Default for AppConfig {
             sync_metadata: None,
             webdav: WebDavConfig::default(),
             app_lock: AppLockConfig::default(),
+            encryption: EncryptionConfig::default(),
             updater: UpdaterConfig::default(),
         }
     }

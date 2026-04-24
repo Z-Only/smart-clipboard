@@ -14,3 +14,11 @@ export interface AppLockStatus {
   unlock_reason: string | null;
   failed_attempts: number;
 }
+
+export interface EncryptionStatus {
+  enabled: boolean;
+  key_exists: boolean;
+  encrypted_count: number;
+  plaintext_count: number;
+  migrating: boolean;
+}

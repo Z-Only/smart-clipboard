@@ -325,4 +325,16 @@ export default {
     reasonProtected: '访问受保护内容前需要解锁',
     reasonDefault: '请输入密码继续',
   },
+  encryption: {
+    settingsTitle: '数据库加密',
+    settingsHint: '使用 AES-256-GCM 加密存储在磁盘上的剪贴板数据',
+    enabled: '已启用加密',
+    enable: '启用加密',
+    disable: '关闭加密',
+    migrating: '正在迁移数据...',
+    statusEncrypted: '{count} 条记录已加密',
+    statusPlaintext: '{count} 条记录未加密',
+    enableConfirm: '将加密所有现有剪贴板条目，是否继续？',
+    disableConfirm: '将解密所有条目并移除加密密钥，是否继续？',
+  },
 };

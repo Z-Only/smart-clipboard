@@ -1,10 +1,19 @@
 import { defineStore } from 'pinia';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import type { AppLockStatus } from '@/types/security';
+import type { AppLockStatus, EncryptionStatus } from '@/types/security';
+
+const defaultEncryptionStatus: EncryptionStatus = {
+  enabled: false,
+  key_exists: false,
+  encrypted_count: 0,
+  plaintext_count: 0,
+  migrating: false,
+};
 
 interface State {
   status: AppLockStatus;
+  encryption: EncryptionStatus;
   loading: boolean;
   error: string | null;
   initialized: boolean;
@@ -24,6 +33,7 @@ const defaultStatus: AppLockStatus = {
 export const useSecurityStore = defineStore('security', {
   state: (): State => ({
     status: defaultStatus,
+    encryption: defaultEncryptionStatus,
     loading: false,
     error: null,
     initialized: false,
@@ -40,6 +50,11 @@ export const useSecurityStore = defineStore('security', {
     },
     async refresh() {
       this.status = await invoke<AppLockStatus>('get_app_lock_status');
+      try {
+        this.encryption = await invoke<EncryptionStatus>('get_encryption_status');
+      } catch {
+        // Encryption commands may not be available if app is locked
+      }
     },
     async setPassword(currentPassword: string | null, newPassword: string) {
       this.loading = true;
@@ -86,6 +101,37 @@ export const useSecurityStore = defineStore('security', {
         throw error;
       } finally {
         this.loading = false;
+      }
+    },
+    async enableEncryption() {
+      this.loading = true;
+      this.error = null;
+      try {
+        this.encryption = await invoke<EncryptionStatus>('enable_encryption');
+      } catch (error) {
+        this.error = String(error);
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+    async disableEncryption() {
+      this.loading = true;
+      this.error = null;
+      try {
+        this.encryption = await invoke<EncryptionStatus>('disable_encryption');
+      } catch (error) {
+        this.error = String(error);
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+    async refreshEncryption() {
+      try {
+        this.encryption = await invoke<EncryptionStatus>('get_encryption_status');
+      } catch {
+        // silently ignore if locked
       }
     },
   },

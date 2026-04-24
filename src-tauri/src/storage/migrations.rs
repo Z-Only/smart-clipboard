@@ -156,6 +156,12 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         conn.execute_batch("ALTER TABLE clipboard_entries ADD COLUMN source_device TEXT;")?;
     }
 
+    if !entry_columns.iter().any(|c| c == "is_encrypted") {
+        conn.execute_batch(
+            "ALTER TABLE clipboard_entries ADD COLUMN is_encrypted INTEGER NOT NULL DEFAULT 0;",
+        )?;
+    }
+
     if !entry_columns.iter().any(|c| c == "pinyin_full") {
         conn.execute_batch(
             "ALTER TABLE clipboard_entries ADD COLUMN pinyin_full TEXT NOT NULL DEFAULT '';",

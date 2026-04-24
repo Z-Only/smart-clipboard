@@ -39,11 +39,19 @@ impl Database {
     }
 
     pub fn insert_entry(&self, entry: &ClipboardEntry) -> Result<i64> {
+        self.insert_entry_with_encrypted_flag(entry, false)
+    }
+
+    pub fn insert_entry_with_encrypted_flag(
+        &self,
+        entry: &ClipboardEntry,
+        is_encrypted: bool,
+    ) -> Result<i64> {
         let conn = self.conn.lock().unwrap();
         let (pinyin_full, pinyin_initials) = build_pinyin_fields(&entry.content);
         conn.execute(
-            "INSERT INTO clipboard_entries (content, content_type, category, hash, source_app, is_favorite, is_sensitive, pinyin_full, pinyin_initials, use_count, created_at, updated_at, expires_at, source_device)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+            "INSERT INTO clipboard_entries (content, content_type, category, hash, source_app, is_favorite, is_sensitive, pinyin_full, pinyin_initials, use_count, created_at, updated_at, expires_at, source_device, is_encrypted)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
             params![
                 entry.content,
                 entry.content_type,
@@ -59,6 +67,7 @@ impl Database {
                 entry.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 entry.expires_at.map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string()),
                 entry.source_device,
+                is_encrypted as i32,
             ],
         )?;
         Ok(conn.last_insert_rowid())
@@ -687,6 +696,64 @@ impl Database {
             .filter_map(|r| r.ok())
             .collect();
         Ok(categories)
+    }
+
+    // --- Encryption support methods ---
+
+    /// Count encrypted vs plaintext entries.
+    pub fn count_encrypted_entries(&self) -> Result<(i64, i64)> {
+        let conn = self.conn.lock().unwrap();
+        let encrypted: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM clipboard_entries WHERE is_encrypted = 1",
+            [],
+            |row| row.get(0),
+        )?;
+        let plaintext: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM clipboard_entries WHERE is_encrypted = 0",
+            [],
+            |row| row.get(0),
+        )?;
+        Ok((encrypted, plaintext))
+    }
+
+    /// Fetch all plaintext entries (id, content) for migration to encrypted.
+    pub fn get_plaintext_entries_for_migration(&self) -> Result<Vec<(i64, String)>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, content FROM clipboard_entries WHERE is_encrypted = 0 AND content_type != 'image'",
+        )?;
+        let entries = stmt
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(entries)
+    }
+
+    /// Fetch all encrypted entries (id, content) for migration to plaintext.
+    pub fn get_encrypted_entries_for_migration(&self) -> Result<Vec<(i64, String)>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt =
+            conn.prepare("SELECT id, content FROM clipboard_entries WHERE is_encrypted = 1")?;
+        let entries = stmt
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(entries)
+    }
+
+    /// Update content and encrypted flag for a single entry (used during migration).
+    pub fn update_entry_content_and_encrypted_flag(
+        &self,
+        id: i64,
+        content: &str,
+        encrypted: bool,
+    ) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE clipboard_entries SET content = ?1, is_encrypted = ?2 WHERE id = ?3",
+            params![content, encrypted as i32, id],
+        )?;
+        Ok(())
     }
 }
 
