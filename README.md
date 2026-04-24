@@ -70,8 +70,9 @@ When app lock is enabled:
 
 ### Current platform behavior
 
-- **macOS**: Password lock, auto-lock, tray/hotkey interception, and a system-auth convenience unlock path are available
-- **Windows / Linux**: Password lock, auto-lock, and tray/hotkey interception are available; biometric unlock currently falls back to password-only behavior
+- **macOS**: Password lock, auto-lock, tray/hotkey interception, and native Touch ID unlock via LocalAuthentication framework
+- **Windows**: Password lock, auto-lock, tray/hotkey interception, and native Windows Hello unlock (fingerprint, face, PIN)
+- **Linux**: Password lock, auto-lock, and tray/hotkey interception are available; biometric unlock falls back to password-only behavior
 
 ## Sync Overview
 
@@ -96,16 +97,16 @@ See the live screenshots and docs site: https://z-only.github.io/smart-clipboard
 
 ## Tech Stack
 
-| Layer          | Technology                                     |
-| -------------- | ---------------------------------------------- |
-| Frontend       | Vue 3 + TypeScript + Tailwind CSS + shadcn-vue |
-| Backend        | Rust                                           |
-| Framework      | Tauri 2                                        |
-| Database       | SQLite with FTS5 (via rusqlite)                |
-| Clipboard      | arboard                                        |
-| Local security | argon2 + keyring                               |
-| LAN discovery  | mdns-sd                                        |
-| i18n           | vue-i18n                                       |
+| Layer          | Technology                                                               |
+| -------------- | ------------------------------------------------------------------------ |
+| Frontend       | Vue 3 + TypeScript + Tailwind CSS + shadcn-vue                           |
+| Backend        | Rust                                                                     |
+| Framework      | Tauri 2                                                                  |
+| Database       | SQLite with FTS5 (via rusqlite)                                          |
+| Clipboard      | arboard                                                                  |
+| Local security | argon2 + keyring + LocalAuthentication (macOS) + Windows Hello (Windows) |
+| LAN discovery  | mdns-sd                                                                  |
+| i18n           | vue-i18n                                                                 |
 
 ## Getting Started
 
@@ -234,7 +235,7 @@ smart-clipboard/
 
 ### Planned / Future Improvements
 
-- [ ] **Native biometric integration**: Replace the current macOS convenience path with a fully native Touch ID / LocalAuthentication bridge and expand platform coverage where possible
+- [x] **Native biometric integration**: Native Touch ID (macOS) and Windows Hello (Windows) via platform FFI
 - [ ] **Deeper runtime integration tests**: Add full invoke-level black-box tests around locked/unlocked command behavior
 - [ ] **Database-at-rest encryption**: Optional encrypted local storage for clipboard data
 - [ ] **Advanced sync conflict handling**: Smarter merge / conflict-resolution behavior
