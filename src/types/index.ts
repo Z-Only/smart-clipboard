@@ -206,3 +206,48 @@ export interface UpdaterStatus {
   lastError: string | null;
   lastCheckSilent: boolean;
 }
+
+// --- Sync Conflict Types ---
+
+export type ConflictResolutionStrategy =
+  | 'last-write-wins'
+  | 'local-first'
+  | 'remote-first'
+  | 'manual';
+
+export type ConflictOutcome = 'kept-local' | 'kept-remote' | 'auto-resolved' | 'dismissed';
+
+export interface ConflictEntry {
+  localVersion: ClipboardEntry;
+  remoteVersion: ClipboardEntry;
+  remoteDeviceName: string;
+}
+
+export interface SyncConflict {
+  id: string;
+  entryId: number;
+  localVersion: ClipboardEntry;
+  remoteVersion: ClipboardEntry;
+  remoteDeviceId: string;
+  remoteDeviceName: string;
+  detectedAt: string;
+  resolved: boolean;
+  resolution: ConflictOutcome | null;
+}
+
+export interface ConflictLogEntry {
+  id: string;
+  entryId: number;
+  localContentPreview: string;
+  remoteContentPreview: string;
+  remoteDeviceName: string;
+  strategy: ConflictResolutionStrategy;
+  outcome: ConflictOutcome;
+  resolvedAt: string;
+}
+
+export interface ConflictConfig {
+  strategy: ConflictResolutionStrategy;
+  keepConflictLog: boolean;
+  maxLogEntries: number;
+}
