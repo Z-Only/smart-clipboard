@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.3.0] - 2026-04-24
+
+### Added
+
+- **Native Touch ID unlock (macOS)**: Real biometric authentication via the LocalAuthentication framework (`LAContext`), replacing the previous `osascript`-based convenience path
+- **Native Windows Hello unlock (Windows)**: Biometric authentication via `UserConsentVerifier` (fingerprint, face, PIN)
+- **Platform-specific biometric module**: New `src-tauri/src/biometric.rs` encapsulating all platform FFI with `#[cfg(target_os)]` conditional compilation and test injection helpers
+- **Biometric unit tests**: 5 new tests covering availability injection, successful unlock, user cancel, error handling, and settings auto-downgrade when biometric is unavailable
+
+### Changed
+
+- **Version bump to 2.3.0**: Native biometric integration as a minor release
+- **security.rs refactored**: Inline biometric functions removed; now delegates to the dedicated `biometric` module via re-exports for backward compatibility
+
+### Dependencies
+
+- Added `objc2-local-authentication`, `objc2-foundation`, `objc2`, `block2` (macOS)
+- Added `windows` crate with `Security_Credentials_UI` and `Foundation` features (Windows)
+
 ## [2.2.0] - 2026-04-24
 
 ### Added

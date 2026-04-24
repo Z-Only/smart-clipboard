@@ -28,7 +28,7 @@ features:
     details: URL / 邮箱 / 代码 / JSON / 文件路径 / 颜色 / 电话自动识别，一秒定位目标内容。
   - icon: 🔐
     title: 安全优先
-    details: Argon2 密码哈希 + OS 凭据存储、应用锁、自动锁定、敏感数据检测与过期清除。
+    details: Argon2 密码哈希 + OS 凭据存储、原生 Touch ID / Windows Hello 生物识别、应用锁、自动锁定、敏感数据检测与过期清除。
   - icon: 🔄
     title: 多设备同步
     details: 局域网端到端加密同步 + WebDAV 云同步，跨设备工作流无缝衔接。

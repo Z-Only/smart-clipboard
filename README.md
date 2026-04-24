@@ -7,21 +7,16 @@ A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + *
 - Website / Docs: https://z-only.github.io/smart-clipboard/
 - Repository: https://github.com/Z-Only/smart-clipboard
 
-## Release Status — v2.2.0 Managed Updater
+## Release Status — v2.3.0 Native Biometric Integration
 
-This repository now includes the **Managed Updater** on top of clipboard history, smart enhancements, templates, LAN sync, WebDAV cloud sync, and Phase 4 access security.
+This repository now includes **Native Biometric Integration** on top of clipboard history, smart enhancements, templates, LAN sync, WebDAV cloud sync, Phase 4 access security, and the managed updater.
 
-### v2.2.0 highlights
+### v2.3.0 highlights
 
-- **Automatic update checks**: Background checks on a configurable schedule (6h / 12h / daily / weekly)
-- **Manual check**: Click the version row in Settings to check for updates immediately
-- **Mirror endpoints**: Custom HTTPS mirrors with `{url}` placeholder for CDN acceleration
-- **Artifact download with progress**: Download update installers with real-time progress tracking
-- **Signature verification**: Minisign signature verification for downloaded artifacts
-- **Pending update management**: Persist downloaded updates across restarts; install or discard at any time
-- **Install handoff**: Launch the downloaded installer with a quit action to complete the update
-- **Phase-specific UI**: Settings panel shows contextual status, controls, and actions for each update phase
-- **Wi-Fi-only downloads**: Optionally restrict auto-downloads to Wi-Fi connections
+- **Native Touch ID unlock (macOS)**: Real biometric authentication via the LocalAuthentication framework, replacing the previous `osascript`-based convenience path
+- **Native Windows Hello unlock (Windows)**: Biometric authentication via `UserConsentVerifier` (fingerprint, face, PIN)
+- **Platform-specific biometric module**: New `biometric.rs` encapsulating all platform FFI with `#[cfg(target_os)]` conditional compilation
+- **Biometric unit tests**: 5 new tests covering availability injection, successful unlock, user cancel, error handling, and settings auto-downgrade
 
 ## Features
 
