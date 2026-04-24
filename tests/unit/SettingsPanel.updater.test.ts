@@ -53,10 +53,21 @@ vi.mock('@/composables/useTheme', () => ({
 vi.mock('@/stores/securityStore', () => ({
   useSecurityStore: () => ({
     status: { biometric_available: true },
+    encryption: {
+      enabled: false,
+      key_exists: false,
+      encrypted_count: 0,
+      plaintext_count: 0,
+      migrating: false,
+    },
+    loading: false,
     refresh: vi.fn().mockResolvedValue(undefined),
     updateSettings: vi.fn().mockResolvedValue(undefined),
     setPassword: vi.fn().mockResolvedValue(undefined),
     lock: vi.fn().mockResolvedValue(undefined),
+    refreshEncryption: vi.fn().mockResolvedValue(undefined),
+    enableEncryption: vi.fn().mockResolvedValue(undefined),
+    disableEncryption: vi.fn().mockResolvedValue(undefined),
   }),
 }));
 vi.mock('@/stores/updaterStore', () => ({
