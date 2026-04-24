@@ -43,13 +43,16 @@ hkdf = "0.12"
 rand = "0.8"
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
 argon2 = "0.5"
 
 keyring = "4.0.0-rc.3"
 keyring-core = "0.7.2"
 urlencoding = "2"
 html-escape = "0.2"
+semver = "1.0"
+minisign-verify = "0.2.5"
 
 [dev-dependencies]
 tauri = { version = "2", features = ["test"] }
+tempfile = "3"

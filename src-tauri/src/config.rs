@@ -8,6 +8,29 @@ use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdaterConfig {
+    pub auto_check_enabled: bool,
+    pub check_interval_hours: u64,
+    pub auto_download_enabled: bool,
+    pub wifi_only: bool,
+    pub mirrors: Vec<String>,
+    pub last_check_at: Option<String>,
+}
+
+impl Default for UpdaterConfig {
+    fn default() -> Self {
+        Self {
+            auto_check_enabled: true,
+            check_interval_hours: 24,
+            auto_download_enabled: false,
+            wifi_only: true,
+            mirrors: vec![],
+            last_check_at: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub max_entries: i64,
     pub retention_days: i64,
@@ -22,6 +45,8 @@ pub struct AppConfig {
     pub webdav: WebDavConfig,
     #[serde(default)]
     pub app_lock: AppLockConfig,
+    #[serde(default)]
+    pub updater: UpdaterConfig,
 }
 
 impl Default for AppConfig {
@@ -37,6 +62,7 @@ impl Default for AppConfig {
             sync_metadata: None,
             webdav: WebDavConfig::default(),
             app_lock: AppLockConfig::default(),
+            updater: UpdaterConfig::default(),
         }
     }
 }
