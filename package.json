@@ -20,7 +20,7 @@
     "lint:rust": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
     "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test:web && pnpm run test:rust",
     "typecheck": "vue-tsc --noEmit",
-    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml -- --test-threads=1",
     "test:web": "vitest run",
     "test:web:watch": "vitest",
     "lint:commit": "commitlint --from HEAD~1 --to HEAD",
