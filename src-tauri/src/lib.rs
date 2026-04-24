@@ -12,6 +12,9 @@ pub mod templates;
 pub mod tray;
 pub mod updater;
 
+#[cfg(test)]
+mod integration_tests;
+
 use std::path::PathBuf;
 use std::sync::Arc;
 

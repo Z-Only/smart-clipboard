@@ -231,7 +231,7 @@ smart-clipboard/
 ### Planned / Future Improvements
 
 - [x] **Native biometric integration**: Native Touch ID (macOS) and Windows Hello (Windows) via platform FFI
-- [ ] **Deeper runtime integration tests**: Add full invoke-level black-box tests around locked/unlocked command behavior
+- [x] **Deeper runtime integration tests**: Add full invoke-level black-box tests around locked/unlocked command behavior
 - [ ] **Database-at-rest encryption**: Optional encrypted local storage for clipboard data
 - [ ] **Advanced sync conflict handling**: Smarter merge / conflict-resolution behavior
 - [ ] **Plugin / extension system**: User-extensible automations and transformations
