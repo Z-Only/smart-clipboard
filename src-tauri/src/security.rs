@@ -8,11 +8,13 @@ use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 use crate::config::ConfigManager;
 
+// Delegate biometric functions to the dedicated module and re-export for
+// backward compatibility with commands.rs.
+use crate::biometric;
+pub use crate::biometric::try_biometric_unlock;
+
 const APP_LOCK_KEYRING_SERVICE: &str = "smart-clipboard";
 const APP_LOCK_KEYRING_ACCOUNT: &str = "app-lock-password-hash";
-
-#[cfg(test)]
-static TEST_BIOMETRIC_RESULT: Mutex<Option<Result<bool, String>>> = Mutex::new(None);
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct AppLockConfig {
@@ -290,7 +292,7 @@ pub(crate) fn reset_test_keyring_store() {
 
 #[cfg(test)]
 pub(crate) fn set_test_biometric_result(result: Option<Result<bool, String>>) {
-    *TEST_BIOMETRIC_RESULT.lock().unwrap() = result;
+    crate::biometric::set_test_biometric_result(result);
 }
 
 fn keyring_entry() -> Result<keyring_core::Entry, String> {
@@ -335,48 +337,7 @@ fn validate_password_strength(password: &str) -> Result<(), String> {
 }
 
 pub fn biometric_available() -> bool {
-    #[cfg(target_os = "macos")]
-    {
-        true
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        false
-    }
-}
-
-pub fn try_biometric_unlock() -> Result<bool, String> {
-    #[cfg(test)]
-    if let Some(result) = TEST_BIOMETRIC_RESULT.lock().unwrap().clone() {
-        return result;
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        use std::process::Command;
-        let script = r#"
-try
-  do shell script "echo biometric-check" with prompt "Unlock Smart Clipboard" with administrator privileges
-  return "ok"
-on error errMsg number errNum
-  error errMsg number errNum
-end try
-"#;
-        let output = Command::new("osascript")
-            .arg("-e")
-            .arg(script)
-            .output()
-            .map_err(|e| format!("Failed to start biometric prompt: {e}"))?;
-        if output.status.success() {
-            Ok(true)
-        } else {
-            Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
-        }
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        Ok(false)
-    }
+    biometric::biometric_available()
 }
 
 pub fn emit_lock_state<R: Runtime>(app: &AppHandle<R>, manager: &AppLockManager) {
