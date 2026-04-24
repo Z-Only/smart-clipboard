@@ -16,6 +16,7 @@ export default defineConfig(async () => ({
   test: {
     environment: 'jsdom',
     globals: true,
+    exclude: ['**/node_modules/**', '**/dist/**', '**/.worktrees/**'],
     setupFiles: [],
     coverage: {
       provider: 'v8',
