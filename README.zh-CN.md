@@ -208,3 +208,22 @@ smart-clipboard/
 ## 许可证
 
 本项目基于 MIT 许可证开源 —— 详见 [LICENSE](LICENSE) 文件。
+
+## 更新配置
+
+托管更新依赖 Tauri updater 构建产物与发布附件。
+
+发布所需 Secrets：
+
+- `TAURI_SIGNING_PRIVATE_KEY`
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
+
+运行时 updater 公钥读取顺序：
+
+1. `SMART_CLIPBOARD_UPDATER_PUBLIC_KEY` 环境变量
+2. `src-tauri/tauri.conf.json` 中的 `plugins.updater.pubkey`
+
+当前状态：
+
+- `sha256:` 签名可作为开发期回退校验方案
+- `minisign:` 签名的运行时公钥接线已完成，但最终验签实现仍待补齐
