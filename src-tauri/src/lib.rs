@@ -1,4 +1,5 @@
 pub mod analyzer;
+pub mod biometric;
 pub mod clipboard;
 pub mod commands;
 pub mod config;
