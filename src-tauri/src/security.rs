@@ -580,6 +580,113 @@ mod tests {
     }
 
     #[test]
+    fn biometric_available_reflects_injected_value() {
+        let _serial = TEST_SERIAL.lock().unwrap();
+        let _keyring = TestKeyringGuard::new();
+
+        crate::biometric::set_test_biometric_available(Some(true));
+        assert!(biometric_available());
+
+        crate::biometric::set_test_biometric_available(Some(false));
+        assert!(!biometric_available());
+
+        crate::biometric::set_test_biometric_available(None);
+    }
+
+    #[test]
+    fn biometric_unlock_success_clears_lock() {
+        let _serial = TEST_SERIAL.lock().unwrap();
+        let _keyring = TestKeyringGuard::new();
+        let temp_dir = TestDir::new();
+        let harness = TestHarness::new(temp_dir.path.clone());
+        harness.configure_password();
+
+        harness
+            .lock
+            .update_settings(UpdateAppLockSettingsPayload {
+                enabled: true,
+                auto_lock_seconds: 0,
+                biometric_enabled: true,
+            })
+            .unwrap();
+
+        harness.lock.lock("manual");
+        assert!(harness.lock.status().locked);
+
+        set_test_biometric_result(Some(Ok(true)));
+        let status = harness.lock.mark_biometric_unlocked();
+        assert!(!status.locked);
+        assert_eq!(status.unlock_reason.as_deref(), Some("biometric"));
+        assert_eq!(status.failed_attempts, 0);
+    }
+
+    #[test]
+    fn biometric_cancel_keeps_lock_and_does_not_increment_failures() {
+        let _serial = TEST_SERIAL.lock().unwrap();
+        let _keyring = TestKeyringGuard::new();
+        let temp_dir = TestDir::new();
+        let harness = TestHarness::new(temp_dir.path.clone());
+        harness.configure_password();
+
+        harness
+            .lock
+            .update_settings(UpdateAppLockSettingsPayload {
+                enabled: true,
+                auto_lock_seconds: 0,
+                biometric_enabled: true,
+            })
+            .unwrap();
+
+        harness.lock.lock("manual");
+        let before = harness.lock.status().failed_attempts;
+
+        set_test_biometric_result(Some(Ok(false)));
+        let result = try_biometric_unlock();
+        assert_eq!(result, Ok(false));
+
+        let status = harness.lock.status();
+        assert!(status.locked);
+        assert_eq!(status.failed_attempts, before);
+    }
+
+    #[test]
+    fn biometric_error_returns_err() {
+        let _serial = TEST_SERIAL.lock().unwrap();
+        let _keyring = TestKeyringGuard::new();
+
+        set_test_biometric_result(Some(Err("Biometric locked out".to_string())));
+        let result = try_biometric_unlock();
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Biometric locked out");
+
+        set_test_biometric_result(None);
+    }
+
+    #[test]
+    fn settings_downgrade_biometric_when_unavailable() {
+        let _serial = TEST_SERIAL.lock().unwrap();
+        let _keyring = TestKeyringGuard::new();
+        let temp_dir = TestDir::new();
+        let harness = TestHarness::new(temp_dir.path.clone());
+        harness.configure_password();
+
+        crate::biometric::set_test_biometric_available(Some(false));
+
+        let status = harness
+            .lock
+            .update_settings(UpdateAppLockSettingsPayload {
+                enabled: true,
+                auto_lock_seconds: 0,
+                biometric_enabled: true,
+            })
+            .unwrap();
+
+        assert!(!status.biometric_enabled);
+
+        crate::biometric::set_test_biometric_available(None);
+    }
+
+    #[test]
     fn auto_lock_threshold_comparison_behaves() {
         let now = Instant::now();
         let idle_for = now
