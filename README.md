@@ -7,22 +7,21 @@ A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + *
 - Website / Docs: https://z-only.github.io/smart-clipboard/
 - Repository: https://github.com/Z-Only/smart-clipboard
 
-## Release Status — Phase 4 Access Security Complete
+## Release Status — v2.2.0 Managed Updater
 
-This repository now includes the full **Phase 4 Access Security** package on top of clipboard history, smart enhancements, templates, LAN sync, and WebDAV cloud sync.
+This repository now includes the **Managed Updater** on top of clipboard history, smart enhancements, templates, LAN sync, WebDAV cloud sync, and Phase 4 access security.
 
-### Phase 4 highlights
+### v2.2.0 highlights
 
-- **App lock**: Enable or disable a local app lock from Settings
-- **Password setup**: Create or update the unlock password
-- **Secure password storage**: Passwords are never stored in plaintext; Rust hashes them with Argon2 and stores only the hash in the OS credential store
-- **Startup unlock**: If app lock is enabled, the app starts in a locked state
-- **Manual lock**: Lock the app immediately from Settings
-- **Tray / hotkey interception**: Tray and global shortcut wakeups are blocked by Rust-side access checks when locked
-- **Auto-lock**: Re-lock after a configurable idle timeout
-- **Biometric convenience unlock**: When available, users can try a faster biometric/system-auth unlock path, with password fallback on failure
-- **Rust-side command guards**: Sensitive Tauri commands now refuse access while the app is locked
-- **Frontend sensitive-state clearing**: Clipboard, sync, template, WebDAV, and statistics state are cleared on lock and reloaded after unlock
+- **Automatic update checks**: Background checks on a configurable schedule (6h / 12h / daily / weekly)
+- **Manual check**: Click the version row in Settings to check for updates immediately
+- **Mirror endpoints**: Custom HTTPS mirrors with `{url}` placeholder for CDN acceleration
+- **Artifact download with progress**: Download update installers with real-time progress tracking
+- **Signature verification**: Minisign signature verification for downloaded artifacts
+- **Pending update management**: Persist downloaded updates across restarts; install or discard at any time
+- **Install handoff**: Launch the downloaded installer with a quit action to complete the update
+- **Phase-specific UI**: Settings panel shows contextual status, controls, and actions for each update phase
+- **Wi-Fi-only downloads**: Optionally restrict auto-downloads to Wi-Fi connections
 
 ## Features
 
@@ -47,6 +46,7 @@ This repository now includes the full **Phase 4 Access Security** package on top
 - **LAN Sync** -- Encrypted peer-to-peer sync over mDNS + WebSocket
 - **WebDAV Cloud Sync** -- End-to-end encrypted cloud sync with device registry, polling, and rate limiting
 - **App Access Security** -- Password lock, auto-lock, guarded wakeups, and secure unlock flow
+- **Managed Updater** -- Background update checks, mirror endpoints, artifact download with progress, signature verification, and install handoff
 - **Lightweight** -- Small binary with low CPU/memory usage thanks to Rust + native WebView
 
 ## Security Model (Phase 4)

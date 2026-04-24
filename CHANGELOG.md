@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.2.0] - 2026-04-24
+
+### Added
+
+- **Managed updater backend**: Full Rust updater module (`src-tauri/src/updater/`) with manifest fetching, mirror resolution, artifact download with progress, minisign signature verification, pending update persistence, and install handoff
+- **Updater config model**: `UpdaterConfig` in `AppConfig` with auto-check, interval, auto-download, Wi-Fi-only, and custom mirror endpoint support
+- **Updater Tauri commands**: `get_updater_status`, `check_for_updates_now`, `download_available_update`, `install_pending_update`, `discard_pending_update`, and `quit_app`
+- **Frontend updater store**: Pinia store with reactive status, event binding, and actions for check, download, install, and discard flows
+- **Settings updater UI**: Version row with manual check, auto-check toggles, check frequency selector, auto-download and Wi-Fi-only options, mirror endpoint textarea with inline validation, phase-specific status text, download progress, pending update install/discard actions, and quit button during install handoff
+- **Release scaffolding**: Enabled `createUpdaterArtifacts` in Tauri config, added signing key validation and updater artifact upload to the release workflow
+- **Updater i18n**: English and Chinese translations for all updater labels, hints, status text, and validation messages
+- **Updater test coverage**: 34 Rust unit tests covering mirrors, pending persistence, policy helpers, manager workflows, signature verification, and download progress; 11 Vitest tests covering the frontend store and Settings panel updater section
+
+### Changed
+
+- **Version bump to 2.2.0**: Added managed updater as a minor release
+
 ## [2.1.0] - 2026-04-21
 
 ### Fixed

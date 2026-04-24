@@ -232,6 +232,7 @@ impl UpdaterManager {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn download_update_with_handlers_and_progress<F, V, P>(
         &self,
         app_data_dir: &std::path::Path,
@@ -261,6 +262,7 @@ impl UpdaterManager {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn download_update_with_handlers_and_progress_and_public_key<F, V, P>(
         &self,
         app_data_dir: &std::path::Path,
