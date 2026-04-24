@@ -126,6 +126,9 @@
 
     <!-- Templates panel -->
     <TemplateList :is-open="showTemplates" @close="showTemplates = false" />
+
+    <!-- Conflict resolve dialog -->
+    <ConflictResolveDialog :conflict="activeConflict" />
   </div>
 </template>
 
@@ -142,11 +145,13 @@ import StatisticsPanel from '@/components/StatisticsPanel.vue';
 import TemplateList from '@/components/TemplateList.vue';
 import SyncPanel from '@/components/SyncPanel.vue';
 import LockScreen from '@/components/LockScreen.vue';
+import ConflictResolveDialog from '@/components/ConflictResolveDialog.vue';
 import { useSecurityStore } from '@/stores/securityStore';
 import { useClipboardStore } from '@/stores/clipboardStore';
 import { useSyncStore } from '@/stores/syncStore';
 import { useTemplateStore } from '@/stores/templateStore';
 import { useWebDavStore } from '@/stores/webdavStore';
+import { useConflictStore } from '@/stores/conflictStore';
 import { useClipboard } from '@/composables/useClipboard';
 import { useTheme } from '@/composables/useTheme';
 
@@ -155,8 +160,11 @@ const security = useSecurityStore();
 const syncStore = useSyncStore();
 const templateStore = useTemplateStore();
 const webdavStore = useWebDavStore();
+const conflictStore = useConflictStore();
 useTheme();
+
 const { totalCount } = storeToRefs(store);
+const { activeConflict } = storeToRefs(conflictStore);
 
 const searchBarRef = ref<InstanceType<typeof SearchBar> | null>(null);
 const showSettings = ref(false);

@@ -7,17 +7,16 @@ A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + *
 - Website / Docs: https://z-only.github.io/smart-clipboard/
 - Repository: https://github.com/Z-Only/smart-clipboard
 
-## Release Status — v2.4.0 Database-at-rest Encryption
+## Release Status — v2.5.0 Advanced Sync Conflict Handling
 
-This repository now includes **Database-at-rest Encryption** on top of clipboard history, smart enhancements, templates, LAN sync, WebDAV cloud sync, Phase 4 access security, native biometric integration, and the managed updater.
+This repository now includes **Advanced Sync Conflict Handling** on top of clipboard history, smart enhancements, templates, LAN sync, WebDAV cloud sync, Phase 4 access security, native biometric integration, the managed updater, and database-at-rest encryption.
 
-### v2.4.0 highlights
+### v2.5.0 highlights
 
-- **Optional database encryption**: AES-256-GCM application-layer encryption for clipboard entry content
-- **Secure key management**: Encryption keys stored in the OS keyring (macOS Keychain / Windows Credential Manager / Linux Secret Service)
-- **Transparent encrypt/decrypt**: Data is encrypted on write and decrypted on read — the frontend is unaware of encryption
-- **One-click migration**: Enable or disable encryption at any time; all existing entries are migrated automatically
-- **Encryption settings UI**: Toggle encryption and monitor migration status from the Settings panel
+- **Smart conflict detection**: Automatically identifies when the same entry is modified on multiple devices
+- **Configurable resolution strategies**: Last Write Wins / Local First / Remote First / Manual — selectable from the Sync panel
+- **Manual resolution UI**: Side-by-side diff dialog for choosing which version to keep
+- **Conflict log**: Full history of resolved conflicts with outcome tracking and bulk management
 
 ## Features
 
@@ -41,6 +40,7 @@ This repository now includes **Database-at-rest Encryption** on top of clipboard
 - **Clipboard Templates** -- Reusable text snippets with `{{placeholder}}` syntax and fill-in dialog
 - **LAN Sync** -- Encrypted peer-to-peer sync over mDNS + WebSocket
 - **WebDAV Cloud Sync** -- End-to-end encrypted cloud sync with device registry, polling, and rate limiting
+- **Sync Conflict Handling** -- Smart conflict detection with configurable resolution strategies and manual diff UI
 - **App Access Security** -- Password lock, auto-lock, guarded wakeups, and secure unlock flow
 - **Managed Updater** -- Background update checks, mirror endpoints, artifact download with progress, signature verification, and install handoff
 - **Database Encryption** -- Optional AES-256-GCM encryption for clipboard data at rest, with keys in the OS keyring

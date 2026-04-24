@@ -34,6 +34,23 @@
             >
               {{ $t('sync.tab.webdav') }}
             </button>
+            <button
+              class="relative rounded-md px-3 py-1 text-sm font-medium transition-colors"
+              :class="
+                activeTab === 'conflicts'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              "
+              @click="activeTab = 'conflicts'"
+            >
+              {{ $t('conflict.tab') }}
+              <span
+                v-if="conflictPendingCount > 0"
+                class="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground"
+              >
+                {{ conflictPendingCount }}
+              </span>
+            </button>
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -78,6 +95,126 @@
       <!-- WebDAV Tab -->
       <div v-if="activeTab === 'webdav'" class="max-h-[80vh] overflow-y-auto p-5">
         <WebDavPanel :is-active="activeTab === 'webdav' && isOpen" />
+      </div>
+
+      <!-- Conflicts Tab -->
+      <div v-else-if="activeTab === 'conflicts'" class="max-h-[80vh] overflow-y-auto p-5">
+        <div class="space-y-6">
+          <!-- Pending conflicts banner -->
+          <div
+            v-if="conflictHasConflicts"
+            class="flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 p-4"
+          >
+            <div class="flex items-center gap-3">
+              <svg
+                class="h-5 w-5 text-amber-500"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"
+                />
+                <path d="M12 9v4" />
+                <path d="M12 17h.01" />
+              </svg>
+              <div>
+                <p class="text-sm font-medium text-amber-700 dark:text-amber-300">
+                  {{ $t('conflict.pendingCount', { count: conflictPendingCount }) }}
+                </p>
+              </div>
+            </div>
+            <button
+              class="inline-flex h-8 items-center rounded-md bg-amber-600 px-3 text-xs font-medium text-white transition-opacity hover:opacity-90"
+              @click="openFirstConflict"
+            >
+              {{ $t('conflict.resolve.title') }}
+            </button>
+          </div>
+
+          <div
+            v-else
+            class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground"
+          >
+            <p>{{ $t('conflict.noPending') }}</p>
+            <p class="mt-1 text-xs">{{ $t('conflict.noPendingHint') }}</p>
+          </div>
+
+          <!-- Strategy config -->
+          <div class="space-y-3">
+            <div class="space-y-1">
+              <label class="text-sm font-semibold">{{ $t('conflict.strategy.title') }}</label>
+              <p class="text-xs text-muted-foreground">{{ $t('conflict.strategy.hint') }}</p>
+            </div>
+            <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <button
+                v-for="strategy in strategies"
+                :key="strategy"
+                class="flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors"
+                :class="
+                  conflictConfig.strategy === strategy
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:bg-accent/40'
+                "
+                @click="conflictStore.updateStrategy(strategy)"
+              >
+                <span class="text-xs font-medium">
+                  {{ $t(`conflict.strategy.${strategy}`) }}
+                </span>
+                <span class="text-[11px] leading-tight text-muted-foreground">
+                  {{ $t(`conflict.strategy.${strategy}-hint`) }}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Log settings -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium">{{ $t('conflict.keepLog') }}</label>
+                <p class="text-xs text-muted-foreground">{{ $t('conflict.keepLogHint') }}</p>
+              </div>
+              <button
+                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors"
+                :class="conflictConfig.keepConflictLog ? 'bg-primary' : 'bg-input'"
+                @click="
+                  conflictStore.updateConfig({
+                    keepConflictLog: !conflictConfig.keepConflictLog,
+                  })
+                "
+              >
+                <span
+                  class="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg transition-transform"
+                  :class="conflictConfig.keepConflictLog ? 'translate-x-5' : 'translate-x-0'"
+                />
+              </button>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium">{{ $t('conflict.maxLogEntries') }}</label>
+              <input
+                :value="conflictConfig.maxLogEntries"
+                type="number"
+                min="10"
+                max="1000"
+                class="h-8 w-24 rounded-md border border-input bg-background px-2 text-right text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                @change="
+                  conflictStore.updateConfig({
+                    maxLogEntries: Number(($event.target as HTMLInputElement).value),
+                  })
+                "
+              />
+            </div>
+          </div>
+
+          <!-- Conflict log -->
+          <ConflictLogPanel />
+        </div>
       </div>
 
       <!-- LAN Tab -->
@@ -293,8 +430,10 @@ import { useI18n } from 'vue-i18n';
 import DeviceCard from '@/components/DeviceCard.vue';
 import PairConfirmDialog from '@/components/PairConfirmDialog.vue';
 import WebDavPanel from '@/components/WebDavPanel.vue';
+import ConflictLogPanel from '@/components/ConflictLogPanel.vue';
 import { useSyncStore } from '@/stores/syncStore';
-import type { SyncDevice, SyncStatus } from '@/types';
+import { useConflictStore } from '@/stores/conflictStore';
+import type { ConflictResolutionStrategy, SyncDevice, SyncStatus } from '@/types';
 
 const props = defineProps<{ isOpen: boolean }>();
 const emit = defineEmits<{ close: [] }>();
@@ -320,7 +459,21 @@ const form = reactive({
   port: 8484,
 });
 
-const activeTab = ref<'lan' | 'webdav'>('lan');
+const conflictStore = useConflictStore();
+const {
+  pendingCount: conflictPendingCount,
+  hasConflicts: conflictHasConflicts,
+  config: conflictConfig,
+} = storeToRefs(conflictStore);
+
+const strategies: ConflictResolutionStrategy[] = [
+  'last-write-wins',
+  'local-first',
+  'remote-first',
+  'manual',
+];
+
+const activeTab = ref<'lan' | 'webdav' | 'conflicts'>('lan');
 const pairingDevice = ref<SyncDevice | null>(null);
 
 function getStatusText(value: SyncStatus) {
@@ -400,6 +553,10 @@ async function handleToggleSync(device: SyncDevice, nextEnabled: boolean) {
 
 function clearError() {
   syncStore.clearError();
+}
+
+function openFirstConflict() {
+  conflictStore.openNextConflict();
 }
 
 function close() {

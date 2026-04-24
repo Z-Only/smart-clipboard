@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.5.0] - 2026-04-25
+
+### Added
+
+- **Sync conflict detection**: Automatic detection when the same clipboard entry is modified on multiple devices (by id + hash comparison), with batch detection support
+- **Configurable resolution strategies**: Four auto-resolution strategies selectable from the Sync panel — Last Write Wins, Local First, Remote First, and Manual
+- **Manual conflict resolution UI**: Side-by-side diff dialog (`ConflictResolveDialog.vue`) showing local vs remote content, modification time, content type, and source device, with Keep Local / Keep Remote / Skip actions
+- **Conflict log panel**: Searchable history of all resolved conflicts (`ConflictLogPanel.vue`) with outcome badges, per-entry deletion, and bulk clear
+- **Conflicts tab in Sync panel**: New tab with pending-conflict badge, strategy picker cards, log settings (toggle + max entries), and embedded conflict log
+- **Conflict i18n**: Full English and Chinese translations for all conflict-related UI (60+ keys)
+
+### Changed
+
+- **Version bump to 2.5.0**: Advanced sync conflict handling as a minor release
+- **SyncPanel.vue**: Added third tab for conflict management with strategy configuration and log viewer
+- **App.vue**: Integrated `ConflictResolveDialog` globally so conflict resolution dialogs can appear from any sync trigger
+
 ## [2.4.0] - 2026-04-25
 
 ### Added
