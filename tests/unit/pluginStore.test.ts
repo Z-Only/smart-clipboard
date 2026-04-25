@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
+import type { PluginListItem, PluginTransformAction } from '@/types';
 
 const invoke = vi.fn();
 vi.mock('@tauri-apps/api/core', () => ({ invoke }));
@@ -10,21 +11,31 @@ describe('usePluginStore', () => {
     invoke.mockReset();
   });
 
-  it('loads plugin list from backend', async () => {
-    const plugins = [
+  it('loads plugin list from backend with ui-facing plugin fields', async () => {
+    const plugins: PluginListItem[] = [
       {
         id: 'builtin.uppercase',
         name: 'Uppercase',
-        description: 'Convert text to uppercase',
         version: '1.0.0',
+        description: 'Convert text to uppercase',
+        kind: 'builtin',
+        handler: 'transform',
+        capabilities: ['transform'],
         enabled: true,
+        valid: true,
+        error: null,
       },
       {
-        id: 'builtin.lowercase',
-        name: 'Lowercase',
-        description: 'Convert text to lowercase',
-        version: '1.0.0',
+        id: 'broken.plugin',
+        name: 'Broken Plugin',
+        version: '0.1.0',
+        description: null,
+        kind: 'external',
+        handler: null,
+        capabilities: [],
         enabled: false,
+        valid: false,
+        error: 'Failed to load manifest',
       },
     ];
     invoke.mockResolvedValue(plugins);
@@ -38,7 +49,7 @@ describe('usePluginStore', () => {
     expect(store.plugins).toEqual(plugins);
   });
 
-  it('updates local state after enabling or disabling a plugin', async () => {
+  it('updates local state after enabling or disabling a plugin while preserving ui metadata', async () => {
     invoke.mockResolvedValue(undefined);
 
     const { usePluginStore } = await import('@/stores/pluginStore');
@@ -47,9 +58,14 @@ describe('usePluginStore', () => {
       {
         id: 'builtin.uppercase',
         name: 'Uppercase',
-        description: 'Convert text to uppercase',
         version: '1.0.0',
+        description: 'Convert text to uppercase',
+        kind: 'builtin',
+        handler: 'transform',
+        capabilities: ['transform'],
         enabled: false,
+        valid: true,
+        error: null,
       },
     ];
 
@@ -59,22 +75,35 @@ describe('usePluginStore', () => {
       pluginId: 'builtin.uppercase',
       enabled: true,
     });
-    expect(store.plugins[0].enabled).toBe(true);
+    expect(store.plugins).toEqual([
+      {
+        id: 'builtin.uppercase',
+        name: 'Uppercase',
+        version: '1.0.0',
+        description: 'Convert text to uppercase',
+        kind: 'builtin',
+        handler: 'transform',
+        capabilities: ['transform'],
+        enabled: true,
+        valid: true,
+        error: null,
+      },
+    ]);
   });
 
-  it('loads transform actions for given content', async () => {
-    const transforms = [
+  it('loads transform actions using the camelCase frontend contract', async () => {
+    const transforms: PluginTransformAction[] = [
       {
-        plugin_id: 'builtin.uppercase',
-        action_id: 'uppercase',
+        pluginId: 'builtin.uppercase',
+        pluginName: 'Uppercase',
+        transformId: 'uppercase',
         label: 'Uppercase',
-        description: 'Convert selection to uppercase',
       },
       {
-        plugin_id: 'builtin.slugify',
-        action_id: 'slugify',
+        pluginId: 'builtin.slugify',
+        pluginName: 'Slugify',
+        transformId: 'slugify',
         label: 'Slugify',
-        description: 'Convert selection to slug',
       },
     ];
     invoke.mockResolvedValue(transforms);

@@ -1,14 +1,19 @@
 export interface PluginListItem {
   id: string;
   name: string;
+  version: string | null;
   description: string | null;
-  version: string;
+  kind: string | null;
+  handler: string | null;
+  capabilities: string[];
   enabled: boolean;
+  valid: boolean;
+  error: string | null;
 }
 
 export interface PluginTransformAction {
-  plugin_id: string;
-  action_id: string;
+  pluginId: string;
+  pluginName: string;
+  transformId: string;
   label: string;
-  description: string | null;
 }
