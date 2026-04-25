@@ -161,6 +161,7 @@ export default {
     trim: 'Trim Whitespace',
     htmlEscape: 'HTML Escape',
     htmlUnescape: 'HTML Unescape',
+    plugins: 'Plugins',
     copied: 'Transformed & copied!',
   },
   tags: {

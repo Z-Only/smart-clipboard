@@ -160,6 +160,7 @@ export default {
     trim: '去除空白',
     htmlEscape: 'HTML 转义',
     htmlUnescape: 'HTML 反转义',
+    plugins: '插件',
     copied: '已转换并复制！',
   },
   tags: {
