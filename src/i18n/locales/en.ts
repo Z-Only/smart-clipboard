@@ -102,6 +102,15 @@ export default {
     themeRose: 'Rose',
     themeOrange: 'Orange',
     themeViolet: 'Violet',
+    plugins: {
+      title: 'Plugins',
+      hint: 'Manage installed plugins and their availability',
+      empty: 'No plugins found',
+      invalid: 'Invalid plugin',
+      id: 'ID: {id}',
+      kind: 'Kind: {kind}',
+      version: 'Version: {version}',
+    },
     updater: {
       title: 'Application Updates',
       hint: 'Configure background checks and mirror endpoints',

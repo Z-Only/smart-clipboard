@@ -101,6 +101,15 @@ export default {
     themeRose: '玫瑰',
     themeOrange: '橙色',
     themeViolet: '紫罗兰',
+    plugins: {
+      title: '插件',
+      hint: '管理已安装插件及其可用状态',
+      empty: '未发现插件',
+      invalid: '无效插件',
+      id: 'ID：{id}',
+      kind: '类型：{kind}',
+      version: '版本：{version}',
+    },
     updater: {
       title: '应用更新',
       hint: '配置后台检查与镜像地址',
