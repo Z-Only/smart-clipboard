@@ -6,6 +6,7 @@ pub mod config;
 pub mod encryption;
 pub mod hotkey;
 pub mod platform;
+pub mod plugins;
 pub mod security;
 pub mod storage;
 pub mod sync;
