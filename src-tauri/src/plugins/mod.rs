@@ -370,4 +370,58 @@ mod tests {
         assert_eq!(action_dto.action_id, "strip_markdown_format");
         assert_eq!(action_dto.label, "Strip Markdown Formatting");
     }
+
+    #[test]
+    fn parses_shipped_example_markdown_plugin_manifest() {
+        let manifest_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("plugins")
+            .join("markdown-tools")
+            .join("plugin.json");
+
+        let manifest_json = fs::read_to_string(&manifest_path)
+            .unwrap_or_else(|err| panic!("failed to read {}: {}", manifest_path.display(), err));
+        let manifest: super::manifest::PluginManifest = serde_json::from_str(&manifest_json)
+            .unwrap_or_else(|err| panic!("failed to parse {}: {}", manifest_path.display(), err));
+
+        assert_eq!(manifest.id, "markdown-tools");
+        assert_eq!(manifest.handler, "builtin.markdown_tools");
+        assert_eq!(manifest.kind, PluginKind::ContentProcessor);
+        assert!(manifest.enabled_by_default);
+        assert_eq!(
+            manifest.capabilities,
+            vec![PluginCapability::Classify, PluginCapability::Transform]
+        );
+    }
+
+    #[tokio::test]
+    async fn builtin_transform_content_behavior_remains_unchanged() {
+        let uppercase =
+            crate::commands::transform_content("hello world".into(), "uppercase".into())
+                .await
+                .unwrap();
+        assert_eq!(uppercase, "HELLO WORLD");
+
+        let title_case =
+            crate::commands::transform_content("hello smart clipboard".into(), "title_case".into())
+                .await
+                .unwrap();
+        assert_eq!(title_case, "Hello Smart Clipboard");
+
+        let trimmed = crate::commands::transform_content(
+            "  keep builtin transforms  
+"
+            .into(),
+            "trim".into(),
+        )
+        .await
+        .unwrap();
+        assert_eq!(trimmed, "keep builtin transforms");
+
+        let err =
+            crate::commands::transform_content("# Hello".into(), "strip_markdown_format".into())
+                .await
+                .unwrap_err();
+        assert!(err.contains("Unknown transform type: strip_markdown_format"));
+    }
 }
