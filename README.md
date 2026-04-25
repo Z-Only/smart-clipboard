@@ -7,22 +7,22 @@ A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + *
 - Website / Docs: https://z-only.github.io/smart-clipboard/
 - Repository: https://github.com/Z-Only/smart-clipboard
 
-## Release Status — v2.5.0 Advanced Sync Conflict Handling
+## Release Status — v2.6.0 Pinyin Fuzzy Search
 
-This repository now includes **Advanced Sync Conflict Handling** on top of clipboard history, smart enhancements, templates, LAN sync, WebDAV cloud sync, Phase 4 access security, native biometric integration, the managed updater, and database-at-rest encryption.
+This repository now includes **Pinyin Fuzzy Search** on top of advanced sync conflict handling, clipboard history, smart enhancements, templates, LAN sync, WebDAV cloud sync, Phase 4 access security, native biometric integration, the managed updater, and database-at-rest encryption.
 
-### v2.5.0 highlights
+### v2.6.0 highlights
 
-- **Smart conflict detection**: Automatically identifies when the same entry is modified on multiple devices
-- **Configurable resolution strategies**: Last Write Wins / Local First / Remote First / Manual — selectable from the Sync panel
-- **Manual resolution UI**: Side-by-side diff dialog for choosing which version to keep
-- **Conflict log**: Full history of resolved conflicts with outcome tracking and bulk management
+- **Pinyin fuzzy search**: Search Chinese clipboard entries by original Hanzi, full pinyin, or initials
+- **Short-input fallback**: Very short inputs such as `zn` or `z` still return matches via LIKE fallback
+- **Case-insensitive initials**: Uppercase queries such as `ZNJTB` match lowercase pinyin indexes transparently
+- **Improved search guidance**: Search placeholder text now explicitly explains support for text / pinyin / initials
 
 ## Features
 
 - **Clipboard History** -- Automatically captures copied content with deduplication
 - **Smart Classification** -- Auto-categorizes content into URL, Email, Code, JSON, FilePath, Color, Phone, Address, Image, and plain Text
-- **Full-Text Search** -- Fast search powered by SQLite FTS5
+- **Full-Text Search** -- Fast search powered by SQLite FTS5, with Chinese pinyin full-text and initials matching
 - **Category Filter** -- Browse clipboard history by content type
 - **Global Hotkey** -- `Cmd/Ctrl + Shift + V` to toggle the clipboard panel
 - **System Tray** -- Runs in the background with tray controls
@@ -41,6 +41,7 @@ This repository now includes **Advanced Sync Conflict Handling** on top of clipb
 - **LAN Sync** -- Encrypted peer-to-peer sync over mDNS + WebSocket
 - **WebDAV Cloud Sync** -- End-to-end encrypted cloud sync with device registry, polling, and rate limiting
 - **Sync Conflict Handling** -- Smart conflict detection with configurable resolution strategies and manual diff UI
+- **Pinyin Fuzzy Search** -- Search Chinese entries by Hanzi, full pinyin, and initials with short-query fallback
 - **App Access Security** -- Password lock, auto-lock, guarded wakeups, and secure unlock flow
 - **Managed Updater** -- Background update checks, mirror endpoints, artifact download with progress, signature verification, and install handoff
 - **Database Encryption** -- Optional AES-256-GCM encryption for clipboard data at rest, with keys in the OS keyring

@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.6.0] - 2026-04-25
+
+### Added
+
+- **Pinyin fuzzy search**: Added Chinese clipboard search by original Hanzi, full pinyin, and initials
+- **FTS pinyin indexing**: Extended the `clipboard_fts` virtual table with `pinyin_full` and `pinyin_initials`, including trigger rebuild and idempotent migration coverage
+- **Short-query fallback**: Added safe LIKE-only fallback when FTS MATCH would otherwise be empty (for example `z` or `!!!`)
+- **Search guidance copy**: Updated English and Chinese search placeholders to explain support for text / pinyin / initials
+- **Search regression coverage**: Added unit and integration tests covering uppercase initials, punctuation-only queries, mixed Hanzi/English prefixes, and migration behavior
+
+### Changed
+
+- **Version bump to 2.6.0**: Promoted pinyin fuzzy search as the next minor release
+- **Search query builder**: Replaced simple quoted-token MATCH generation with a column-aware FTS builder spanning `content`, `pinyin_full`, and `pinyin_initials`
+- **Project docs**: Updated README, Chinese README, release status, and roadmap to reflect completed pinyin fuzzy search capability
+
 ## [2.5.0] - 2026-04-25
 
 ### Added
