@@ -206,6 +206,53 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
                 [full, initials, id.to_string()],
             )?;
         }
+
+        let fts_columns: Vec<String> = {
+            let mut stmt = conn.prepare("PRAGMA table_info(clipboard_fts)")?;
+            let cols = stmt
+                .query_map([], |row| row.get::<_, String>(1))?
+                .filter_map(|r| r.ok())
+                .collect();
+            cols
+        };
+
+        if !fts_columns.iter().any(|c| c == "pinyin_full") {
+            conn.execute_batch(
+            r#"
+            DROP TRIGGER IF EXISTS entries_ai;
+            DROP TRIGGER IF EXISTS entries_ad;
+            DROP TRIGGER IF EXISTS entries_au;
+
+            DROP TABLE IF EXISTS clipboard_fts;
+
+            CREATE VIRTUAL TABLE clipboard_fts USING fts5(
+                content, category, source_app, pinyin_full, pinyin_initials,
+                content='clipboard_entries',
+                content_rowid='id'
+            );
+
+            CREATE TRIGGER entries_ai AFTER INSERT ON clipboard_entries BEGIN
+                INSERT INTO clipboard_fts(rowid, content, category, source_app, pinyin_full, pinyin_initials)
+                VALUES (new.id, new.content, new.category, new.source_app, new.pinyin_full, new.pinyin_initials);
+            END;
+
+            CREATE TRIGGER entries_ad AFTER DELETE ON clipboard_entries BEGIN
+                INSERT INTO clipboard_fts(clipboard_fts, rowid, content, category, source_app, pinyin_full, pinyin_initials)
+                VALUES ('delete', old.id, old.content, old.category, old.source_app, old.pinyin_full, old.pinyin_initials);
+            END;
+
+            CREATE TRIGGER entries_au AFTER UPDATE ON clipboard_entries BEGIN
+                INSERT INTO clipboard_fts(clipboard_fts, rowid, content, category, source_app, pinyin_full, pinyin_initials)
+                VALUES ('delete', old.id, old.content, old.category, old.source_app, old.pinyin_full, old.pinyin_initials);
+                INSERT INTO clipboard_fts(rowid, content, category, source_app, pinyin_full, pinyin_initials)
+                VALUES (new.id, new.content, new.category, new.source_app, new.pinyin_full, new.pinyin_initials);
+            END;
+
+            INSERT INTO clipboard_fts(rowid, content, category, source_app, pinyin_full, pinyin_initials)
+            SELECT id, content, category, source_app, pinyin_full, pinyin_initials FROM clipboard_entries;
+            "#,
+        )?;
+        }
     }
 
     // Template management table
@@ -233,6 +280,129 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fts_rebuild_includes_pinyin_columns() {
+        let conn = Connection::open_in_memory().unwrap();
+
+        conn.execute_batch(
+            r#"
+            CREATE TABLE clipboard_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                content TEXT NOT NULL,
+                content_type TEXT NOT NULL DEFAULT 'text',
+                category TEXT NOT NULL DEFAULT 'text',
+                hash TEXT NOT NULL UNIQUE,
+                source_app TEXT,
+                is_favorite INTEGER NOT NULL DEFAULT 0,
+                is_sensitive INTEGER NOT NULL DEFAULT 0,
+                pinyin_full TEXT NOT NULL DEFAULT '',
+                pinyin_initials TEXT NOT NULL DEFAULT '',
+                use_count INTEGER NOT NULL DEFAULT 1,
+                created_at DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
+                updated_at DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
+                expires_at DATETIME
+            );
+
+            CREATE VIRTUAL TABLE clipboard_fts USING fts5(
+                content, category, source_app,
+                content='clipboard_entries', content_rowid='id'
+            );
+
+            CREATE TRIGGER entries_ai AFTER INSERT ON clipboard_entries BEGIN
+                INSERT INTO clipboard_fts(rowid, content, category, source_app)
+                VALUES (new.id, new.content, new.category, new.source_app);
+            END;
+
+            CREATE TRIGGER entries_ad AFTER DELETE ON clipboard_entries BEGIN
+                INSERT INTO clipboard_fts(clipboard_fts, rowid, content, category, source_app)
+                VALUES ('delete', old.id, old.content, old.category, old.source_app);
+            END;
+
+            CREATE TRIGGER entries_au AFTER UPDATE ON clipboard_entries BEGIN
+                INSERT INTO clipboard_fts(clipboard_fts, rowid, content, category, source_app)
+                VALUES ('delete', old.id, old.content, old.category, old.source_app);
+                INSERT INTO clipboard_fts(rowid, content, category, source_app)
+                VALUES (new.id, new.content, new.category, new.source_app);
+            END;
+            "#,
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT INTO clipboard_entries (content, content_type, category, hash, pinyin_full, pinyin_initials, created_at, updated_at) VALUES (?1, 'text', 'text', 'legacy-hash', ?2, ?3, datetime('now', 'localtime'), datetime('now', 'localtime'))",
+            rusqlite::params!["智能剪贴板", "zhinengjiantieban", "znjtb"],
+        ).unwrap();
+
+        run_migrations(&conn).unwrap();
+
+        let columns: Vec<String> = {
+            let mut stmt = conn.prepare("PRAGMA table_info(clipboard_fts)").unwrap();
+            stmt.query_map([], |row| row.get::<_, String>(1))
+                .unwrap()
+                .map(|r| r.unwrap())
+                .collect()
+        };
+
+        assert!(columns.iter().any(|c| c == "pinyin_full"));
+        assert!(columns.iter().any(|c| c == "pinyin_initials"));
+
+        let rowid_by_full: i64 = conn
+            .query_row(
+                "SELECT rowid FROM clipboard_fts WHERE clipboard_fts MATCH 'pinyin_full:zhineng*'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        let rowid_by_initials: i64 = conn
+            .query_row(
+                "SELECT rowid FROM clipboard_fts WHERE clipboard_fts MATCH 'pinyin_initials:znjtb'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(rowid_by_full, rowid_by_initials);
+    }
+
+    #[test]
+    fn migration_is_idempotent() {
+        let conn = Connection::open_in_memory().unwrap();
+        run_migrations(&conn).unwrap();
+        run_migrations(&conn).unwrap();
+
+        let column_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('clipboard_fts')",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(column_count, 5);
+    }
+
+    #[test]
+    fn post_migration_insert_updates_fts_pinyin_columns() {
+        let conn = Connection::open_in_memory().unwrap();
+        run_migrations(&conn).unwrap();
+
+        conn.execute(
+            "INSERT INTO clipboard_entries (content, content_type, category, hash, pinyin_full, pinyin_initials, created_at, updated_at) VALUES (?1, 'text', 'text', 'new-hash', ?2, ?3, datetime('now', 'localtime'), datetime('now', 'localtime'))",
+            rusqlite::params!["世界", "shijie", "sj"],
+        ).unwrap();
+
+        let rowid: i64 = conn
+            .query_row(
+                "SELECT rowid FROM clipboard_fts WHERE clipboard_fts MATCH 'pinyin_full:shijie*'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert!(rowid > 0);
+    }
 
     #[test]
     fn migration_backfills_pinyin_columns() {

@@ -6,7 +6,7 @@ export default {
     statistics: 'Statistics',
   },
   search: {
-    placeholder: 'Search clipboard...',
+    placeholder: 'Search text / pinyin / initials (e.g. znjtb)',
   },
   categories: {
     all: 'All',

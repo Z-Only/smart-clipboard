@@ -6,7 +6,7 @@ export default {
     statistics: '统计',
   },
   search: {
-    placeholder: '搜索剪贴板...',
+    placeholder: '搜索内容 / 拼音 / 首字母（如 znjtb）',
   },
   categories: {
     all: '全部',

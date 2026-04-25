@@ -9,7 +9,7 @@ use super::models::{
     CategoryCount, ClipboardEntry, DayCount, PairedDevice, SearchQuery, SearchResult, Statistics,
     Tag, Template,
 };
-use super::search_pinyin::{build_pinyin_fields, normalize_search_keyword};
+use super::search_pinyin::{build_fts_match_expr, build_pinyin_fields, normalize_search_keyword};
 
 trait Pipe: Sized {
     fn pipe<T>(self, f: impl FnOnce(Self) -> T) -> T {
@@ -764,34 +764,56 @@ fn search_fts(conn: &Connection, keyword: &str, query: &SearchQuery) -> Result<S
         return get_entries_inner(conn, query);
     }
 
-    let fts_query = keyword
-        .replace('"', "\"\"")
-        .split_whitespace()
-        .map(|w| format!("\"{}\"", w))
-        .collect::<Vec<_>>()
-        .join(" ");
+    let fts_query = build_fts_match_expr(keyword);
     let like_pattern = format!("%{}%", normalized_keyword.replace(' ', "%"));
 
-    let mut sql = String::from(
-        "SELECT e.id, e.content, e.content_type, e.category, e.hash, e.source_app, e.is_favorite, e.is_sensitive, e.use_count, e.created_at, e.updated_at, e.expires_at, e.source_device
-         FROM clipboard_entries e
-         WHERE (
-             e.id IN (SELECT rowid FROM clipboard_fts WHERE clipboard_fts MATCH ?1)
-             OR LOWER(e.content) LIKE ?2
-             OR e.pinyin_full LIKE ?2
-             OR e.pinyin_initials LIKE ?2
-         )",
-    );
-    let mut count_sql = String::from(
-        "SELECT COUNT(*)
-         FROM clipboard_entries e
-         WHERE (
-             e.id IN (SELECT rowid FROM clipboard_fts WHERE clipboard_fts MATCH ?1)
-             OR LOWER(e.content) LIKE ?2
-             OR e.pinyin_full LIKE ?2
-             OR e.pinyin_initials LIKE ?2
-         )",
-    );
+    let (mut sql, mut count_sql, use_match_branch) = if fts_query.is_empty() {
+        (
+            String::from(
+                "SELECT e.id, e.content, e.content_type, e.category, e.hash, e.source_app, e.is_favorite, e.is_sensitive, e.use_count, e.created_at, e.updated_at, e.expires_at, e.source_device
+                 FROM clipboard_entries e
+                 WHERE (
+                     LOWER(e.content) LIKE ?1
+                     OR e.pinyin_full LIKE ?1
+                     OR e.pinyin_initials LIKE ?1
+                 )",
+            ),
+            String::from(
+                "SELECT COUNT(*)
+                 FROM clipboard_entries e
+                 WHERE (
+                     LOWER(e.content) LIKE ?1
+                     OR e.pinyin_full LIKE ?1
+                     OR e.pinyin_initials LIKE ?1
+                 )",
+            ),
+            false,
+        )
+    } else {
+        (
+            String::from(
+                "SELECT e.id, e.content, e.content_type, e.category, e.hash, e.source_app, e.is_favorite, e.is_sensitive, e.use_count, e.created_at, e.updated_at, e.expires_at, e.source_device
+                 FROM clipboard_entries e
+                 WHERE (
+                     e.id IN (SELECT rowid FROM clipboard_fts WHERE clipboard_fts MATCH ?1)
+                     OR LOWER(e.content) LIKE ?2
+                     OR e.pinyin_full LIKE ?2
+                     OR e.pinyin_initials LIKE ?2
+                 )",
+            ),
+            String::from(
+                "SELECT COUNT(*)
+                 FROM clipboard_entries e
+                 WHERE (
+                     e.id IN (SELECT rowid FROM clipboard_fts WHERE clipboard_fts MATCH ?1)
+                     OR LOWER(e.content) LIKE ?2
+                     OR e.pinyin_full LIKE ?2
+                     OR e.pinyin_initials LIKE ?2
+                 )",
+            ),
+            true,
+        )
+    };
 
     if let Some(ref cat) = query.category {
         let filter = format!(" AND e.category = '{}'", cat.replace('\'', "''"));
@@ -805,25 +827,47 @@ fn search_fts(conn: &Connection, keyword: &str, query: &SearchQuery) -> Result<S
         count_sql.push_str(&filter);
     }
 
-    sql.push_str(" ORDER BY e.created_at DESC LIMIT ?3 OFFSET ?4");
+    if use_match_branch {
+        sql.push_str(" ORDER BY e.created_at DESC LIMIT ?3 OFFSET ?4");
 
-    let total_count: i64 = conn.query_row(&count_sql, params![fts_query, like_pattern], |row| {
-        row.get(0)
-    })?;
+        let total_count: i64 =
+            conn.query_row(&count_sql, params![fts_query, like_pattern], |row| {
+                row.get(0)
+            })?;
 
-    let mut stmt = conn.prepare(&sql)?;
-    let entries: Vec<ClipboardEntry> = stmt
-        .query_map(
-            params![fts_query, like_pattern, query.limit, query.offset],
-            row_to_entry,
-        )?
-        .filter_map(|r| r.ok())
-        .collect();
+        let mut stmt = conn.prepare(&sql)?;
+        let entries: Vec<ClipboardEntry> = stmt
+            .query_map(
+                params![fts_query, like_pattern, query.limit, query.offset],
+                row_to_entry,
+            )?
+            .filter_map(|r| r.ok())
+            .collect();
 
-    Ok(SearchResult {
-        entries,
-        total_count,
-    })
+        Ok(SearchResult {
+            entries,
+            total_count,
+        })
+    } else {
+        sql.push_str(" ORDER BY e.created_at DESC LIMIT ?2 OFFSET ?3");
+
+        let total_count: i64 =
+            conn.query_row(&count_sql, params![like_pattern], |row| row.get(0))?;
+
+        let mut stmt = conn.prepare(&sql)?;
+        let entries: Vec<ClipboardEntry> = stmt
+            .query_map(
+                params![like_pattern, query.limit, query.offset],
+                row_to_entry,
+            )?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        Ok(SearchResult {
+            entries,
+            total_count,
+        })
+    }
 }
 
 fn get_entries_inner(conn: &Connection, query: &SearchQuery) -> Result<SearchResult> {
@@ -1017,6 +1061,63 @@ mod tests {
             .unwrap();
         assert_eq!(initials.total_count, 1);
         assert_eq!(initials.entries[0].content, "智能剪贴板");
+    }
+
+    #[test]
+    fn test_search_uppercase_initials() {
+        let db = Database::new(":memory:").unwrap();
+        db.insert_entry(&make_entry("智能剪贴板", "text")).unwrap();
+
+        let result = db
+            .search(&SearchQuery {
+                keyword: Some("ZNJTB".to_string()),
+                category: None,
+                is_favorite: None,
+                limit: 50,
+                offset: 0,
+            })
+            .unwrap();
+
+        assert_eq!(result.total_count, 1);
+        assert_eq!(result.entries[0].content, "智能剪贴板");
+    }
+
+    #[test]
+    fn test_search_punctuation_only_does_not_error() {
+        let db = Database::new(":memory:").unwrap();
+        db.insert_entry(&make_entry("hello world", "text")).unwrap();
+        db.insert_entry(&make_entry("智能剪贴板", "text")).unwrap();
+
+        let result = db
+            .search(&SearchQuery {
+                keyword: Some("!!!".to_string()),
+                category: None,
+                is_favorite: None,
+                limit: 50,
+                offset: 0,
+            })
+            .unwrap();
+
+        assert_eq!(result.total_count, 2);
+    }
+
+    #[test]
+    fn test_search_mixed_cn_en_contiguous_prefix() {
+        let db = Database::new(":memory:").unwrap();
+        db.insert_entry(&make_entry("Hello世界", "text")).unwrap();
+
+        let result = db
+            .search(&SearchQuery {
+                keyword: Some("helloshi".to_string()),
+                category: None,
+                is_favorite: None,
+                limit: 50,
+                offset: 0,
+            })
+            .unwrap();
+
+        assert_eq!(result.total_count, 1);
+        assert_eq!(result.entries[0].content, "Hello世界");
     }
 
     #[test]
