@@ -372,18 +372,31 @@ mod tests {
     }
 
     #[test]
-    fn parses_shipped_example_markdown_plugin_manifest() {
-        let manifest_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+    fn loads_shipped_example_markdown_plugin_through_registry() {
+        let plugins_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("..")
-            .join("plugins")
-            .join("markdown-tools")
-            .join("plugin.json");
+            .join("plugins");
 
-        let manifest_json = fs::read_to_string(&manifest_path)
-            .unwrap_or_else(|err| panic!("failed to read {}: {}", manifest_path.display(), err));
-        let manifest: super::manifest::PluginManifest = serde_json::from_str(&manifest_json)
-            .unwrap_or_else(|err| panic!("failed to parse {}: {}", manifest_path.display(), err));
+        let loaded = load_plugins_from_dir(&plugins_dir, &builtin_handler_registry());
+        let shipped_plugin = loaded
+            .plugins
+            .iter()
+            .find(|plugin| {
+                plugin
+                    .manifest
+                    .as_ref()
+                    .map(|manifest| manifest.id.as_str())
+                    == Some("markdown-tools")
+            })
+            .unwrap_or_else(|| {
+                panic!(
+                    "failed to discover shipped markdown-tools plugin under {}",
+                    plugins_dir.display()
+                )
+            });
 
+        assert!(shipped_plugin.validation_error.is_none());
+        let manifest = shipped_plugin.manifest.as_ref().unwrap();
         assert_eq!(manifest.id, "markdown-tools");
         assert_eq!(manifest.handler, "builtin.markdown_tools");
         assert_eq!(manifest.kind, PluginKind::ContentProcessor);
@@ -391,6 +404,44 @@ mod tests {
         assert_eq!(
             manifest.capabilities,
             vec![PluginCapability::Classify, PluginCapability::Transform]
+        );
+
+        let registry = PluginRegistry::from_loaded(loaded, std::collections::HashMap::new());
+        let plugins = registry.plugins();
+        let discovered = plugins
+            .iter()
+            .find(|plugin| {
+                plugin.manifest.as_ref().map(|m| m.id.as_str()) == Some("markdown-tools")
+            })
+            .unwrap();
+        assert!(discovered.is_valid);
+        assert!(discovered.enabled);
+
+        let classifications = registry.classify_content("- [x] verify shipped plugin");
+        assert!(classifications
+            .iter()
+            .any(|classification| classification.plugin_id == "markdown-tools"));
+
+        let transforms = registry.list_transform_actions(
+            "# Hello
+**world**",
+        );
+        assert!(transforms.iter().any(|action| {
+            action.plugin_id == "markdown-tools" && action.action_id == "strip_markdown_format"
+        }));
+
+        let transformed = registry
+            .apply_transform(
+                "markdown-tools",
+                "strip_markdown_format",
+                "# Hello
+**world**",
+            )
+            .unwrap();
+        assert_eq!(
+            transformed,
+            "Hello
+world"
         );
     }
 
