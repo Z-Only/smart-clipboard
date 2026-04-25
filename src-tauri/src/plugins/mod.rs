@@ -1,4 +1,5 @@
 pub mod builtin;
+pub mod commands;
 pub mod loader;
 pub mod manifest;
 pub mod registry;
@@ -6,9 +7,11 @@ pub mod registry;
 #[cfg(test)]
 mod tests {
     use super::builtin::builtin_handler_registry;
+    use super::commands::{PluginListItemDto, PluginTransformActionDto};
     use super::loader::load_plugins_from_dir;
     use super::manifest::{PluginCapability, PluginKind};
     use super::registry::PluginRegistry;
+    use crate::config::AppConfig;
     use std::fs;
 
     fn write_plugin(dir: &std::path::Path, plugin_dir_name: &str, body: &str) {
@@ -260,72 +263,14 @@ mod tests {
         assert_eq!(discovered.len(), 2);
         assert!(discovered.iter().all(|plugin| plugin.is_valid));
 
-        let classifications = registry.classify_content("- [x] shared handler");
+        let classifications = registry.classify_content("- [ ] one\n- [x] two");
         assert_eq!(classifications.len(), 2);
-        assert!(classifications
-            .iter()
-            .any(|result| result.plugin_id == "markdown-tools-a"));
-        assert!(classifications
-            .iter()
-            .any(|result| result.plugin_id == "markdown-tools-b"));
+        assert_eq!(classifications[0].plugin_id, "markdown-tools-a");
+        assert_eq!(classifications[1].plugin_id, "markdown-tools-b");
     }
 
     #[test]
-    fn preserves_invalid_plugins_in_registry_but_excludes_them_from_dispatch() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        write_plugin(
-            temp_dir.path(),
-            "valid-plugin",
-            r#"{
-              "id": "valid-plugin",
-              "name": "Valid Plugin",
-              "version": "1.0.0",
-              "kind": "content_processor",
-              "enabledByDefault": true,
-              "capabilities": ["classify"],
-              "handler": "builtin.markdown_tools"
-            }"#,
-        );
-        write_plugin(
-            temp_dir.path(),
-            "invalid-plugin",
-            r#"{
-              "id": "invalid-plugin",
-              "name": "Invalid Plugin",
-              "version": "1.0.0",
-              "kind": "content_processor",
-              "enabledByDefault": true,
-              "capabilities": ["classify"],
-              "handler": "builtin.missing"
-            }"#,
-        );
-
-        let loaded = load_plugins_from_dir(temp_dir.path(), &builtin_handler_registry());
-        let registry = PluginRegistry::from_loaded(loaded, std::collections::HashMap::new());
-
-        let discovered = registry.plugins();
-        assert_eq!(discovered.len(), 2);
-        assert_eq!(
-            discovered.iter().filter(|plugin| plugin.is_valid).count(),
-            1
-        );
-        assert_eq!(
-            discovered.iter().filter(|plugin| !plugin.is_valid).count(),
-            1
-        );
-        assert!(discovered.iter().any(|plugin| plugin
-            .validation_error
-            .as_deref()
-            .unwrap_or("")
-            .contains("unknown handler")));
-
-        let classifications = registry.classify_content("- [x] visible");
-        assert_eq!(classifications.len(), 1);
-        assert_eq!(classifications[0].plugin_id, "valid-plugin");
-    }
-
-    #[test]
-    fn ignores_disabled_plugins_when_dispatching_hooks() {
+    fn respects_config_enablement_overrides_for_registry_dispatch() {
         let temp_dir = tempfile::tempdir().unwrap();
         write_plugin(
             temp_dir.path(),
@@ -342,17 +287,87 @@ mod tests {
         );
 
         let loaded = load_plugins_from_dir(temp_dir.path(), &builtin_handler_registry());
-        let registry = PluginRegistry::from_loaded(
-            loaded,
-            std::collections::HashMap::from([("markdown-tools".to_string(), false)]),
+        let mut config = AppConfig::default();
+        config.plugin_enabled.insert("markdown-tools".into(), false);
+        let registry = PluginRegistry::from_loaded(loaded, config.plugin_enabled.clone());
+
+        assert!(registry.classify_content("- [x] write tests").is_empty());
+        assert!(registry.list_transform_actions("# Hello").is_empty());
+        assert_eq!(
+            registry.apply_transform("markdown-tools", "strip_markdown_format", "# Hello"),
+            None
         );
 
-        assert!(registry.classify_content("- [ ] hidden").is_empty());
-        assert!(registry.list_transform_actions("# Hidden").is_empty());
+        let plugins = registry.plugins();
+        assert_eq!(plugins.len(), 1);
+        assert!(!plugins[0].enabled);
+    }
 
-        let discovered = registry.plugins();
-        assert_eq!(discovered.len(), 1);
-        assert!(!discovered[0].enabled);
-        assert!(discovered[0].is_valid);
+    #[test]
+    fn plugin_enablement_persists_in_app_config_json() {
+        let mut config = AppConfig::default();
+        config.plugin_enabled.insert("markdown-tools".into(), false);
+
+        let json = serde_json::to_string(&config).unwrap();
+        let restored: AppConfig = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(restored.plugin_enabled.get("markdown-tools"), Some(&false));
+    }
+
+    #[test]
+    fn exports_plugin_dtos_with_manifest_and_error_metadata() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        write_plugin(
+            temp_dir.path(),
+            "markdown-tools",
+            r#"{
+              "id": "markdown-tools",
+              "name": "Markdown Tools",
+              "version": "1.0.0",
+              "kind": "content_processor",
+              "enabledByDefault": true,
+              "description": "Adds markdown-aware classification and transforms.",
+              "capabilities": ["classify", "transform"],
+              "handler": "builtin.markdown_tools"
+            }"#,
+        );
+        write_plugin(
+            temp_dir.path(),
+            "broken-plugin",
+            r#"{
+              "id": "broken-plugin",
+              "name": "Broken Plugin",
+              "version": "1.0.0",
+              "kind": "content_processor",
+              "enabledByDefault": true,
+              "capabilities": ["classify"],
+              "handler": "builtin.missing"
+            }"#,
+        );
+
+        let loaded = load_plugins_from_dir(temp_dir.path(), &builtin_handler_registry());
+        let registry = PluginRegistry::from_loaded(loaded, std::collections::HashMap::new());
+        let plugins = registry.plugins();
+
+        let valid = PluginListItemDto::from(plugins[1]);
+        assert_eq!(valid.id.as_deref(), Some("markdown-tools"));
+        assert_eq!(valid.name.as_deref(), Some("Markdown Tools"));
+        assert!(valid.is_valid);
+        assert_eq!(valid.validation_error, None);
+
+        let invalid = PluginListItemDto::from(plugins[0]);
+        assert_eq!(invalid.id.as_deref(), Some("broken-plugin"));
+        assert!(!invalid.is_valid);
+        assert!(invalid
+            .validation_error
+            .as_deref()
+            .unwrap()
+            .contains("unknown handler"));
+
+        let actions = registry.list_transform_actions("# Hello\n**world**");
+        let action_dto = PluginTransformActionDto::from(actions[0].clone());
+        assert_eq!(action_dto.plugin_id, "markdown-tools");
+        assert_eq!(action_dto.action_id, "strip_markdown_format");
+        assert_eq!(action_dto.label, "Strip Markdown Formatting");
     }
 }

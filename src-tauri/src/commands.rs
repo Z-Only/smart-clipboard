@@ -5,6 +5,9 @@ use tauri::State;
 
 use crate::config::{AppConfig, ConfigManager};
 use crate::encryption::{EncryptionManager, EncryptionStatus};
+use crate::plugins::commands::{PluginListItemDto, PluginTransformActionDto};
+use crate::plugins::loader::load_plugins_from_dir;
+use crate::plugins::registry::PluginRegistry;
 use crate::security::{
     self, AppLockManager, AppLockStatus, SetPasswordPayload, UnlockPayload,
     UpdateAppLockSettingsPayload,
@@ -14,6 +17,15 @@ use crate::sync::webdav::{WebDavConfig, WebDavSyncManager, WebDavSyncStatus};
 use crate::sync::{SyncConfig, SyncManager};
 use crate::updater::UpdaterManager;
 use crate::AppDataDir;
+
+fn load_plugin_registry(app_data_dir: &AppDataDir, config: &ConfigManager) -> PluginRegistry {
+    let plugins_dir = app_data_dir.0.join("plugins");
+    let loaded = load_plugins_from_dir(
+        &plugins_dir,
+        &crate::plugins::builtin::builtin_handler_registry(),
+    );
+    PluginRegistry::from_loaded(loaded, config.get().plugin_enabled)
+}
 
 fn require_unlocked(lock: &State<'_, Arc<AppLockManager>>) -> Result<(), String> {
     lock.ensure_unlocked()
@@ -529,6 +541,58 @@ pub async fn get_entries_by_tag(
 #[tauri::command]
 pub async fn transform_content(content: String, transform_type: String) -> Result<String, String> {
     transform::apply_transform(&content, &transform_type)
+}
+
+#[tauri::command]
+pub async fn list_plugins(
+    app_data_dir: State<'_, Arc<AppDataDir>>,
+    config: State<'_, Arc<ConfigManager>>,
+) -> Result<Vec<PluginListItemDto>, String> {
+    let registry = load_plugin_registry(app_data_dir.inner().as_ref(), config.inner().as_ref());
+    Ok(registry
+        .plugins()
+        .into_iter()
+        .map(PluginListItemDto::from)
+        .collect())
+}
+
+#[tauri::command]
+pub async fn set_plugin_enabled(
+    config: State<'_, Arc<ConfigManager>>,
+    plugin_id: String,
+    enabled: bool,
+) -> Result<(), String> {
+    let mut app_config = config.get();
+    app_config.plugin_enabled.insert(plugin_id, enabled);
+    config.update(app_config)
+}
+
+#[tauri::command]
+pub async fn list_plugin_transforms(
+    app_data_dir: State<'_, Arc<AppDataDir>>,
+    config: State<'_, Arc<ConfigManager>>,
+    content: String,
+) -> Result<Vec<PluginTransformActionDto>, String> {
+    let registry = load_plugin_registry(app_data_dir.inner().as_ref(), config.inner().as_ref());
+    Ok(registry
+        .list_transform_actions(&content)
+        .into_iter()
+        .map(PluginTransformActionDto::from)
+        .collect())
+}
+
+#[tauri::command]
+pub async fn apply_plugin_transform(
+    app_data_dir: State<'_, Arc<AppDataDir>>,
+    config: State<'_, Arc<ConfigManager>>,
+    plugin_id: String,
+    action_id: String,
+    content: String,
+) -> Result<String, String> {
+    let registry = load_plugin_registry(app_data_dir.inner().as_ref(), config.inner().as_ref());
+    registry
+        .apply_transform(&plugin_id, &action_id, &content)
+        .ok_or_else(|| format!("Unknown plugin transform: {}:{}", plugin_id, action_id))
 }
 
 pub mod transform {

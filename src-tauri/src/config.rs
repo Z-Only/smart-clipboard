@@ -3,6 +3,7 @@ use crate::security::AppLockConfig;
 use crate::sync::webdav::WebDavConfig;
 use crate::sync::SyncConfig;
 use serde_json::Value;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -50,6 +51,8 @@ pub struct AppConfig {
     pub encryption: EncryptionConfig,
     #[serde(default)]
     pub updater: UpdaterConfig,
+    #[serde(default)]
+    pub plugin_enabled: HashMap<String, bool>,
 }
 
 impl Default for AppConfig {
@@ -67,6 +70,7 @@ impl Default for AppConfig {
             app_lock: AppLockConfig::default(),
             encryption: EncryptionConfig::default(),
             updater: UpdaterConfig::default(),
+            plugin_enabled: HashMap::new(),
         }
     }
 }
