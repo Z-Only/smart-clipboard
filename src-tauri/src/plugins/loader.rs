@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use super::builtin::HandlerRegistry;
 use super::manifest::PluginManifest;
@@ -9,6 +9,7 @@ use super::manifest::PluginManifest;
 pub struct LoadedPlugin {
     pub manifest: Option<PluginManifest>,
     pub validation_error: Option<String>,
+    pub source_path: PathBuf,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -60,16 +61,19 @@ pub fn load_plugins_from_dir(dir: &Path, handlers: &HandlerRegistry) -> LoadedPl
                     LoadedPlugin {
                         manifest: Some(manifest),
                         validation_error,
+                        source_path: path.clone(),
                     }
                 }
                 Err(err) => LoadedPlugin {
                     manifest: None,
                     validation_error: Some(format!("invalid plugin manifest JSON: {err}")),
+                    source_path: path.clone(),
                 },
             },
             Err(err) => LoadedPlugin {
                 manifest: None,
                 validation_error: Some(format!("failed to read plugin manifest: {err}")),
+                source_path: path.clone(),
             },
         };
 
@@ -80,6 +84,7 @@ pub fn load_plugins_from_dir(dir: &Path, handlers: &HandlerRegistry) -> LoadedPl
         let a_id = a.manifest.as_ref().map(|m| m.id.as_str()).unwrap_or("");
         let b_id = b.manifest.as_ref().map(|m| m.id.as_str()).unwrap_or("");
         a_id.cmp(b_id)
+            .then_with(|| a.source_path.cmp(&b.source_path))
     });
 
     LoadedPlugins { plugins }

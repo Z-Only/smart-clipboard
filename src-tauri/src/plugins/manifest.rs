@@ -8,12 +8,22 @@ pub enum PluginCapability {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PluginKind {
+    ContentProcessor,
+}
+
+fn default_enabled_by_default() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct PluginManifest {
     pub id: String,
     pub name: String,
     pub version: String,
-    pub kind: String,
-    #[serde(rename = "enabledByDefault")]
+    pub kind: PluginKind,
+    #[serde(rename = "enabledByDefault", default = "default_enabled_by_default")]
     pub enabled_by_default: bool,
     #[serde(default)]
     pub description: Option<String>,
@@ -31,9 +41,6 @@ impl PluginManifest {
         }
         if self.version.trim().is_empty() {
             return Err("plugin version cannot be empty".to_string());
-        }
-        if self.kind.trim().is_empty() {
-            return Err("plugin kind cannot be empty".to_string());
         }
         if self.capabilities.is_empty() {
             return Err("plugin capabilities cannot be empty".to_string());

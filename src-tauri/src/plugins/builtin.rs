@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use regex::Regex;
 
@@ -29,13 +30,14 @@ pub trait PluginHandler: Send + Sync {
     }
 }
 
-pub type HandlerRegistry = HashMap<String, Box<dyn PluginHandler>>;
+pub type SharedPluginHandler = Arc<dyn PluginHandler>;
+pub type HandlerRegistry = HashMap<String, SharedPluginHandler>;
 
 pub fn builtin_handler_registry() -> HandlerRegistry {
     let mut handlers: HandlerRegistry = HashMap::new();
     handlers.insert(
         "builtin.markdown_tools".to_string(),
-        Box::new(MarkdownToolsHandler),
+        Arc::new(MarkdownToolsHandler),
     );
     handlers
 }
@@ -93,9 +95,9 @@ fn looks_like_markdown(content: &str) -> bool {
     let trimmed = content.trim();
     trimmed.starts_with('#')
         || trimmed.contains("**")
-        || trimmed.contains("`")
+        || trimmed.contains('`')
         || trimmed.contains("- [")
-        || trimmed.contains("*")
+        || trimmed.contains('*')
 }
 
 fn strip_markdown(content: &str) -> String {
