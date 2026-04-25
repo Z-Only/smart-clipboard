@@ -21,16 +21,33 @@
     </button>
     <div
       v-if="isOpen"
-      class="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+      class="absolute right-0 top-full mt-1 z-50 min-w-[220px] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
     >
-      <button
-        v-for="item in availableTransforms"
-        :key="item.type"
-        class="flex w-full items-center rounded-sm px-2 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground cursor-pointer"
-        @click.stop="handleTransform(item.type)"
-      >
-        {{ t(item.labelKey) }}
-      </button>
+      <div>
+        <button
+          v-for="item in availableTransforms"
+          :key="item.type"
+          class="flex w-full items-center rounded-sm px-2 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground cursor-pointer"
+          @click.stop="handleTransform(item.type)"
+        >
+          {{ t(item.labelKey) }}
+        </button>
+      </div>
+      <div v-if="pluginTransforms.length" class="mt-1 border-t pt-1">
+        <div class="px-2 py-1 text-[11px] font-medium text-muted-foreground">
+          {{ t('transforms.plugins') }}
+        </div>
+        <button
+          v-for="item in pluginTransforms"
+          :key="`${item.pluginId}:${item.transformId}`"
+          class="flex w-full flex-col items-start rounded-sm px-2 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground cursor-pointer"
+          :data-test="`plugin-transform-${item.pluginId}-${item.transformId}`"
+          @click.stop="handlePluginTransform(item.pluginId, item.transformId)"
+        >
+          <span>{{ item.label }}</span>
+          <span class="text-[11px] text-muted-foreground">{{ item.pluginName }}</span>
+        </button>
+      </div>
     </div>
     <div
       v-if="toastMessage"
@@ -45,8 +62,10 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { invoke } from '@tauri-apps/api/core';
+import { usePluginStore } from '@/stores/pluginStore';
 
 const { t } = useI18n();
+const pluginStore = usePluginStore();
 
 const props = defineProps<{
   content: string;
@@ -56,6 +75,7 @@ const props = defineProps<{
 const isOpen = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
 const toastMessage = ref('');
+const pluginTransforms = computed(() => pluginStore.transforms);
 
 interface TransformItem {
   type: string;
@@ -85,8 +105,17 @@ const availableTransforms = computed(() => {
   });
 });
 
-function toggleMenu() {
-  isOpen.value = !isOpen.value;
+async function toggleMenu() {
+  const nextOpen = !isOpen.value;
+  isOpen.value = nextOpen;
+
+  if (nextOpen) {
+    try {
+      await pluginStore.loadTransforms(props.content);
+    } catch (err) {
+      showToast(String(err));
+    }
+  }
 }
 
 function closeMenu() {
@@ -98,6 +127,21 @@ async function handleTransform(transformType: string) {
     const result = await invoke<string>('transform_content', {
       content: props.content,
       transformType: transformType,
+    });
+    await navigator.clipboard.writeText(result);
+    showToast(t('transforms.copied'));
+  } catch (err) {
+    showToast(String(err));
+  }
+  closeMenu();
+}
+
+async function handlePluginTransform(pluginId: string, transformId: string) {
+  try {
+    const result = await invoke<string>('apply_plugin_transform', {
+      pluginId,
+      transformId,
+      content: props.content,
     });
     await navigator.clipboard.writeText(result);
     showToast(t('transforms.copied'));

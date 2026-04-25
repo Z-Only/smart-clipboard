@@ -102,6 +102,15 @@ export default {
     themeRose: 'Rose',
     themeOrange: 'Orange',
     themeViolet: 'Violet',
+    plugins: {
+      title: 'Plugins',
+      hint: 'Manage installed plugins and their availability',
+      empty: 'No plugins found',
+      invalid: 'Invalid plugin',
+      id: 'ID: {id}',
+      kind: 'Kind: {kind}',
+      version: 'Version: {version}',
+    },
     updater: {
       title: 'Application Updates',
       hint: 'Configure background checks and mirror endpoints',
@@ -152,6 +161,7 @@ export default {
     trim: 'Trim Whitespace',
     htmlEscape: 'HTML Escape',
     htmlUnescape: 'HTML Unescape',
+    plugins: 'Plugins',
     copied: 'Transformed & copied!',
   },
   tags: {

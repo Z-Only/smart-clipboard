@@ -1,0 +1,10 @@
+{
+  "id": "markdown-tools",
+  "name": "Markdown Tools",
+  "version": "1.0.0",
+  "kind": "content_processor",
+  "enabledByDefault": true,
+  "description": "Adds markdown-aware classification and transforms.",
+  "capabilities": ["classify", "transform"],
+  "handler": "builtin.markdown_tools"
+}

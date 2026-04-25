@@ -6,6 +6,7 @@ pub mod config;
 pub mod encryption;
 pub mod hotkey;
 pub mod platform;
+pub mod plugins;
 pub mod security;
 pub mod storage;
 pub mod sync;
@@ -93,6 +94,10 @@ pub fn run() {
             commands::get_autostart_enabled,
             commands::set_autostart_enabled,
             commands::transform_content,
+            plugins::commands::list_plugins,
+            plugins::commands::set_plugin_enabled,
+            plugins::commands::list_plugin_transforms,
+            plugins::commands::apply_plugin_transform,
             commands::create_tag,
             commands::delete_tag,
             commands::get_all_tags,
