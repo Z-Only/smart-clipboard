@@ -1,3 +1,4 @@
+export * from './plugins';
 export interface Tag {
   id: number;
   name: string;
