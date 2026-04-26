@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.7.0] - 2026-04-26
+
+### Added
+
+- **Plugin / extension system**: Added local plugin discovery from a `plugins/` directory with manifest validation, trusted builtin handler binding, and registry-based dispatch
+- **Plugin management backend**: Added plugin enablement persistence plus Tauri commands for listing plugins, toggling enablement, listing plugin transforms, and applying plugin transforms
+- **Plugin management UI**: Added a Settings panel plugin section for browsing valid and invalid plugins, reviewing metadata, and enabling or disabling valid plugins
+- **Plugin transform menu integration**: Added grouped plugin transform actions to the transform menu with end-to-end invocation through the dedicated plugin command path
+- **Example markdown plugin**: Shipped a `markdown-tools` example plugin and added end-to-end tests covering manifest loading, registry dispatch, and transform behavior
+
+### Changed
+
+- **Version bump to 2.7.0**: Promoted the plugin / extension system as the next minor release
+- **Project documentation**: Updated README, Chinese README, design/spec references, and release metadata to reflect plugin platform support and the shipped example plugin
+
 ## [2.6.0] - 2026-04-25
 
 ### Added

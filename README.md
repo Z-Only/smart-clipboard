@@ -7,16 +7,16 @@ A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + *
 - Website / Docs: https://z-only.github.io/smart-clipboard/
 - Repository: https://github.com/Z-Only/smart-clipboard
 
-## Release Status — v2.6.0 Pinyin Fuzzy Search
+## Release Status — v2.7.0 Plugin Extension System
 
-This repository now includes **Pinyin Fuzzy Search** on top of advanced sync conflict handling, clipboard history, smart enhancements, templates, LAN sync, WebDAV cloud sync, Phase 4 access security, native biometric integration, the managed updater, and database-at-rest encryption.
+This repository now includes a **Plugin / Extension System** on top of pinyin fuzzy search, advanced sync conflict handling, clipboard history, smart enhancements, templates, LAN sync, WebDAV cloud sync, Phase 4 access security, native biometric integration, the managed updater, and database-at-rest encryption.
 
-### v2.6.0 highlights
+### v2.7.0 highlights
 
-- **Pinyin fuzzy search**: Search Chinese clipboard entries by original Hanzi, full pinyin, or initials
-- **Short-input fallback**: Very short inputs such as `zn` or `z` still return matches via LIKE fallback
-- **Case-insensitive initials**: Uppercase queries such as `ZNJTB` match lowercase pinyin indexes transparently
-- **Improved search guidance**: Search placeholder text now explicitly explains support for text / pinyin / initials
+- **Plugin / extension system**: Discover local plugins from a `plugins/` directory with manifest validation, trusted builtin handlers, and persistent enable/disable state
+- **Plugin management UI**: Review valid and invalid plugins from Settings, inspect metadata, and toggle availability without editing config files by hand
+- **Plugin transform integration**: Surface plugin-provided transform actions directly in the transform menu and execute them through the dedicated backend plugin command path
+- **Shipped example plugin**: Includes a `markdown-tools` example plugin that validates manifest loading, registry dispatch, and end-to-end transform behavior
 
 ## Features
 
@@ -45,6 +45,7 @@ This repository now includes **Pinyin Fuzzy Search** on top of advanced sync con
 - **App Access Security** -- Password lock, auto-lock, guarded wakeups, and secure unlock flow
 - **Managed Updater** -- Background update checks, mirror endpoints, artifact download with progress, signature verification, and install handoff
 - **Database Encryption** -- Optional AES-256-GCM encryption for clipboard data at rest, with keys in the OS keyring
+- **Plugin / Extension System** -- Local manifest-based plugin discovery, validation, enable/disable management, and trusted content-processor hooks
 - **Lightweight** -- Small binary with low CPU/memory usage thanks to Rust + native WebView
 
 ## Security Model (Phase 4)
@@ -237,8 +238,9 @@ smart-clipboard/
 - [x] **Native biometric integration**: Native Touch ID (macOS) and Windows Hello (Windows) via platform FFI
 - [x] **Deeper runtime integration tests**: Add full invoke-level black-box tests around locked/unlocked command behavior
 - [x] **Database-at-rest encryption**: Optional AES-256-GCM encrypted local storage for clipboard data with OS keyring key management
-- [ ] **Advanced sync conflict handling**: Smarter merge / conflict-resolution behavior
-- [ ] **Plugin / extension system**: User-extensible automations and transformations
+- [x] **Advanced sync conflict handling**: Smarter merge / conflict-resolution behavior
+- [x] **Pinyin fuzzy search**: Chinese Hanzi / full pinyin / initials search for clipboard entries
+- [x] **Plugin / extension system**: Local manifest-based plugin discovery, validation, enable/disable management, and trusted transform hooks
 - [ ] **More platform-specific hardening**: Better idle detection and richer OS-native unlock UX
 
 ## Contributing

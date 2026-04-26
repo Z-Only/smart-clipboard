@@ -1,6 +1,6 @@
 [package]
 name = "smart-clipboard"
-version = "2.6.0"
+version = "2.7.0"
 description = "A cross-platform smart clipboard manager"
 authors = ["chanyu"]
 license = "MIT"
