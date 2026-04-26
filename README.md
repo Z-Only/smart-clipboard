@@ -42,7 +42,7 @@ This repository now includes a **Plugin / Extension System** on top of pinyin fu
 - **WebDAV Cloud Sync** -- End-to-end encrypted cloud sync with device registry, polling, and rate limiting
 - **Sync Conflict Handling** -- Smart conflict detection with configurable resolution strategies and manual diff UI
 - **Pinyin Fuzzy Search** -- Search Chinese entries by Hanzi, full pinyin, and initials with short-query fallback
-- **App Access Security** -- Password lock, auto-lock, guarded wakeups, and secure unlock flow
+- **App Access Security** -- Password lock, manual lock (settings & tray), auto-lock timeout, guarded tray/hotkey wakeups, and command-level access control
 - **Managed Updater** -- Background update checks, mirror endpoints, artifact download with progress, signature verification, and install handoff
 - **Database Encryption** -- Optional AES-256-GCM encryption for clipboard data at rest, with keys in the OS keyring
 - **Plugin / Extension System** -- Local manifest-based plugin discovery, validation, enable/disable management, and trusted content-processor hooks
