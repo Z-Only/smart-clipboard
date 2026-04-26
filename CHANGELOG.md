@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.8.0] - 2026-04-27
+
+### Added
+
+- **Quick Paste Panel**: Global shortcut (`Cmd/Ctrl+Shift+1`) invokes a lightweight overlay showing the most recent clipboard entries with number-key (1-9) instant paste, arrow-key navigation, Esc dismiss, and type-to-search handoff
+- **Quick-paste backend command**: New `get_recent_entries` Tauri command that retrieves the N most recent clipboard entries with security guard
+- **Quick-paste hotkey registration**: New `setup_quick_paste_hotkey` function in `hotkey.rs` that registers the configurable quick-paste shortcut and emits activation events to the frontend
+- **Quick-paste configuration**: Added `quick_paste_shortcut` and `quick_paste_entry_count` fields to `AppConfig` with serde defaults for backward compatibility
+- **QuickPasteOverlay component**: New Vue component with Teleport rendering, keyboard navigation, category icons, relative timestamps, and search transition
+- **Quick-paste i18n**: Full English and Chinese translations for quick-paste overlay labels and settings keys
+- **Quick-paste unit tests**: Component tests for QuickPasteOverlay (keyboard navigation, number-key paste, dismiss, search handoff) and store tests for `fetchRecentEntries`
+
+### Changed
+
+- **Version bump to 2.8.0**: Promoted the quick paste panel as the next minor release
+- **App.vue integration**: Added quick-paste event listener, activation handler, paste-and-hide workflow, and search transition
+- **clipboardStore**: Added `recentEntries` reactive state and `fetchRecentEntries` action
+- **Project documentation**: Updated README, Chinese README, CHANGELOG, VitePress docs, and version metadata
+
 ## [2.7.0] - 2026-04-26
 
 ### Added
