@@ -243,6 +243,7 @@ smart-clipboard/
 - [x] **Advanced sync conflict handling**: Smarter merge / conflict-resolution behavior
 - [x] **Pinyin fuzzy search**: Chinese Hanzi / full pinyin / initials search for clipboard entries
 - [x] **Plugin / extension system**: Local manifest-based plugin discovery, validation, enable/disable management, and trusted transform hooks
+- [ ] **Quick Paste Panel**: Lightweight keyboard-driven overlay for instant paste of recent entries via number keys 1-9, with seamless search transition
 - [ ] **More platform-specific hardening**: Better idle detection and richer OS-native unlock UX
 
 ## Contributing
