@@ -53,6 +53,18 @@ pub struct AppConfig {
     pub updater: UpdaterConfig,
     #[serde(default)]
     pub plugin_enabled: HashMap<String, bool>,
+    #[serde(default = "default_quick_paste_shortcut")]
+    pub quick_paste_shortcut: String,
+    #[serde(default = "default_quick_paste_entry_count")]
+    pub quick_paste_entry_count: u8,
+}
+
+fn default_quick_paste_shortcut() -> String {
+    "CommandOrControl+Shift+C".to_string()
+}
+
+fn default_quick_paste_entry_count() -> u8 {
+    9
 }
 
 impl Default for AppConfig {
@@ -71,6 +83,8 @@ impl Default for AppConfig {
             encryption: EncryptionConfig::default(),
             updater: UpdaterConfig::default(),
             plugin_enabled: HashMap::new(),
+            quick_paste_shortcut: default_quick_paste_shortcut(),
+            quick_paste_entry_count: default_quick_paste_entry_count(),
         }
     }
 }
