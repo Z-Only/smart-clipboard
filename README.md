@@ -46,6 +46,8 @@ This repository now includes a **Plugin / Extension System** on top of pinyin fu
 - **Managed Updater** -- Background update checks, mirror endpoints, artifact download with progress, signature verification, and install handoff
 - **Database Encryption** -- Optional AES-256-GCM encryption for clipboard data at rest, with keys in the OS keyring
 - **Plugin / Extension System** -- Local manifest-based plugin discovery, validation, enable/disable management, and trusted content-processor hooks
+- **Batch Operations** -- Multi-select mode with bulk delete, favorite/unfavorite, tagging, merge-copy, and select-all/invert/clear actions
+- **Virtual Scroll** -- Virtualized list rendering for smooth scrolling with large clipboard histories
 - **Lightweight** -- Small binary with low CPU/memory usage thanks to Rust + native WebView
 
 ## Security Model (Phase 4)

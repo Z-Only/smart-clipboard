@@ -673,4 +673,539 @@ describe('useClipboardStore', () => {
       expect(store.isLoading).toBe(false);
     });
   });
+
+  describe('多选模式生命周期（补充）', () => {
+    it('enterMultiSelectMode 无参数时只设置模式标志', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+
+      store.enterMultiSelectMode();
+
+      expect(store.isMultiSelectMode).toBe(true);
+      expect(store.selectedEntryIds).toEqual([]);
+      expect(store.selectionAnchorId).toBe(null);
+    });
+
+    it('clearSelection 只清除选中 ID 不改变模式标志', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.isMultiSelectMode = true;
+      store.selectionAnchorId = 1;
+      store.selectedEntryIds = [1, 2];
+
+      store.clearSelection();
+
+      expect(store.selectedEntryIds).toEqual([]);
+      // 模式标志和锚点不受 clearSelection 影响
+      expect(store.isMultiSelectMode).toBe(true);
+      expect(store.selectionAnchorId).toBe(1);
+    });
+  });
+
+  describe('选择操作（补充）', () => {
+    it('toggleEntrySelection 使用 force=true 强制选中', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 })];
+
+      store.toggleEntrySelection(1, true);
+      expect(store.selectedEntryIds).toContain(1);
+
+      // 再次 force=true 不会取消
+      store.toggleEntrySelection(1, true);
+      expect(store.selectedEntryIds).toContain(1);
+    });
+
+    it('toggleEntrySelection 使用 force=false 强制取消选中', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 }), makeEntry({ id: 2 })];
+      store.isMultiSelectMode = true;
+      store.selectedEntryIds = [1, 2];
+
+      store.toggleEntrySelection(1, false);
+      expect(store.selectedEntryIds).not.toContain(1);
+      expect(store.selectedEntryIds).toContain(2);
+    });
+
+    it('取消选中最后一个条目时自动退出多选模式', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 })];
+      store.isMultiSelectMode = true;
+      store.selectedEntryIds = [1];
+      store.selectionAnchorId = 1;
+
+      store.toggleEntrySelection(1);
+
+      expect(store.selectedEntryIds).toEqual([]);
+      expect(store.isMultiSelectMode).toBe(false);
+      expect(store.selectionAnchorId).toBe(null);
+    });
+
+    it('toggleEntrySelection 首次选中时设置锚点', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 }), makeEntry({ id: 2 })];
+
+      expect(store.selectionAnchorId).toBe(null);
+      store.toggleEntrySelection(1);
+      expect(store.selectionAnchorId).toBe(1);
+    });
+
+    it('selectRangeTo 反向范围选择（anchor > target）', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [
+        makeEntry({ id: 1 }),
+        makeEntry({ id: 2 }),
+        makeEntry({ id: 3 }),
+        makeEntry({ id: 4 }),
+      ];
+      store.selectionAnchorId = 3;
+
+      store.selectRangeTo(1);
+
+      expect(store.isMultiSelectMode).toBe(true);
+      expect(store.selectedEntryIds).toEqual([1, 2, 3]);
+    });
+
+    it('selectRangeTo 无锚点时使用 activeEntryId', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 }), makeEntry({ id: 2 }), makeEntry({ id: 3 })];
+      store.selectionAnchorId = null;
+      store.activeEntryId = 1;
+
+      store.selectRangeTo(3);
+
+      expect(store.selectedEntryIds).toEqual([1, 2, 3]);
+    });
+
+    it('invertLoadedSelection 全部已选时结果为空并退出多选', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 }), makeEntry({ id: 2 })];
+      store.isMultiSelectMode = true;
+      store.selectedEntryIds = [1, 2];
+
+      store.invertLoadedSelection();
+
+      expect(store.selectedEntryIds).toEqual([]);
+      // 锚点清除
+      expect(store.selectionAnchorId).toBe(null);
+    });
+
+    it('invertLoadedSelection 无选中时选中全部并进入多选模式', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 }), makeEntry({ id: 2 })];
+      store.selectedEntryIds = [];
+      store.isMultiSelectMode = false;
+
+      store.invertLoadedSelection();
+
+      expect(store.selectedEntryIds).toEqual([1, 2]);
+      expect(store.isMultiSelectMode).toBe(true);
+    });
+  });
+
+  describe('computed 属性（多选相关）', () => {
+    it('selectedEntryIdSet 是 Set 且与 selectedEntryIds 同步', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.selectedEntryIds = [1, 3, 5];
+
+      expect(store.selectedEntryIdSet).toBeInstanceOf(Set);
+      expect(store.selectedEntryIdSet.has(1)).toBe(true);
+      expect(store.selectedEntryIdSet.has(2)).toBe(false);
+      expect(store.selectedEntryIdSet.has(3)).toBe(true);
+    });
+
+    it('selectedCount 返回选中条目数', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.selectedEntryIds = [];
+      expect(store.selectedCount).toBe(0);
+
+      store.selectedEntryIds = [1, 2, 3];
+      expect(store.selectedCount).toBe(3);
+    });
+
+    it('selectedEntries 返回选中的实体条目', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [
+        makeEntry({ id: 1, content: 'a' }),
+        makeEntry({ id: 2, content: 'b' }),
+        makeEntry({ id: 3, content: 'c' }),
+      ];
+      store.selectedEntryIds = [1, 3];
+
+      expect(store.selectedEntries).toHaveLength(2);
+      expect(store.selectedEntries[0].id).toBe(1);
+      expect(store.selectedEntries[1].id).toBe(3);
+    });
+
+    it('canBatchCopy 当选中条目包含非图片时为 true', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [
+        makeEntry({ id: 1, content_type: 'text' }),
+        makeEntry({ id: 2, content_type: 'image' }),
+      ];
+      store.selectedEntryIds = [1, 2];
+
+      expect(store.canBatchCopy).toBe(true);
+    });
+
+    it('canBatchCopy 当选中条目全是图片时为 false', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [
+        makeEntry({ id: 1, content_type: 'image' }),
+        makeEntry({ id: 2, content_type: 'image' }),
+      ];
+      store.selectedEntryIds = [1, 2];
+
+      expect(store.canBatchCopy).toBe(false);
+    });
+  });
+
+  describe('批量动作（补充）', () => {
+    it('deleteSelectedEntries 失败时打印错误不崩溃', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 }), makeEntry({ id: 2 })];
+      store.selectedEntryIds = [1];
+      store.isMultiSelectMode = true;
+      const error = new Error('Batch delete failed');
+      invoke.mockRejectedValue(error);
+
+      await store.deleteSelectedEntries();
+
+      expect(errorSpy).toHaveBeenCalledWith('Failed to delete selected entries:', error);
+    });
+
+    it('deleteSelectedEntries 无选中时不调用后端', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 })];
+      store.selectedEntryIds = [];
+
+      await store.deleteSelectedEntries();
+
+      expect(invoke).not.toHaveBeenCalled();
+    });
+
+    it('copySelectedEntries 调用后端 copy_entries', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [
+        makeEntry({ id: 1, content: 'hello' }),
+        makeEntry({ id: 2, content: 'world' }),
+      ];
+      store.selectedEntryIds = [1, 2];
+      store.isMultiSelectMode = true;
+      invoke.mockResolvedValue('hello\n\nworld');
+
+      await store.copySelectedEntries();
+
+      expect(invoke).toHaveBeenCalledWith('copy_entries', { ids: [1, 2] });
+    });
+
+    it('copySelectedEntries 无选中时不调用后端', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 })];
+      store.selectedEntryIds = [];
+
+      await store.copySelectedEntries();
+
+      expect(invoke).not.toHaveBeenCalled();
+    });
+
+    it('copySelectedEntries 失败时打印错误', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1, content: 'hello' })];
+      store.selectedEntryIds = [1];
+      store.isMultiSelectMode = true;
+      const error = new Error('Copy failed');
+      invoke.mockRejectedValue(error);
+
+      await store.copySelectedEntries();
+
+      expect(errorSpy).toHaveBeenCalledWith('Failed to copy selected entries:', error);
+    });
+
+    it('favoriteSelectedEntries(true) 批量设置收藏', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [
+        makeEntry({ id: 1, is_favorite: false }),
+        makeEntry({ id: 2, is_favorite: false }),
+        makeEntry({ id: 3, is_favorite: true }),
+      ];
+      store.selectedEntryIds = [1, 2];
+      store.isMultiSelectMode = true;
+      invoke.mockResolvedValue(2);
+
+      await store.favoriteSelectedEntries(true);
+
+      expect(invoke).toHaveBeenCalledWith('set_favorite_state_for_entries', {
+        ids: [1, 2],
+        favorite: true,
+      });
+      expect(store.entries[0].is_favorite).toBe(true);
+      expect(store.entries[1].is_favorite).toBe(true);
+      // 未选中的条目不受影响
+      expect(store.entries[2].is_favorite).toBe(true);
+    });
+
+    it('favoriteSelectedEntries(false) 批量取消收藏', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [
+        makeEntry({ id: 1, is_favorite: true }),
+        makeEntry({ id: 2, is_favorite: true }),
+      ];
+      store.selectedEntryIds = [1, 2];
+      store.isMultiSelectMode = true;
+      invoke.mockResolvedValue(2);
+
+      await store.favoriteSelectedEntries(false);
+
+      expect(invoke).toHaveBeenCalledWith('set_favorite_state_for_entries', {
+        ids: [1, 2],
+        favorite: false,
+      });
+      expect(store.entries[0].is_favorite).toBe(false);
+      expect(store.entries[1].is_favorite).toBe(false);
+    });
+
+    it('favoriteSelectedEntries(false) 在收藏分类下过滤已取消收藏的条目', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [
+        makeEntry({ id: 1, is_favorite: true }),
+        makeEntry({ id: 2, is_favorite: true }),
+        makeEntry({ id: 3, is_favorite: true }),
+      ];
+      store.selectedEntryIds = [1, 2];
+      store.isMultiSelectMode = true;
+      store.selectedCategory = 'favorites';
+      store.totalCount = 3;
+      invoke.mockResolvedValue(2);
+
+      await store.favoriteSelectedEntries(false);
+
+      // 取消收藏后，在收藏视图下应被过滤
+      expect(store.entries.length).toBe(1);
+      expect(store.entries[0].id).toBe(3);
+      expect(store.totalCount).toBe(1);
+    });
+
+    it('favoriteSelectedEntries 失败时打印错误', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 })];
+      store.selectedEntryIds = [1];
+      store.isMultiSelectMode = true;
+      const error = new Error('Favorite failed');
+      invoke.mockRejectedValue(error);
+
+      await store.favoriteSelectedEntries(true);
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        'Failed to update favorite state for selected entries:',
+        error,
+      );
+    });
+
+    it('favoriteSelectedEntries 无选中时不调用后端', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 })];
+      store.selectedEntryIds = [];
+
+      await store.favoriteSelectedEntries(true);
+
+      expect(invoke).not.toHaveBeenCalled();
+    });
+
+    it('applyTagsToSelectedEntries 调用后端并刷新标签缓存', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1, content: 'a' }), makeEntry({ id: 2, content: 'b' })];
+      store.selectedEntryIds = [1, 2];
+      store.isMultiSelectMode = true;
+
+      const updatedTags: Tag[] = [{ id: 10, name: 'work' }];
+      invoke.mockImplementation((cmd: string) => {
+        if (cmd === 'set_tags_for_entries') return Promise.resolve();
+        if (cmd === 'get_entry_tags') return Promise.resolve(updatedTags);
+        return Promise.resolve();
+      });
+
+      await store.applyTagsToSelectedEntries([10], 'replace');
+
+      expect(invoke).toHaveBeenCalledWith('set_tags_for_entries', {
+        ids: [1, 2],
+        tagIds: [10],
+        mode: 'replace',
+      });
+      // 标签缓存应被刷新
+      expect(store.getEntryTags(1)).toEqual(updatedTags);
+      expect(store.getEntryTags(2)).toEqual(updatedTags);
+    });
+
+    it('applyTagsToSelectedEntries 无选中时不调用后端', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 })];
+      store.selectedEntryIds = [];
+
+      await store.applyTagsToSelectedEntries([10], 'append');
+
+      expect(invoke).not.toHaveBeenCalled();
+    });
+
+    it('applyTagsToSelectedEntries 失败时打印错误', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 })];
+      store.selectedEntryIds = [1];
+      store.isMultiSelectMode = true;
+      const error = new Error('Tags failed');
+      invoke.mockRejectedValue(error);
+
+      await store.applyTagsToSelectedEntries([10]);
+
+      expect(errorSpy).toHaveBeenCalledWith('Failed to set tags for selected entries:', error);
+    });
+  });
+
+  describe('handleEntryPrimaryAction 多选模式行为', () => {
+    it('多选模式下切换选中而非粘贴', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 }), makeEntry({ id: 2 })];
+      store.isMultiSelectMode = true;
+      store.selectedEntryIds = [];
+
+      store.handleEntryPrimaryAction(1);
+
+      // 应该切换选中状态而不是调用 paste_entry
+      expect(store.selectedEntryIds).toContain(1);
+      expect(store.activeEntryId).toBe(1);
+      expect(invoke).not.toHaveBeenCalled();
+    });
+
+    it('多选模式下 + range 调用 selectRangeTo', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 }), makeEntry({ id: 2 }), makeEntry({ id: 3 })];
+      store.isMultiSelectMode = true;
+      store.selectionAnchorId = 1;
+
+      store.handleEntryPrimaryAction(3, { range: true });
+
+      expect(store.selectedEntryIds).toEqual([1, 2, 3]);
+      expect(store.activeEntryId).toBe(3);
+    });
+
+    it('非多选模式下调用 pasteEntry', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1, use_count: 0 })];
+      store.isMultiSelectMode = false;
+      invoke.mockResolvedValue(undefined);
+
+      store.handleEntryPrimaryAction(1);
+
+      expect(store.activeEntryId).toBe(1);
+      expect(invoke).toHaveBeenCalledWith('paste_entry', { id: 1 });
+    });
+
+    it('多选模式下再次点击已选中条目取消选中', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 }), makeEntry({ id: 2 })];
+      store.isMultiSelectMode = true;
+      store.selectedEntryIds = [1, 2];
+
+      store.handleEntryPrimaryAction(1);
+
+      expect(store.selectedEntryIds).not.toContain(1);
+      expect(store.selectedEntryIds).toContain(2);
+    });
+  });
+
+  describe('reconcileSelection 选区调和', () => {
+    it('移除不再存在于 entries 中的选中 ID', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 2 }), makeEntry({ id: 3 })];
+      store.isMultiSelectMode = true;
+      store.selectedEntryIds = [1, 2, 3];
+      store.activeEntryId = 1;
+
+      // 通过 deleteEntry 触发 reconcileSelection
+      invoke.mockResolvedValue(undefined);
+      await store.deleteEntry(1);
+
+      // ID 1 已被删除，应该从选中集合中移除
+      // deleteEntry 会直接从 entries 移除，但 selectedEntryIds 中的 1 由 reconcileSelection 清理
+      expect(store.selectedEntryIds).not.toContain(1);
+    });
+
+    it('选中数归零时自动退出多选模式', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 })];
+      store.isMultiSelectMode = true;
+      store.selectedEntryIds = [1];
+      store.activeEntryId = 1;
+      store.totalCount = 1;
+
+      invoke.mockResolvedValue(undefined);
+      await store.deleteEntry(1);
+
+      expect(store.selectedEntryIds).toEqual([]);
+      expect(store.isMultiSelectMode).toBe(false);
+    });
+
+    it('activeEntryId 不存在时更新为第一个条目', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 1 }), makeEntry({ id: 2 })];
+      store.activeEntryId = 1;
+      store.totalCount = 2;
+
+      invoke.mockResolvedValue(undefined);
+      await store.deleteEntry(1);
+
+      // activeEntryId 应更新为剩余的第一个条目
+      expect(store.activeEntryId).toBe(2);
+    });
+
+    it('selectionAnchorId 不存在时更新为第一个选中的 ID', async () => {
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+      store.entries = [makeEntry({ id: 2 }), makeEntry({ id: 3 })];
+      store.isMultiSelectMode = true;
+      store.selectedEntryIds = [1, 2, 3];
+      store.selectionAnchorId = 1;
+      store.activeEntryId = 2;
+      store.totalCount = 3;
+
+      // 手动触发：模拟删除后 entries 不再包含 ID 1
+      invoke.mockResolvedValue(undefined);
+      await store.deleteEntry(1);
+
+      // 锚点应更新为剩余选中列表的第一个
+      expect(store.selectionAnchorId).not.toBe(1);
+    });
+  });
 });
