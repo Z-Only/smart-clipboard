@@ -12,6 +12,7 @@ export default [
       'src-tauri/gen/**',
       'site/.vitepress/cache/**',
       'site/.vitepress/dist/**',
+      'coverage/**',
     ],
   },
   js.configs.recommended,
