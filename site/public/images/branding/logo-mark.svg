@@ -1,9 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
-  <rect width="256" height="256" rx="56" fill="#111827"/>
-  <rect x="48" y="52" width="160" height="152" rx="28" fill="#1F2937" stroke="#60A5FA" stroke-width="8"/>
-  <path d="M92 102H164" stroke="#F9FAFB" stroke-width="12" stroke-linecap="round"/>
-  <path d="M92 128H150" stroke="#93C5FD" stroke-width="12" stroke-linecap="round"/>
-  <path d="M92 154H138" stroke="#34D399" stroke-width="12" stroke-linecap="round"/>
-  <path d="M160 150L184 174" stroke="#FBBF24" stroke-width="12" stroke-linecap="round"/>
-  <circle cx="150" cy="140" r="22" stroke="#FBBF24" stroke-width="10"/>
+  <!-- 背景：深蓝渐变圆角方块，符合 macOS / iOS 图标风格 -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1E3A8A"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="board" x1="64" y1="60" x2="192" y2="220" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#E2E8F0"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+
+  <!-- 剪贴板主体（亮色纸面，与深色背景形成强对比） -->
+  <rect x="56" y="60" width="144" height="160" rx="20" fill="url(#board)"/>
+
+  <!-- 剪贴板顶部夹子，强化 "clipboard" 语义 -->
+  <rect x="98" y="42" width="60" height="30" rx="10" fill="#0F172A"/>
+  <rect x="108" y="36" width="40" height="16" rx="6" fill="#64748B"/>
+
+  <!-- 内容文字线：三段渐变蓝，隐喻条目列表 -->
+  <path d="M80 108H172" stroke="#1E3A8A" stroke-width="12" stroke-linecap="round"/>
+  <path d="M80 136H152" stroke="#3B82F6" stroke-width="12" stroke-linecap="round"/>
+  <path d="M80 164H128" stroke="#60A5FA" stroke-width="12" stroke-linecap="round"/>
+
+  <!-- 右下角放大镜：体现 "智能搜索"，独立于文字避免遮挡 -->
+  <circle cx="172" cy="176" r="26" fill="#FACC15" stroke="#0F172A" stroke-width="8"/>
+  <path d="M190 194L210 214" stroke="#0F172A" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="172" cy="176" r="12" fill="#FEF3C7"/>
 </svg>
