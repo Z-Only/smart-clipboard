@@ -173,346 +173,15 @@
 
         <Separator />
 
-        <div class="space-y-3">
-          <div class="space-y-1">
-            <label class="text-sm font-medium">{{ $t('settings.plugins.title') }}</label>
-            <p class="text-xs text-muted-foreground">{{ $t('settings.plugins.hint') }}</p>
-          </div>
-
-          <div v-if="plugins.length === 0" class="text-xs text-muted-foreground">
-            {{ $t('settings.plugins.empty') }}
-          </div>
-
-          <div
-            v-for="plugin in plugins"
-            :key="plugin.id"
-            class="rounded-md border border-input p-3 space-y-2"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 space-y-1">
-                <div class="text-sm font-medium break-words">{{ plugin.name }}</div>
-                <div v-if="plugin.description" class="text-xs text-muted-foreground break-words">
-                  {{ plugin.description }}
-                </div>
-                <div class="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  <span>{{ $t('settings.plugins.id', { id: plugin.id }) }}</span>
-                  <span v-if="plugin.kind">{{
-                    $t('settings.plugins.kind', { kind: plugin.kind })
-                  }}</span>
-                  <span v-if="plugin.version">{{
-                    $t('settings.plugins.version', { version: plugin.version })
-                  }}</span>
-                </div>
-              </div>
-
-              <button
-                v-if="plugin.valid"
-                :data-test="`plugin-toggle-${plugin.id}`"
-                class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                :class="plugin.enabled ? 'bg-primary' : 'bg-input'"
-                @click="pluginStore.setPluginEnabled(plugin.id, !plugin.enabled)"
-              >
-                <span
-                  class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform"
-                  :class="plugin.enabled ? 'translate-x-4' : 'translate-x-0'"
-                />
-              </button>
-            </div>
-
-            <div
-              v-if="!plugin.valid"
-              class="rounded-md border border-destructive/30 bg-destructive/5 px-2 py-1 text-xs text-destructive"
-            >
-              <div class="font-medium">{{ $t('settings.plugins.invalid') }}</div>
-              <div v-if="plugin.error">{{ plugin.error }}</div>
-            </div>
-          </div>
-        </div>
+        <SettingsPluginSection />
 
         <Separator />
 
-        <div class="space-y-3">
-          <div class="space-y-1">
-            <label class="text-sm font-medium">{{ $t('settings.updater.title') }}</label>
-            <p class="text-xs text-muted-foreground">{{ $t('settings.updater.hint') }}</p>
-          </div>
-
-          <div class="flex items-center justify-between">
-            <div>
-              <label class="text-sm font-medium">{{ $t('settings.updater.autoCheck') }}</label>
-            </div>
-            <button
-              class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors"
-              :class="form.updater.auto_check_enabled ? 'bg-primary' : 'bg-input'"
-              @click="form.updater.auto_check_enabled = !form.updater.auto_check_enabled"
-            >
-              <span
-                class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform"
-                :class="form.updater.auto_check_enabled ? 'translate-x-4' : 'translate-x-0'"
-              />
-            </button>
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium">{{ $t('settings.updater.checkFrequency') }}</label>
-            <select
-              v-model.number="form.updater.check_interval_hours"
-              class="h-8 rounded-md border border-input bg-background px-2 text-sm"
-              :disabled="!form.updater.auto_check_enabled"
-            >
-              <option :value="6">{{ $t('settings.updater.every6Hours') }}</option>
-              <option :value="12">{{ $t('settings.updater.every12Hours') }}</option>
-              <option :value="24">{{ $t('settings.updater.daily') }}</option>
-              <option :value="168">{{ $t('settings.updater.weekly') }}</option>
-            </select>
-          </div>
-
-          <div class="flex items-center justify-between">
-            <div>
-              <label class="text-sm font-medium">{{ $t('settings.updater.autoDownload') }}</label>
-            </div>
-            <button
-              class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors"
-              :class="form.updater.auto_download_enabled ? 'bg-primary' : 'bg-input'"
-              @click="form.updater.auto_download_enabled = !form.updater.auto_download_enabled"
-            >
-              <span
-                class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform"
-                :class="form.updater.auto_download_enabled ? 'translate-x-4' : 'translate-x-0'"
-              />
-            </button>
-          </div>
-
-          <div class="flex items-center justify-between">
-            <div>
-              <label class="text-sm font-medium">{{ $t('settings.updater.wifiOnly') }}</label>
-            </div>
-            <button
-              class="relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors"
-              :disabled="!form.updater.auto_download_enabled"
-              :class="form.updater.wifi_only ? 'bg-primary' : 'bg-input'"
-              @click="form.updater.wifi_only = !form.updater.wifi_only"
-            >
-              <span
-                class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform"
-                :class="form.updater.wifi_only ? 'translate-x-4' : 'translate-x-0'"
-              />
-            </button>
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium">{{ $t('settings.updater.mirrors') }}</label>
-            <textarea
-              v-model="updaterMirrorsText"
-              data-test="updater-mirrors"
-              class="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              rows="3"
-              :placeholder="$t('settings.updater.mirrorsPlaceholder')"
-            />
-            <span v-if="updaterValidationError" class="text-xs text-destructive">{{
-              $t(updaterValidationError)
-            }}</span>
-          </div>
-
-          <button
-            type="button"
-            class="w-full rounded-md border border-input px-3 py-2 text-left text-sm hover:bg-accent"
-            data-test="updater-check-now"
-            @click="manualUpdaterCheck"
-          >
-            <div>
-              {{
-                $t('settings.updater.currentVersion', {
-                  version: updater.status.currentVersion || 'unknown',
-                })
-              }}
-            </div>
-            <div class="text-xs text-muted-foreground">
-              {{ $t('settings.updater.clickToCheck') }}
-            </div>
-            <div class="text-xs text-muted-foreground">{{ $t(updaterPhaseLabel()) }}</div>
-          </button>
-
-          <div
-            v-if="updater.status.phase === 'installing'"
-            class="rounded-md border border-input p-3 space-y-2"
-          >
-            <div class="text-sm font-medium">{{ $t('settings.updater.installingTitle') }}</div>
-            <div class="text-xs text-muted-foreground">
-              {{ $t('settings.updater.installingHint') }}
-            </div>
-            <div class="flex gap-2">
-              <Button size="sm" variant="destructive" @click="quitApp">{{
-                $t('settings.updater.quitNow')
-              }}</Button>
-            </div>
-          </div>
-
-          <div
-            v-if="!updater.status.pendingUpdate && updater.status.phase === 'downloading'"
-            class="rounded-md border border-input p-3 space-y-2"
-          >
-            <div class="text-sm font-medium">{{ $t('settings.updater.phase.downloading') }}</div>
-            <div class="text-xs text-muted-foreground">
-              {{ Math.round((updater.status.downloadProgress ?? 0) * 100) }}%
-            </div>
-          </div>
-
-          <div
-            v-if="!updater.status.pendingUpdate && updater.status.phase === 'update_available'"
-            class="rounded-md border border-input p-3 space-y-2"
-          >
-            <div class="text-sm font-medium">
-              {{
-                $t('settings.updater.availableTitle', { version: updater.status.availableVersion })
-              }}
-            </div>
-            <div class="text-xs text-muted-foreground">{{ updater.status.availableNotes }}</div>
-            <div class="flex gap-2">
-              <Button size="sm" @click="downloadAvailableUpdate">{{
-                $t('settings.updater.downloadInstaller')
-              }}</Button>
-            </div>
-          </div>
-
-          <div
-            v-if="updater.status.pendingUpdate"
-            class="rounded-md border border-input p-3 space-y-2"
-          >
-            <div class="text-sm font-medium">
-              {{
-                $t('settings.updater.readyTitle', { version: updater.status.pendingUpdate.version })
-              }}
-            </div>
-            <div class="text-xs text-muted-foreground">
-              {{ updater.status.pendingUpdate.notes }}
-            </div>
-            <div class="flex gap-2">
-              <Button size="sm" @click="installPendingUpdate">{{
-                $t('settings.updater.installAndRestart')
-              }}</Button>
-              <Button size="sm" variant="outline" @click="discardPendingUpdate">{{
-                $t('settings.updater.discardPending')
-              }}</Button>
-            </div>
-          </div>
-        </div>
+        <SettingsUpdaterSection ref="updaterSection" v-model="form.updater" />
 
         <Separator />
 
-        <div class="space-y-3">
-          <div class="flex items-center justify-between">
-            <div>
-              <label class="text-sm font-medium">{{ $t('lock.settingsTitle') }}</label>
-              <p class="text-xs text-muted-foreground">{{ $t('lock.settingsHint') }}</p>
-            </div>
-            <button
-              class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors"
-              :class="form.app_lock.enabled ? 'bg-primary' : 'bg-input'"
-              @click="form.app_lock.enabled = !form.app_lock.enabled"
-            >
-              <span
-                class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform"
-                :class="form.app_lock.enabled ? 'translate-x-4' : 'translate-x-0'"
-              />
-            </button>
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium">{{ $t('lock.autoLock') }}</label>
-            <Input
-              v-model="form.app_lock.auto_lock_seconds"
-              type="number"
-              min="0"
-              max="86400"
-              class="h-8"
-            />
-            <span class="text-xs text-muted-foreground">{{ $t('lock.autoLockHint') }}</span>
-          </div>
-
-          <div class="flex items-center justify-between">
-            <div>
-              <label class="text-sm font-medium">{{ $t('lock.biometric') }}</label>
-              <p class="text-xs text-muted-foreground">{{ $t('lock.biometricHint') }}</p>
-            </div>
-            <button
-              class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors"
-              :disabled="!security.status.biometric_available"
-              :class="
-                form.app_lock.biometric_enabled ? 'bg-primary' : 'bg-input disabled:opacity-50'
-              "
-              @click="form.app_lock.biometric_enabled = !form.app_lock.biometric_enabled"
-            >
-              <span
-                class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform"
-                :class="form.app_lock.biometric_enabled ? 'translate-x-4' : 'translate-x-0'"
-              />
-            </button>
-          </div>
-
-          <div class="grid gap-2">
-            <Input
-              v-model="currentPassword"
-              type="password"
-              class="h-8"
-              :placeholder="$t('lock.currentPasswordPlaceholder')"
-            />
-            <Input
-              v-model="newPassword"
-              type="password"
-              class="h-8"
-              :placeholder="$t('lock.newPasswordPlaceholder')"
-            />
-            <Button variant="outline" size="sm" @click="savePassword">{{
-              $t('lock.setPassword')
-            }}</Button>
-          </div>
-
-          <Button variant="outline" size="sm" @click="manualLock">{{ $t('lock.lockNow') }}</Button>
-        </div>
-
-        <Separator />
-
-        <!-- Database Encryption -->
-        <div class="space-y-3">
-          <div class="space-y-1">
-            <label class="text-sm font-medium">{{ $t('encryption.settingsTitle') }}</label>
-            <p class="text-xs text-muted-foreground">{{ $t('encryption.settingsHint') }}</p>
-          </div>
-
-          <div class="flex items-center justify-between">
-            <div>
-              <label class="text-sm font-medium">{{ $t('encryption.enabled') }}</label>
-              <p v-if="security.encryption.migrating" class="text-xs text-yellow-600">
-                {{ $t('encryption.migrating') }}
-              </p>
-              <p v-else-if="security.encryption.enabled" class="text-xs text-muted-foreground">
-                {{
-                  $t('encryption.statusEncrypted', { count: security.encryption.encrypted_count })
-                }}
-              </p>
-              <p
-                v-else-if="security.encryption.plaintext_count > 0"
-                class="text-xs text-muted-foreground"
-              >
-                {{
-                  $t('encryption.statusPlaintext', { count: security.encryption.plaintext_count })
-                }}
-              </p>
-            </div>
-            <button
-              class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors"
-              :class="security.encryption.enabled ? 'bg-primary' : 'bg-input'"
-              :disabled="security.encryption.migrating || security.loading"
-              @click="toggleEncryption"
-            >
-              <span
-                class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform"
-                :class="security.encryption.enabled ? 'translate-x-4' : 'translate-x-0'"
-              />
-            </button>
-          </div>
-        </div>
+        <SettingsSecuritySection v-model="form.app_lock" @close="close" />
 
         <!-- Action buttons -->
         <div class="flex justify-end gap-2">
@@ -538,8 +207,10 @@ import { Separator } from '@/components/ui/separator';
 import { setLocale } from '@/i18n';
 import { useTheme, type AppearanceMode, type ThemeColor } from '@/composables/useTheme';
 import { useSecurityStore } from '@/stores/securityStore';
-import { useUpdaterStore } from '@/stores/updaterStore';
 import { usePluginStore } from '@/stores/pluginStore';
+import SettingsPluginSection from '@/components/SettingsPluginSection.vue';
+import SettingsUpdaterSection from '@/components/SettingsUpdaterSection.vue';
+import SettingsSecuritySection from '@/components/SettingsSecuritySection.vue';
 
 interface AppLockConfig {
   enabled: boolean;
@@ -579,9 +250,7 @@ function changeLanguage(lang: string) {
 
 const { appearance, themeColor, setAppearance, setThemeColor } = useTheme();
 const security = useSecurityStore();
-const updater = useUpdaterStore();
 const pluginStore = usePluginStore();
-const plugins = computed(() => pluginStore.plugins ?? []);
 const appearanceModes: AppearanceMode[] = ['system', 'light', 'dark'];
 const themeColors: { id: ThemeColor; swatch: string }[] = [
   { id: 'zinc', swatch: '#71717a' },
@@ -616,29 +285,7 @@ const form = reactive<AppConfig>({
 
 const autostart = ref(false);
 
-const updaterMirrorsText = computed({
-  get: () => form.updater.mirrors.join('\n'),
-  set: (val: string) => {
-    form.updater.mirrors = val
-      .split('\n')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-  },
-});
-
-const updaterValidationError = ref('');
-
-function validateUpdaterMirrors() {
-  const invalid = form.updater.mirrors.find(
-    (mirror) => !mirror.startsWith('https://') || !mirror.includes('{url}'),
-  );
-  updaterValidationError.value = invalid ? 'settings.updater.invalidMirror' : '';
-  return !invalid;
-}
-
-function updaterPhaseLabel() {
-  return `settings.updater.phase.${updater.status.phase}`;
-}
+const updaterSection = ref<InstanceType<typeof SettingsUpdaterSection> | null>(null);
 
 const excludedAppsText = computed({
   get: () => form.excluded_apps.join('\n'),
@@ -673,7 +320,7 @@ async function loadConfig() {
 
 async function save() {
   try {
-    if (!validateUpdaterMirrors()) return;
+    if (updaterSection.value && !updaterSection.value.validateMirrors()) return;
     await invoke('update_config', { newConfig: { ...form } });
     await security.updateSettings(form.app_lock);
     close();
@@ -698,61 +345,6 @@ function resetDefaults() {
     mirrors: [],
     last_check_at: null,
   };
-}
-
-async function manualUpdaterCheck() {
-  await updater.checkNow();
-}
-
-async function downloadAvailableUpdate() {
-  await updater.downloadAvailable();
-}
-
-async function installPendingUpdate() {
-  await updater.installPending();
-}
-
-async function discardPendingUpdate() {
-  await updater.discardPending();
-}
-
-async function quitApp() {
-  await invoke('quit_app');
-}
-
-const currentPassword = ref('');
-const newPassword = ref('');
-
-async function savePassword() {
-  if (!newPassword.value) return;
-  await security.setPassword(currentPassword.value || null, newPassword.value);
-  currentPassword.value = '';
-  newPassword.value = '';
-  form.app_lock.enabled = true;
-}
-
-async function manualLock() {
-  await security.lock();
-  close();
-}
-
-async function toggleEncryption() {
-  const { t } = useI18n();
-  if (security.encryption.enabled) {
-    if (!confirm(t('encryption.disableConfirm'))) return;
-    try {
-      await security.disableEncryption();
-    } catch (error) {
-      console.error('Failed to disable encryption:', error);
-    }
-  } else {
-    if (!confirm(t('encryption.enableConfirm'))) return;
-    try {
-      await security.enableEncryption();
-    } catch (error) {
-      console.error('Failed to enable encryption:', error);
-    }
-  }
 }
 
 async function toggleAutostart() {
