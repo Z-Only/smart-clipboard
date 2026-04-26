@@ -75,6 +75,7 @@ pub fn run() {
             commands::clipboard::get_entry_count,
             commands::clipboard::get_statistics,
             commands::clipboard::paste_entry,
+            commands::clipboard::get_recent_entries,
             // updater commands
             commands::updater::get_updater_status,
             commands::updater::check_for_updates_now,

@@ -35,8 +35,8 @@ pub(crate) fn decrypt_search_result(encryption: &EncryptionManager, result: &mut
 
 // Re-export all command functions so that `commands::xxx` paths remain valid.
 pub use clipboard::{
-    copy_entries, delete_entries, delete_entry, get_entries, get_entry_count, get_statistics,
-    paste_entry, search_entries, set_favorite_state_for_entries, toggle_favorite,
+    copy_entries, delete_entries, delete_entry, get_entries, get_entry_count, get_recent_entries,
+    get_statistics, paste_entry, search_entries, set_favorite_state_for_entries, toggle_favorite,
 };
 pub use config::{
     get_autostart_enabled, get_config, quit_app, set_autostart_enabled, update_config,

@@ -47,6 +47,47 @@ pub(crate) fn handle_toggle_request<R: Runtime>(app_handle: &AppHandle<R>, windo
     }
 }
 
+pub fn setup_quick_paste_hotkey<R: Runtime>(
+    app: &AppHandle<R>,
+    shortcut_str: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let shortcut: Shortcut = shortcut_str.parse()?;
+
+    app.global_shortcut()
+        .on_shortcut(shortcut, move |app_handle, _shortcut, event| {
+            if event.state == ShortcutState::Pressed {
+                activate_quick_paste(app_handle);
+            }
+        })?;
+
+    Ok(())
+}
+
+fn activate_quick_paste<R: Runtime>(app_handle: &AppHandle<R>) {
+    let Some(window) = app_handle.get_webview_window("main") else {
+        return;
+    };
+
+    if let Some(lock_manager) = app_handle.try_state::<std::sync::Arc<AppLockManager>>() {
+        if !lock_manager.status().locked {
+            if !window.is_visible().unwrap_or(false) {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+            let _ = app_handle.emit("quick-paste-activated", ());
+        } else {
+            enforce_window_access(app_handle, &lock_manager, "quick_paste");
+        }
+        return;
+    }
+
+    if !window.is_visible().unwrap_or(false) {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+    let _ = app_handle.emit("quick-paste-activated", ());
+}
+
 #[cfg(test)]
 mod wakeup_tests {
     use super::{handle_toggle_request, toggle_window};

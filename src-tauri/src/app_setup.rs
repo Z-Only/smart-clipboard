@@ -85,6 +85,11 @@ pub(crate) fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::
         log::error!("Failed to setup hotkey: {}", e);
     }
 
+    let quick_paste_shortcut = config.quick_paste_shortcut.clone();
+    if let Err(e) = hotkey::setup_quick_paste_hotkey(app.handle(), &quick_paste_shortcut) {
+        log::error!("Failed to setup quick-paste hotkey: {}", e);
+    }
+
     if let Err(e) = tray::setup_tray(app.handle()) {
         log::error!("Failed to setup tray: {}", e);
     }

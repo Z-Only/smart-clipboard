@@ -199,3 +199,20 @@ pub async fn paste_entry(
 
     Ok(())
 }
+
+#[tauri::command]
+pub async fn get_recent_entries(
+    lock: State<'_, Arc<AppLockManager>>,
+    encryption: State<'_, Arc<EncryptionManager>>,
+    db: State<'_, Arc<Database>>,
+    limit: i64,
+) -> Result<Vec<crate::storage::ClipboardEntry>, String> {
+    require_unlocked(&lock)?;
+    let capped_limit = limit.clamp(1, 9);
+    let result = db
+        .get_entries(capped_limit, 0, None, None)
+        .map_err(|e| e.to_string())?;
+    let mut entries = result.entries;
+    decrypt_entries(&encryption, &mut entries);
+    Ok(entries)
+}
