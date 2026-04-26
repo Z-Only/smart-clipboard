@@ -111,6 +111,12 @@ export default {
       kind: 'Kind: {kind}',
       version: 'Version: {version}',
     },
+    quickPaste: {
+      title: 'Quick Paste',
+      hint: 'Configure the quick paste shortcut and behavior',
+      shortcut: 'Shortcut',
+      entryCount: 'Entries to show',
+    },
     updater: {
       title: 'Application Updates',
       hint: 'Configure background checks and mirror endpoints',
@@ -394,6 +400,13 @@ export default {
         dismissed: 'Dismissed',
       },
     },
+  },
+  quickPaste: {
+    title: 'Quick Paste',
+    dismiss: 'Esc to close',
+    typeToSearch: 'Type to search...',
+    empty: 'No recent entries',
+    imageEntry: '[Image]',
   },
   encryption: {
     settingsTitle: 'Database Encryption',

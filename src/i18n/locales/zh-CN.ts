@@ -106,9 +106,15 @@ export default {
       hint: '管理已安装插件及其可用状态',
       empty: '未发现插件',
       invalid: '无效插件',
-      id: 'ID：{id}',
-      kind: '类型：{kind}',
-      version: '版本：{version}',
+      id: 'ID:{id}',
+      kind: '类型:{kind}',
+      version: '版本:{version}',
+    },
+    quickPaste: {
+      title: '快捷粘贴',
+      hint: '配置快捷粘贴的快捷键和行为',
+      shortcut: '快捷键',
+      entryCount: '显示条目数',
     },
     updater: {
       title: '应用更新',
@@ -392,6 +398,13 @@ export default {
         dismissed: '已跳过',
       },
     },
+  },
+  quickPaste: {
+    title: '快捷粘贴',
+    dismiss: 'Esc 关闭',
+    typeToSearch: '输入搜索...',
+    empty: '暂无最近记录',
+    imageEntry: '[图片]',
   },
   encryption: {
     settingsTitle: '数据库加密',
