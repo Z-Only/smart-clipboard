@@ -1208,4 +1208,29 @@ describe('useClipboardStore', () => {
       expect(store.selectionAnchorId).not.toBe(1);
     });
   });
+
+  describe('fetchRecentEntries', () => {
+    it('invokes get_recent_entries and stores result', async () => {
+      const entry1 = makeEntry({ id: 1, content: 'first' });
+      const entry2 = makeEntry({ id: 2, content: 'second' });
+      invoke.mockResolvedValueOnce([entry1, entry2]);
+
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+
+      await store.fetchRecentEntries(9);
+      expect(invoke).toHaveBeenCalledWith('get_recent_entries', { limit: 9 });
+      expect(store.recentEntries).toEqual([entry1, entry2]);
+    });
+
+    it('sets recentEntries to empty array on error', async () => {
+      invoke.mockRejectedValueOnce(new Error('locked'));
+
+      const { useClipboardStore } = await import('@/stores/clipboardStore');
+      const store = useClipboardStore();
+
+      await store.fetchRecentEntries(9);
+      expect(store.recentEntries).toEqual([]);
+    });
+  });
 });
