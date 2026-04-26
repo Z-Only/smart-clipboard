@@ -7,16 +7,15 @@ A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + *
 - Website / Docs: https://z-only.github.io/smart-clipboard/
 - Repository: https://github.com/Z-Only/smart-clipboard
 
-## Release Status — v2.7.0 Plugin Extension System
+## Release Status — v2.8.0 Quick Paste Panel
 
-This repository now includes a **Plugin / Extension System** on top of pinyin fuzzy search, advanced sync conflict handling, clipboard history, smart enhancements, templates, LAN sync, WebDAV cloud sync, Phase 4 access security, native biometric integration, the managed updater, and database-at-rest encryption.
+This repository now includes a **Quick Paste Panel** on top of the plugin extension system, pinyin fuzzy search, advanced sync conflict handling, clipboard history, smart enhancements, templates, LAN sync, WebDAV cloud sync, Phase 4 access security, native biometric integration, the managed updater, and database-at-rest encryption.
 
-### v2.7.0 highlights
+### v2.8.0 highlights
 
-- **Plugin / extension system**: Discover local plugins from a `plugins/` directory with manifest validation, trusted builtin handlers, and persistent enable/disable state
-- **Plugin management UI**: Review valid and invalid plugins from Settings, inspect metadata, and toggle availability without editing config files by hand
-- **Plugin transform integration**: Surface plugin-provided transform actions directly in the transform menu and execute them through the dedicated backend plugin command path
-- **Shipped example plugin**: Includes a `markdown-tools` example plugin that validates manifest loading, registry dispatch, and end-to-end transform behavior
+- **Quick Paste Panel**: Global shortcut (`Cmd/Ctrl+Shift+1`) invokes a lightweight overlay showing the 9 most recent clipboard entries with number-key instant paste, arrow-key navigation, Esc to dismiss, and type-to-search handoff
+- **Configurable quick-paste shortcut**: Change the trigger shortcut and the number of displayed entries in Settings
+- **Seamless search transition**: Typing any character in the quick-paste overlay transitions to the full search interface with the keystroke pre-filled
 
 ## Features
 
@@ -25,6 +24,7 @@ This repository now includes a **Plugin / Extension System** on top of pinyin fu
 - **Full-Text Search** -- Fast search powered by SQLite FTS5, with Chinese pinyin full-text and initials matching
 - **Category Filter** -- Browse clipboard history by content type
 - **Global Hotkey** -- `Cmd/Ctrl + Shift + V` to toggle the clipboard panel
+- **Quick Paste** -- `Cmd/Ctrl + Shift + 1` to open a lightweight overlay for instant number-key paste
 - **System Tray** -- Runs in the background with tray controls
 - **Favorites** -- Pin frequently used entries to prevent auto-cleanup
 - **Configurable** -- Max entries, retention period, excluded apps, monitor interval, and sensitive-content expiry
