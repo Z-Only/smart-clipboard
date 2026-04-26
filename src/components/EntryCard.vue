@@ -151,9 +151,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { invoke, convertFileSrc } from '@tauri-apps/api/core';
+import { convertFileSrc } from '@tauri-apps/api/core';
 import { Badge } from '@/components/ui/badge';
 import TransformMenu from '@/components/TransformMenu.vue';
 import TagPicker from '@/components/TagPicker.vue';
@@ -181,32 +181,11 @@ function handleClick(event: MouseEvent) {
   emit('select', { id: props.entry.id, shiftKey: event.shiftKey });
 }
 
-const entryTags = ref<Tag[]>([]);
-
-async function loadEntryTags() {
-  try {
-    const cached = store.entryTagsMap[props.entry.id];
-    if (cached) {
-      entryTags.value = cached;
-      return;
-    }
-    entryTags.value = await invoke<Tag[]>('get_entry_tags', { entryId: props.entry.id });
-    store.setEntryTags(props.entry.id, entryTags.value);
-  } catch {
-    // ignore
-  }
-}
+const entryTags = computed(() => store.getEntryTags(props.entry.id));
 
 function onTagsChanged(tags: Tag[]) {
-  entryTags.value = tags;
   store.setEntryTags(props.entry.id, tags);
 }
-
-watch(
-  () => props.entry.id,
-  () => loadEntryTags(),
-  { immediate: true },
-);
 
 const isImage = computed(() => props.entry.content_type === 'image');
 const imageAssetUrl = computed(() => (isImage.value ? convertFileSrc(props.entry.content) : ''));

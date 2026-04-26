@@ -327,6 +327,34 @@ onMounted(() => {
   );
   if (sentinelRef.value) observer.observe(sentinelRef.value);
 });
+let previousVisibleKeys = new Set<string>();
+watch(
+  visibleItems,
+  (items) => {
+    const currentKeys = new Set(items.map((item) => item.key));
+
+    // Disconnect ResizeObservers for items that left the visible area
+    for (const key of previousVisibleKeys) {
+      if (!currentKeys.has(key)) {
+        const ro = resizeObservers.get(key);
+        if (ro) {
+          ro.disconnect();
+          resizeObservers.delete(key);
+        }
+      }
+    }
+    previousVisibleKeys = currentKeys;
+
+    // Batch-preload tags for visible entry items not yet cached
+    const entryIds = items
+      .filter((item) => item.type === 'entry')
+      .map((item) => (item as { entry: { id: number } }).entry.id);
+    if (entryIds.length > 0) {
+      store.batchLoadEntryTags(entryIds);
+    }
+  },
+  { flush: 'post' },
+);
 watch(sentinelRef, async (el, prev) => {
   if (prev) observer?.unobserve(prev);
   await nextTick();

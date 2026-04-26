@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
+import { computed, ref, shallowRef, triggerRef } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import type {
   CategoryType,
@@ -50,8 +50,8 @@ export const useClipboardStore = defineStore('clipboard', () => {
   const selectedEntryIds = ref<number[]>([]);
   const selectionAnchorId = ref<number | null>(null);
   const pendingLoadMore = ref(false);
-  const measuredItemHeights = ref<Record<string, number>>({});
-  const entryTagsMap = ref<Record<number, Tag[]>>({});
+  const measuredItemHeights = shallowRef(new Map<string, number>());
+  const entryTagsMap = shallowRef(new Map<number, Tag[]>());
 
   const hasMore = computed(() => entries.value.length < totalCount.value);
   const selectedEntryIdSet = computed(() => new Set(selectedEntryIds.value));
@@ -85,21 +85,42 @@ export const useClipboardStore = defineStore('clipboard', () => {
   );
 
   function getVirtualItemHeight(key: string, fallback: number) {
-    return measuredItemHeights.value[key] ?? fallback;
+    return measuredItemHeights.value.get(key) ?? fallback;
   }
   function setVirtualItemHeight(key: string, height: number) {
     if (!Number.isFinite(height) || height <= 0) return;
-    if (measuredItemHeights.value[key] === height) return;
-    measuredItemHeights.value = { ...measuredItemHeights.value, [key]: height };
+    if (measuredItemHeights.value.get(key) === height) return;
+    measuredItemHeights.value.set(key, height);
+    triggerRef(measuredItemHeights);
   }
   function clearVirtualItemHeights() {
-    measuredItemHeights.value = {};
+    measuredItemHeights.value.clear();
+    triggerRef(measuredItemHeights);
   }
   function setEntryTags(entryId: number, tags: Tag[]) {
-    entryTagsMap.value = { ...entryTagsMap.value, [entryId]: tags };
+    entryTagsMap.value.set(entryId, tags);
+    triggerRef(entryTagsMap);
   }
   function clearEntryTagsCache() {
-    entryTagsMap.value = {};
+    entryTagsMap.value.clear();
+    triggerRef(entryTagsMap);
+  }
+  function getEntryTags(entryId: number): Tag[] {
+    return entryTagsMap.value.get(entryId) ?? [];
+  }
+  async function batchLoadEntryTags(entryIds: number[]) {
+    const uncachedIds = entryIds.filter((id) => !entryTagsMap.value.has(id));
+    if (uncachedIds.length === 0) return;
+    const results = await Promise.all(
+      uncachedIds.map(async (id) => ({
+        id,
+        tags: await invoke<Tag[]>('get_entry_tags', { entryId: id }),
+      })),
+    );
+    for (const { id, tags } of results) {
+      entryTagsMap.value.set(id, tags);
+    }
+    triggerRef(entryTagsMap);
   }
 
   function reconcileSelection() {
@@ -355,9 +376,10 @@ export const useClipboardStore = defineStore('clipboard', () => {
     const updates = await Promise.all(
       ids.map(async (id) => ({ id, tags: await invoke<Tag[]>('get_entry_tags', { entryId: id }) })),
     );
-    const next = { ...entryTagsMap.value };
-    for (const update of updates) next[update.id] = update.tags;
-    entryTagsMap.value = next;
+    for (const { id, tags } of updates) {
+      entryTagsMap.value.set(id, tags);
+    }
+    triggerRef(entryTagsMap);
   }
   async function applyTagsToSelectedEntries(
     tagIds: number[],
@@ -418,6 +440,8 @@ export const useClipboardStore = defineStore('clipboard', () => {
     getVirtualItemHeight,
     setEntryTags,
     clearEntryTagsCache,
+    getEntryTags,
+    batchLoadEntryTags,
     setVirtualItemHeight,
     clearVirtualItemHeights,
     clearSelection,
