@@ -129,6 +129,15 @@
 
     <!-- Conflict resolve dialog -->
     <ConflictResolveDialog :conflict="activeConflict" />
+
+    <!-- Quick paste overlay -->
+    <QuickPasteOverlay
+      :entries="recentEntries"
+      :is-active="quickPasteActive"
+      @paste="handleQuickPaste"
+      @dismiss="handleQuickPasteDismiss"
+      @search="handleQuickPasteSearch"
+    />
   </div>
 </template>
 
@@ -146,6 +155,7 @@ import TemplateList from '@/components/TemplateList.vue';
 import SyncPanel from '@/components/SyncPanel.vue';
 import LockScreen from '@/components/LockScreen.vue';
 import ConflictResolveDialog from '@/components/ConflictResolveDialog.vue';
+import QuickPasteOverlay from '@/components/QuickPasteOverlay.vue';
 import { useSecurityStore } from '@/stores/securityStore';
 import { useClipboardStore } from '@/stores/clipboardStore';
 import { useSyncStore } from '@/stores/syncStore';
@@ -173,6 +183,9 @@ const showTemplates = ref(false);
 const showSync = ref(false);
 const showLockOverlay = computed(() => security.status.enabled && security.status.locked);
 
+const quickPasteActive = ref(false);
+const { recentEntries } = storeToRefs(store);
+
 // Listen for clipboard changes from backend
 useClipboard();
 
@@ -188,6 +201,7 @@ watch(
       showStatistics.value = false;
       showTemplates.value = false;
       showSync.value = false;
+      quickPasteActive.value = false;
       return;
     }
     if (prev && !locked) {
@@ -203,6 +217,29 @@ watch(
     }
   },
 );
+
+async function activateQuickPaste() {
+  if (security.status.locked) return;
+  await store.fetchRecentEntries(9);
+  quickPasteActive.value = true;
+}
+
+async function handleQuickPaste(entryId: number) {
+  quickPasteActive.value = false;
+  await store.pasteEntry(entryId);
+  const { getCurrentWindow } = await import('@tauri-apps/api/window');
+  await getCurrentWindow().hide();
+}
+
+function handleQuickPasteDismiss() {
+  quickPasteActive.value = false;
+}
+
+function handleQuickPasteSearch(text: string) {
+  quickPasteActive.value = false;
+  searchBarRef.value?.focus();
+  store.setSearch(text);
+}
 
 onMounted(async () => {
   await security.init();
@@ -221,6 +258,11 @@ onMounted(async () => {
   // Open settings from tray menu
   await listen('open-settings', () => {
     showSettings.value = true;
+  });
+
+  // Quick paste activation
+  await listen('quick-paste-activated', () => {
+    activateQuickPaste();
   });
 });
 </script>
