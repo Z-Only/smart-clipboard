@@ -50,6 +50,7 @@ export const useClipboardStore = defineStore('clipboard', () => {
   const selectedEntryIds = ref<number[]>([]);
   const selectionAnchorId = ref<number | null>(null);
   const pendingLoadMore = ref(false);
+  const recentEntries = ref<ClipboardEntry[]>([]);
   const measuredItemHeights = shallowRef(new Map<string, number>());
   const entryTagsMap = shallowRef(new Map<number, Tag[]>());
 
@@ -155,6 +156,15 @@ export const useClipboardStore = defineStore('clipboard', () => {
     selectedCategory.value = 'all';
     searchKeyword.value = '';
     isLoading.value = false;
+  }
+
+  async function fetchRecentEntries(count: number) {
+    try {
+      recentEntries.value = await invoke<ClipboardEntry[]>('get_recent_entries', { limit: count });
+    } catch (e) {
+      console.error('Failed to fetch recent entries:', e);
+      recentEntries.value = [];
+    }
   }
 
   async function fetchEntries(reset = true) {
@@ -412,6 +422,7 @@ export const useClipboardStore = defineStore('clipboard', () => {
 
   return {
     entries,
+    recentEntries,
     totalCount,
     selectedCategory,
     searchKeyword,
@@ -431,6 +442,7 @@ export const useClipboardStore = defineStore('clipboard', () => {
     measuredItemHeights,
     entryTagsMap,
     fetchEntries,
+    fetchRecentEntries,
     loadMore,
     setCategory,
     setSearch,
