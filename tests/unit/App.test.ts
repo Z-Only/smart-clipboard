@@ -129,6 +129,23 @@ vi.mock('@/components/SyncPanel.vue', async () => {
   };
 });
 
+vi.mock('@/components/QuickPasteOverlay.vue', async () => {
+  const { defineComponent, h } = await import('vue');
+  return {
+    default: defineComponent({
+      name: 'QuickPasteOverlayStub',
+      props: {
+        entries: { type: Array, default: () => [] },
+        isActive: { type: Boolean, default: false },
+      },
+      setup(props) {
+        return () =>
+          h('div', { 'data-test': 'quick-paste-overlay', 'data-active': String(props.isActive) });
+      },
+    }),
+  };
+});
+
 import App from '@/App.vue';
 import { useClipboardStore } from '@/stores/clipboardStore';
 import { useSecurityStore } from '@/stores/securityStore';
