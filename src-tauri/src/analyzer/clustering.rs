@@ -70,7 +70,7 @@ impl ClusterEngine {
         // For performance: if entries.len() > 1000, take a random sample of 1000
         let entries_to_cluster = if entries.len() > 1000 {
             use rand::seq::SliceRandom;
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             let mut sampled: Vec<&(i64, String)> = entries.iter().collect();
             sampled.shuffle(&mut rng);
             sampled.truncate(1000);

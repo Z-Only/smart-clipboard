@@ -1,10 +1,9 @@
-use aes_gcm::aead::{Aead, KeyInit};
+use aes_gcm::aead::rand_core::RngCore;
+use aes_gcm::aead::{Aead, KeyInit, OsRng};
 use aes_gcm::{Aes256Gcm, Nonce};
 use argon2::{Algorithm, Argon2, Params, Version};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use hkdf::Hkdf;
-use rand::rngs::OsRng;
-use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use x25519_dalek::{PublicKey, StaticSecret};

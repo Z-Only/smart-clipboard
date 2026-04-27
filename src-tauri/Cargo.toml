@@ -20,7 +20,7 @@ tauri-plugin-global-shortcut = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-log = "2"
 arboard = "3"
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.39", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
@@ -34,19 +34,19 @@ base64 = "0.22"
 image = "0.25"
 pinyin = { version = "0.11", default-features = false, features = ["plain"] }
 
-mdns-sd = "0.11"
+mdns-sd = "0.19"
 
-tokio-tungstenite = "0.26"
+tokio-tungstenite = "0.29"
 futures-util = "0.3"
 aes-gcm = "0.10"
 hkdf = "0.12"
-rand = "0.8"
+rand = "0.9"
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+reqwest = { version = "0.13", default-features = false, features = ["json", "stream"] }
 argon2 = "0.5"
 
-keyring = "4.0.0-rc.3"
+keyring = "4.0.0-alpha.2"
 keyring-core = "0.7.2"
 urlencoding = "2"
 html-escape = "0.2"
@@ -60,7 +60,7 @@ objc2 = "0.6"
 block2 = "0.6"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows = { version = "0.58", features = [
+windows = { version = "0.61", features = [
     "Security_Credentials_UI",
     "Foundation",
 ] }

@@ -1,10 +1,10 @@
 use std::sync::{Arc, Mutex};
 
+use aes_gcm::aead::rand_core::RngCore;
 use aes_gcm::aead::{Aead, KeyInit, OsRng};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
-use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
 use crate::config::ConfigManager;

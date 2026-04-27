@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use chrono::Local;
 use log::{debug, error, warn};
-use mdns_sd::{ServiceDaemon, ServiceEvent, ServiceInfo};
+use mdns_sd::{ResolvedService, ServiceDaemon, ServiceEvent, ServiceInfo};
 use serde_json::{json, Value};
 
 use crate::config::{AppConfig, ConfigManager};
@@ -185,7 +185,7 @@ impl Drop for MdnsDiscoveryService {
 }
 
 fn resolved_service_to_device(
-    info: &ServiceInfo,
+    info: &ResolvedService,
     self_device_id: &str,
 ) -> Option<DiscoveredDevice> {
     let properties = info.get_properties();
