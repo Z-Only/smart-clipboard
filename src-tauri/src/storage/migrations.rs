@@ -274,6 +274,36 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         ",
     )?;
 
+    // Smart search: cluster and tag suggestion tables
+    conn.execute_batch(
+        "
+        CREATE TABLE IF NOT EXISTS entry_clusters (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            label       TEXT NOT NULL,
+            created_at  DATETIME DEFAULT (datetime('now', 'localtime')),
+            updated_at  DATETIME DEFAULT (datetime('now', 'localtime'))
+        );
+
+        CREATE TABLE IF NOT EXISTS entry_cluster_members (
+            cluster_id  INTEGER NOT NULL REFERENCES entry_clusters(id) ON DELETE CASCADE,
+            entry_id    INTEGER NOT NULL REFERENCES clipboard_entries(id) ON DELETE CASCADE,
+            score       REAL NOT NULL DEFAULT 0.0,
+            PRIMARY KEY (cluster_id, entry_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_cluster_members_entry
+            ON entry_cluster_members(entry_id);
+
+        CREATE TABLE IF NOT EXISTS tag_suggestions (
+            entry_id    INTEGER NOT NULL REFERENCES clipboard_entries(id) ON DELETE CASCADE,
+            tag_id      INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+            confidence  REAL NOT NULL DEFAULT 0.0,
+            created_at  DATETIME DEFAULT (datetime('now', 'localtime')),
+            PRIMARY KEY (entry_id, tag_id)
+        );
+        ",
+    )?;
+
     Ok(())
 }
 

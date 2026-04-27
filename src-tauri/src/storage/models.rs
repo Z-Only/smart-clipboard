@@ -134,3 +134,34 @@ pub struct SyncLogEntry {
     pub direction: String,
     pub synced_at: NaiveDateTime,
 }
+
+// --- Smart Search Models ---
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClusterSummary {
+    pub id: i64,
+    pub label: String,
+    pub entry_count: i64,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClusterMember {
+    pub cluster_id: i64,
+    pub entry_id: i64,
+    pub score: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TagSuggestion {
+    pub entry_id: i64,
+    pub tag: Tag,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RelatedEntry {
+    pub entry: ClipboardEntry,
+    pub score: f64,
+}

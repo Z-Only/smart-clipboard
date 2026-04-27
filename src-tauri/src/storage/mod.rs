@@ -5,6 +5,7 @@ pub mod search_pinyin;
 
 pub use database::Database;
 pub use models::{
-    CategoryCount, ClipboardEntry, DayCount, DiscoveredDevice, PairedDevice, SearchQuery,
-    SearchResult, Statistics, SyncLogEntry, SyncStatus, Tag, Template,
+    CategoryCount, ClipboardEntry, ClusterMember, ClusterSummary, DayCount, DiscoveredDevice,
+    PairedDevice, RelatedEntry, SearchQuery, SearchResult, Statistics, SyncLogEntry, SyncStatus,
+    Tag, TagSuggestion, Template,
 };
