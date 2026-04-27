@@ -156,7 +156,7 @@ impl ClusterEngine {
 
         // Sort by count descending and take top 3
         let mut sorted_words: Vec<(String, usize)> = word_counts.into_iter().collect();
-        sorted_words.sort_by(|a, b| b.1.cmp(&a.1));
+        sorted_words.sort_by_key(|b| std::cmp::Reverse(b.1));
         sorted_words.truncate(3);
 
         if sorted_words.is_empty() {
