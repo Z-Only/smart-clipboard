@@ -7,15 +7,17 @@ A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + *
 - Website / Docs: https://z-only.github.io/smart-clipboard/
 - Repository: https://github.com/Z-Only/smart-clipboard
 
-## Release Status — v2.8.0 Quick Paste Panel
+## Release Status — v2.9.0 Smart Search & Knowledge Organization
 
-This repository now includes a **Quick Paste Panel** on top of the plugin extension system, pinyin fuzzy search, advanced sync conflict handling, clipboard history, smart enhancements, templates, LAN sync, WebDAV cloud sync, Phase 4 access security, native biometric integration, the managed updater, and database-at-rest encryption.
+This repository now includes **Smart Search & Knowledge Organization** on top of the quick paste panel, plugin extension system, pinyin fuzzy search, advanced sync conflict handling, clipboard history, smart enhancements, templates, LAN sync, WebDAV cloud sync, Phase 4 access security, native biometric integration, the managed updater, and database-at-rest encryption.
 
-### v2.8.0 highlights
+### v2.9.0 highlights
 
-- **Quick Paste Panel**: Global shortcut (`Cmd/Ctrl+Shift+1`) invokes a lightweight overlay showing the 9 most recent clipboard entries with number-key instant paste, arrow-key navigation, Esc to dismiss, and type-to-search handoff
-- **Configurable quick-paste shortcut**: Change the trigger shortcut and the number of displayed entries in Settings
-- **Seamless search transition**: Typing any character in the quick-paste overlay transitions to the full search interface with the keystroke pre-filled
+- **Smart Groups**: Automatic entry clustering via N-gram/TF-IDF similarity with auto-generated labels, accessible from a new slide-over panel
+- **Tag Suggestions**: Content-similarity-based tag recommendations shown inline on entry cards with one-click accept or dismiss
+- **Related Entries**: Collapsible section showing the top-5 most similar entries with similarity percentages
+- **Search Re-ranking**: FTS5 results re-ranked using TF-IDF cosine similarity for better ordering on ambiguous queries
+- **Phase B Extension Point**: `SimilarityScorer` trait enables future drop-in vector/embedding backends via the plugin system
 
 ## Features
 
@@ -46,6 +48,9 @@ This repository now includes a **Quick Paste Panel** on top of the plugin extens
 - **Managed Updater** -- Background update checks, mirror endpoints, artifact download with progress, signature verification, and install handoff
 - **Database Encryption** -- Optional AES-256-GCM encryption for clipboard data at rest, with keys in the OS keyring
 - **Plugin / Extension System** -- Local manifest-based plugin discovery, validation, enable/disable management, and trusted content-processor hooks
+- **Smart Groups** -- Automatic entry clustering via N-gram/TF-IDF similarity with auto-generated labels and a dedicated slide-over panel
+- **Tag Suggestions** -- Content-similarity-based tag recommendations shown inline on entry cards
+- **Related Entries** -- Collapsible section showing the most similar entries with similarity percentages
 - **Batch Operations** -- Multi-select mode with bulk delete, favorite/unfavorite, tagging, merge-copy, and select-all/invert/clear actions
 - **Virtual Scroll** -- Virtualized list rendering for smooth scrolling with large clipboard histories
 - **Lightweight** -- Small binary with low CPU/memory usage thanks to Rust + native WebView

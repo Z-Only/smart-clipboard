@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.9.0] - 2026-04-27
+
+### Added
+
+- **Smart Groups (Intelligent Clustering)**: Automatic entry grouping via agglomerative clustering with auto-generated labels, accessible from a new "Smart Groups" slide-over panel
+- **Tag Suggestions**: Content-similarity-based tag recommendations shown inline on entry cards, with one-click accept or dismiss
+- **Related Entries**: Collapsible "Related" section under each entry showing the top-5 most similar entries with similarity percentage
+- **Similarity Engine**: Pure-Rust N-gram tokenizer, TF-IDF index, Jaccard and cosine similarity scoring with a `SimilarityScorer` trait as a Phase B extension point for future vector/embedding backends
+- **Search Relevance Re-ranking**: FTS5 candidate results are re-ranked using TF-IDF cosine similarity for noticeably better ordering on ambiguous queries
+- **Smart search configuration**: Four new settings — `smart_search_enabled`, `cluster_similarity_threshold`, `tag_suggestion_min_confidence`, `max_related_entries`
+- **Smart search IPC commands**: Seven new Tauri commands for clusters, tag suggestions, and related entries with security guards
+- **Smart search i18n**: Full English and Chinese translations for smart groups, tag suggestions, and related entries UI
+
+### Changed
+
+- **Version bump to 2.9.0**: Promoted smart search and knowledge organization as the next minor release
+- **App.vue integration**: Added Smart Groups button in the toolbar and SmartGroupsPanel slide-over
+- **Project documentation**: Updated README, Chinese README, CHANGELOG, and version metadata
+
 ## [2.8.0] - 2026-04-27
 
 ### Added
