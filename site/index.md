@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Smart Clipboard
   text: 智能剪贴板管理器
-  tagline: 轻量、安全、跨平台 —— 自动记录每一次复制，让粘贴更聪明。
+  tagline: 轻量、安全、跨平台 —— 自动记录、智能组织每一次复制，让粘贴更高效。
   image:
     src: /images/branding/logo-mark.svg
     alt: Smart Clipboard
@@ -24,8 +24,8 @@ features:
     title: 剪贴板历史
     details: 自动捕获每一次复制，去重保留、拼音模糊搜索、分类过滤、批量操作、虚拟滚动，再也不怕覆盖丢失。
   - icon: 🧠
-    title: 智能分类
-    details: URL / 邮箱 / 代码 / JSON / 文件路径 / 颜色 / 电话 / 地址自动识别，标签管理、使用统计一应俱全。
+    title: 智能识别与组织
+    details: 自动识别常见内容类型，并通过智能分组、标签建议、相关条目与搜索重排序帮助你更快找到和复用历史内容。
   - icon: 🔐
     title: 安全优先
     details: Argon2 密码哈希 + OS 凭据存储、原生 Touch ID / Windows Hello 生物识别、应用锁、自动锁定、命令级访问保护、敏感数据检测与过期清除。
@@ -34,7 +34,7 @@ features:
     details: 局域网端到端加密同步 + WebDAV 云同步，智能冲突检测与多策略解决，跨设备工作流无缝衔接。
   - icon: 🔌
     title: 模板与插件
-    details: 占位符模板一次性填写、多段文本复用；Manifest 插件系统支持自定义转换扩展。
+    details: 占位符模板支持一次填写、多次复用；插件扩展系统支持自定义转换能力，并为未来相似度评分后端保留扩展点。
   - icon: ⚡
     title: 轻量极速
     details: Tauri 2 + Rust 后端 + 原生 WebView，包体小、启动快、资源占用极低，内置托管更新器保持常新。
@@ -50,6 +50,13 @@ features:
     <figcaption>搜索与分类过滤</figcaption>
   </figure>
 </div>
+
+## 当前版本亮点
+
+- **智能分组**：自动聚类相近条目，降低重复检索成本
+- **标签建议**：从相似内容中推荐可复用标签
+- **相关条目**：帮助快速回忆上下文并再次复制
+- **搜索重排序**：让模糊查询结果更贴近真实意图
 
 ## 为什么选择 Smart Clipboard？
 

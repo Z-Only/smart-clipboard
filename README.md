@@ -9,50 +9,48 @@ A cross-platform, lightweight smart clipboard manager built with **Tauri 2** + *
 
 ## Release Status — v2.9.0 Smart Search & Knowledge Organization
 
-This repository now includes **Smart Search & Knowledge Organization** on top of the quick paste panel, plugin extension system, pinyin fuzzy search, advanced sync conflict handling, clipboard history, smart enhancements, templates, LAN sync, WebDAV cloud sync, Phase 4 access security, native biometric integration, the managed updater, and database-at-rest encryption.
+The current main branch already delivers a full desktop workflow spanning clipboard history, smart enhancements, templates, secure local protection, LAN/WebDAV sync, managed updates, and plugin-based extensibility. Version 2.9.0 further strengthens **Smart Search & Knowledge Organization**.
 
 ### v2.9.0 highlights
 
-- **Smart Groups**: Automatic entry clustering via N-gram/TF-IDF similarity with auto-generated labels, accessible from a new slide-over panel
-- **Tag Suggestions**: Content-similarity-based tag recommendations shown inline on entry cards with one-click accept or dismiss
-- **Related Entries**: Collapsible section showing the top-5 most similar entries with similarity percentages
-- **Search Re-ranking**: FTS5 results re-ranked using TF-IDF cosine similarity for better ordering on ambiguous queries
-- **Phase B Extension Point**: `SimilarityScorer` trait enables future drop-in vector/embedding backends via the plugin system
+- **Smart Groups**: Automatically clusters similar entries with N-gram / TF-IDF similarity and generates readable group labels
+- **Tag Suggestions**: Recommends reusable tags from similar entries directly on each card
+- **Related Entries**: Surfaces the top 5 most similar entries with similarity percentages for quick recall
+- **Search Re-ranking**: Reorders FTS5 matches with TF-IDF cosine similarity to improve ambiguous queries
+- **Similarity Scoring Extension Point**: The `SimilarityScorer` trait keeps the ranking pipeline open to future vector or embedding-based backends
 
 ## Features
 
+### Core workflow
+
 - **Clipboard History** -- Automatically captures copied content with deduplication
-- **Smart Classification** -- Auto-categorizes content into URL, Email, Code, JSON, FilePath, Color, Phone, Address, Image, and plain Text
 - **Full-Text Search** -- Fast search powered by SQLite FTS5, with Chinese pinyin full-text and initials matching
 - **Category Filter** -- Browse clipboard history by content type
 - **Global Hotkey** -- `Cmd/Ctrl + Shift + V` to toggle the clipboard panel
 - **Quick Paste** -- `Cmd/Ctrl + Shift + 1` to open a lightweight overlay for instant number-key paste
-- **System Tray** -- Runs in the background with tray controls
-- **Favorites** -- Pin frequently used entries to prevent auto-cleanup
-- **Configurable** -- Max entries, retention period, excluded apps, monitor interval, and sensitive-content expiry
-- **Auto-Start** -- Optionally launch on system login
-- **Appearance Modes** -- System / Light / Dark mode
-- **Theme Colors** -- 6 built-in color themes
-- **Multi-Language** -- English and Chinese UI support
+- **Batch Operations** -- Multi-select mode with bulk delete, favorite/unfavorite, tagging, merge-copy, and select-all/invert/clear actions
+- **Virtual Scroll** -- Virtualized list rendering for smooth scrolling with large clipboard histories
+
+### Smart enhancements & knowledge organization
+
+- **Smart Classification** -- Auto-categorizes content into URL, Email, Code, JSON, FilePath, Color, Phone, Address, Image, and plain Text
 - **Sensitive Detection** -- Detects passwords, API keys, tokens, JWTs, and connection strings with optional auto-expiry
 - **Content Transforms** -- One-click case, encoding, and formatting transforms
 - **Tag Management** -- Custom tags for organizing entries
 - **Image Clipboard** -- Captures and displays clipboard images with PNG storage
 - **Usage Statistics** -- Dashboard with category breakdown, daily activity, and most-used entries
 - **Clipboard Templates** -- Reusable text snippets with `{{placeholder}}` syntax and fill-in dialog
+- **Smart Search & Knowledge Organization** -- Combines Smart Groups, tag suggestions, related entries, and search re-ranking to make history easier to organize and reuse
+
+### Security, sync, and extensibility
+
+- **App Access Security** -- Password lock, manual lock (settings & tray), auto-lock timeout, guarded tray/hotkey wakeups, and command-level access control
+- **Database Encryption** -- Optional AES-256-GCM encryption for clipboard data at rest, with keys in the OS keyring
 - **LAN Sync** -- Encrypted peer-to-peer sync over mDNS + WebSocket
 - **WebDAV Cloud Sync** -- End-to-end encrypted cloud sync with device registry, polling, and rate limiting
 - **Sync Conflict Handling** -- Smart conflict detection with configurable resolution strategies and manual diff UI
-- **Pinyin Fuzzy Search** -- Search Chinese entries by Hanzi, full pinyin, and initials with short-query fallback
-- **App Access Security** -- Password lock, manual lock (settings & tray), auto-lock timeout, guarded tray/hotkey wakeups, and command-level access control
 - **Managed Updater** -- Background update checks, mirror endpoints, artifact download with progress, signature verification, and install handoff
-- **Database Encryption** -- Optional AES-256-GCM encryption for clipboard data at rest, with keys in the OS keyring
-- **Plugin / Extension System** -- Local manifest-based plugin discovery, validation, enable/disable management, and trusted content-processor hooks
-- **Smart Groups** -- Automatic entry clustering via N-gram/TF-IDF similarity with auto-generated labels and a dedicated slide-over panel
-- **Tag Suggestions** -- Content-similarity-based tag recommendations shown inline on entry cards
-- **Related Entries** -- Collapsible section showing the most similar entries with similarity percentages
-- **Batch Operations** -- Multi-select mode with bulk delete, favorite/unfavorite, tagging, merge-copy, and select-all/invert/clear actions
-- **Virtual Scroll** -- Virtualized list rendering for smooth scrolling with large clipboard histories
+- **Plugin extension system** -- Local plugin discovery, validation, enable/disable management, trusted transform hooks, and the `SimilarityScorer` similarity-scoring extension point for future ranking backends
 - **Lightweight** -- Small binary with low CPU/memory usage thanks to Rust + native WebView
 
 ## Security Model (Phase 4)
@@ -232,24 +230,20 @@ smart-clipboard/
 
 ## Roadmap
 
-### Completed
+### Implemented
 
-- [x] **Phase 1 -- MVP**: Clipboard monitoring, storage, classification, search UI, hotkey, tray, settings
-- [x] **Phase 2 -- Smart Enhancements**: Sensitive detection, content transforms, tags, images, usage stats
-- [x] **Templates**: Parameterized reusable clipboard snippets
-- [x] **Phase 3 -- Sync**: LAN sync, pairing, encrypted WebSocket transport, WebDAV cloud sync
-- [x] **Phase 4 -- Access Security**: App lock, secure password storage, startup unlock gate, tray/hotkey interception, auto-lock, and guarded commands
+- [x] **Core clipboard workflow**: Background monitoring, deduplicated history, classification, search UI, hotkey, tray, and settings
+- [x] **Smart enhancements**: Sensitive detection, content transforms, tags, images, usage statistics, and reusable templates
+- [x] **Multi-device sync**: LAN sync, device pairing, encrypted WebSocket transport, WebDAV cloud sync, and conflict handling
+- [x] **Access security**: App lock, secure password storage, startup unlock gate, tray/hotkey interception, auto-lock, guarded commands, native biometrics, and database-at-rest encryption
+- [x] **Smart search & knowledge organization**: Smart Groups, tag suggestions, related entries, search re-ranking, batch operations, virtual scroll, and quick paste overlay
+- [x] **Plugin extension system**: Local plugin discovery, validation, enable/disable management, trusted transform hooks, and the `SimilarityScorer` similarity-scoring extension point for future ranking backends
 
-### Planned / Future Improvements
+### Next
 
-- [x] **Native biometric integration**: Native Touch ID (macOS) and Windows Hello (Windows) via platform FFI
-- [x] **Deeper runtime integration tests**: Add full invoke-level black-box tests around locked/unlocked command behavior
-- [x] **Database-at-rest encryption**: Optional AES-256-GCM encrypted local storage for clipboard data with OS keyring key management
-- [x] **Advanced sync conflict handling**: Smarter merge / conflict-resolution behavior
-- [x] **Pinyin fuzzy search**: Chinese Hanzi / full pinyin / initials search for clipboard entries
-- [x] **Plugin / extension system**: Local manifest-based plugin discovery, validation, enable/disable management, and trusted transform hooks
-- [x] **Quick Paste Panel**: Lightweight keyboard-driven overlay for instant paste of recent entries via number keys 1-9, with seamless search transition
-- [ ] **More platform-specific hardening**: Better idle detection and richer OS-native unlock UX
+- [ ] **More platform-specific hardening**: Better idle detection, richer native unlock UX, and stronger consistency across protected entry points
+- [ ] **Broader plugin capabilities**: Expand plugins from transform actions toward richer content processing and similarity backends
+- [ ] **Further search/organization improvements**: Keep improving grouping quality, recommendation explainability, and result relevance while staying lightweight and local-first
 
 ## Contributing
 

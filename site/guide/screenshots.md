@@ -1,6 +1,6 @@
 # 截图预览
 
-以下是 Smart Clipboard 各核心功能的界面截图，帮助你快速了解应用的全貌。
+以下是 Smart Clipboard 各核心功能的界面截图，帮助你快速了解历史管理、智能搜索与知识组织、模板、安全与同步等能力。
 
 <div class="screenshot-grid">
 
@@ -63,3 +63,13 @@
 - `template-workflow.png`
 - `statistics-panel.png`
 - `sync-panel.png`
+
+## 建议补充的后续截图
+
+为了让文档更完整，后续建议补充以下已实现功能的截图：
+
+- Smart Groups 侧边面板
+- 条目卡片中的标签建议
+- 条目详情中的相关条目区域
+- 快捷粘贴弹层
+- 插件设置区与启用/禁用状态
