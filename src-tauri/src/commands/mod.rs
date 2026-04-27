@@ -1,6 +1,7 @@
 pub mod clipboard;
 pub mod config;
 pub mod security;
+pub mod smart;
 pub mod sync;
 pub mod tags;
 pub mod transform;
@@ -58,4 +59,8 @@ pub use transform::transform_content;
 pub use updater::{
     check_for_updates_now, discard_pending_update, download_available_update, get_updater_status,
     install_pending_update,
+};
+pub use smart::{
+    accept_tag_suggestion, dismiss_tag_suggestions, get_cluster_entries, get_clusters,
+    get_related_entries, get_tag_suggestions, trigger_recluster,
 };
