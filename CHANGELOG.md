@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **QuickPasteOverlay component**: New Vue component with Teleport rendering, keyboard navigation, category icons, relative timestamps, and search transition
 - **Quick-paste i18n**: Full English and Chinese translations for quick-paste overlay labels and settings keys
 - **Quick-paste unit tests**: Component tests for QuickPasteOverlay (keyboard navigation, number-key paste, dismiss, search handoff) and store tests for `fetchRecentEntries`
+- **Bilingual release notes**: GitHub Releases now display actual CHANGELOG content instead of generic diff links, with Chinese translation support and locale-aware display in the updater UI
 
 ### Changed
 

@@ -15,6 +15,7 @@
 - **QuickPasteOverlay 组件**：新增 Vue 组件，使用 Teleport 渲染，支持键盘导航、分类图标、相对时间戳和搜索切换
 - **快速粘贴国际化**：快速粘贴覆盖面板标签和设置键的中英文翻译
 - **快速粘贴单元测试**：QuickPasteOverlay 组件测试（键盘导航、数字键粘贴、关闭、搜索切换）和 store 测试（`fetchRecentEntries`）
+- **双语更新日志**：GitHub Releases 现在展示实际的 CHANGELOG 内容而非通用的 diff 链接，支持中文翻译并在更新界面根据语言设置展示对应内容
 
 ### 变更
 
