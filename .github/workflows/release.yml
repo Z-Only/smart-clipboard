@@ -65,12 +65,52 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Extract changelog for current tag
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          BODY_FILE=$(mktemp)
+          USE_GENERATED="false"
+
+          extract_version_section() {
+            local file="$1"
+            awk -v ver="$VERSION" '
+              /^## \[/ {
+                if (found) exit
+                if (index($0, "[" ver "]")) { found=1; next }
+              }
+              found { print }
+            ' "$file"
+          }
+
+          EN_NOTES=$(extract_version_section "CHANGELOG.md")
+
+          if [ -n "$EN_NOTES" ]; then
+            echo "<!-- lang:en -->" > "$BODY_FILE"
+            echo "$EN_NOTES" >> "$BODY_FILE"
+
+            if [ -f "CHANGELOG.zh-CN.md" ]; then
+              ZH_NOTES=$(extract_version_section "CHANGELOG.zh-CN.md")
+              if [ -n "$ZH_NOTES" ]; then
+                echo "" >> "$BODY_FILE"
+                echo "<!-- lang:zh-CN -->" >> "$BODY_FILE"
+                echo "$ZH_NOTES" >> "$BODY_FILE"
+              fi
+            fi
+          else
+            USE_GENERATED="true"
+          fi
+
+          echo "body_file=$BODY_FILE" >> "$GITHUB_OUTPUT"
+          echo "use_generated=$USE_GENERATED" >> "$GITHUB_OUTPUT"
+
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
           draft: true
-          generate_release_notes: true
+          body_path: ${{ steps.changelog.outputs.use_generated == 'false' && steps.changelog.outputs.body_file || '' }}
+          generate_release_notes: ${{ steps.changelog.outputs.use_generated == 'true' }}
 
   build-tauri:
     needs: [quality, create-release]
