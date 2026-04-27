@@ -420,4 +420,16 @@ export default {
     enableConfirm: 'This will encrypt all existing clipboard entries. Continue?',
     disableConfirm: 'This will decrypt all entries and remove the encryption key. Continue?',
   },
+  smart: {
+    groups: 'Smart Groups',
+    refresh: 'Refresh',
+    reclustering: 'Analyzing...',
+    unclustered: 'Unclustered',
+    lastUpdated: 'Last updated: {time}',
+    related: 'Related ({count})',
+    suggestedTags: 'Suggested:',
+    noGroups: 'Not enough entries for smart grouping yet',
+    noRelated: 'No related entries found',
+    entries: '{count} entries',
+  },
 };

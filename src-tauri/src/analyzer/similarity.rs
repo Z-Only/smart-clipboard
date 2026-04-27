@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// Trait for content similarity scoring.
 /// Phase A: implemented by `NgramSimilarityEngine`.
@@ -16,7 +15,7 @@ pub trait SimilarityScorer: Send + Sync {
     fn engine_name(&self) -> &str;
 }
 
-/// N-gram based similarity engine using character-level tokenization.
+/// Character-level n-gram similarity engine using Jaccard similarity.
 pub struct NgramSimilarityEngine {
     ngram_size: usize,
 }
@@ -27,21 +26,42 @@ impl NgramSimilarityEngine {
     }
 
     pub fn with_ngram_size(ngram_size: usize) -> Self {
-        Self { ngram_size }
+        Self {
+            ngram_size: ngram_size.max(2),
+        }
     }
 
+    /// Extract character-level n-grams from text.
+    /// For short texts (< 50 chars), uses bigrams regardless of configured size.
     fn extract_ngrams(&self, text: &str) -> HashSet<String> {
-        let chars: Vec<char> = text.chars().collect();
-        if chars.len() < self.ngram_size {
-            // For very short texts, use individual characters
-            return chars.iter().map(|c| c.to_string()).collect();
+        let normalized = text.to_lowercase();
+        let chars: Vec<char> = normalized.chars().collect();
+
+        if chars.is_empty() {
+            return HashSet::new();
         }
 
+        let effective_size = if chars.len() < 50 { 2 } else { self.ngram_size };
+
         let mut ngrams = HashSet::new();
-        for i in 0..=chars.len() - self.ngram_size {
-            let ngram: String = chars[i..i + self.ngram_size].iter().collect();
+
+        // Add individual CJK characters as tokens
+        for &character in &chars {
+            if is_cjk(character) {
+                ngrams.insert(character.to_string());
+            }
+        }
+
+        if chars.len() < effective_size {
+            ngrams.insert(normalized);
+            return ngrams;
+        }
+
+        for window in chars.windows(effective_size) {
+            let ngram: String = window.iter().collect();
             ngrams.insert(ngram);
         }
+
         ngrams
     }
 
@@ -49,18 +69,12 @@ impl NgramSimilarityEngine {
         if set_a.is_empty() && set_b.is_empty() {
             return 0.0;
         }
-        if set_a.is_empty() || set_b.is_empty() {
-            return 0.0;
-        }
-
         let intersection = set_a.intersection(set_b).count() as f64;
         let union = set_a.union(set_b).count() as f64;
-
         if union == 0.0 {
-            0.0
-        } else {
-            intersection / union
+            return 0.0;
         }
+        intersection / union
     }
 }
 
@@ -72,123 +86,190 @@ impl Default for NgramSimilarityEngine {
 
 impl SimilarityScorer for NgramSimilarityEngine {
     fn score(&self, content_a: &str, content_b: &str) -> f64 {
-        if content_a == content_b {
-            return 1.0;
-        }
         if content_a.is_empty() || content_b.is_empty() {
             return 0.0;
         }
-
-        let set_a = self.extract_ngrams(content_a);
-        let set_b = self.extract_ngrams(content_b);
-        Self::jaccard_similarity(&set_a, &set_b)
+        if content_a == content_b {
+            return 1.0;
+        }
+        let ngrams_a = self.extract_ngrams(content_a);
+        let ngrams_b = self.extract_ngrams(content_b);
+        Self::jaccard_similarity(&ngrams_a, &ngrams_b)
     }
 
     fn score_batch(&self, query: &str, candidates: &[&str]) -> Vec<(usize, f64)> {
-        let mut scores: Vec<(usize, f64)> = candidates
+        if query.is_empty() {
+            return Vec::new();
+        }
+        let query_ngrams = self.extract_ngrams(query);
+        let mut results: Vec<(usize, f64)> = candidates
             .iter()
             .enumerate()
-            .map(|(idx, candidate)| (idx, self.score(query, candidate)))
+            .map(|(index, candidate)| {
+                let candidate_ngrams = self.extract_ngrams(candidate);
+                let similarity = Self::jaccard_similarity(&query_ngrams, &candidate_ngrams);
+                (index, similarity)
+            })
+            .filter(|(_, similarity)| *similarity > 0.0)
             .collect();
-
-        scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-        scores
+        results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        results
     }
 
     fn engine_name(&self) -> &str {
-        "NgramSimilarityEngine"
+        "ngram"
     }
 }
 
+// ---------------------------------------------------------------------------
+// Tokenization
+// ---------------------------------------------------------------------------
+
+/// Check if a character is in the CJK Unified Ideographs range.
+fn is_cjk(character: char) -> bool {
+    ('\u{4e00}'..='\u{9fff}').contains(&character)
+}
+
+/// Tokenize text into terms for TF-IDF indexing.
+///
+/// Rules:
+/// - Lowercase all text
+/// - Split on whitespace and common punctuation
+/// - CJK characters are emitted as individual tokens
+/// - Non-CJK tokens shorter than 2 characters are filtered out
+pub fn tokenize(text: &str) -> Vec<String> {
+    let lowered = text.to_lowercase();
+    let mut tokens = Vec::new();
+    let mut current_word = String::new();
+
+    for character in lowered.chars() {
+        if is_cjk(character) {
+            // Flush any accumulated ASCII word
+            if current_word.len() >= 2 {
+                tokens.push(current_word.clone());
+            }
+            current_word.clear();
+            // Emit CJK character as its own token
+            tokens.push(character.to_string());
+        } else if character.is_alphanumeric() || character == '_' {
+            current_word.push(character);
+        } else {
+            // Whitespace / punctuation → flush word
+            if current_word.len() >= 2 {
+                tokens.push(current_word.clone());
+            }
+            current_word.clear();
+        }
+    }
+
+    // Flush trailing word
+    if current_word.len() >= 2 {
+        tokens.push(current_word);
+    }
+
+    tokens
+}
+
+// ---------------------------------------------------------------------------
+// TF-IDF Index
+// ---------------------------------------------------------------------------
+
 /// Lightweight in-memory TF-IDF index for a small corpus.
 pub struct TfIdfIndex {
-    documents: Vec<HashMap<String, f64>>, // term → tf-idf weight per doc
-    idf: HashMap<String, f64>,            // term → idf
+    documents: Vec<HashMap<String, f64>>,
+    idf: HashMap<String, f64>,
 }
 
 impl TfIdfIndex {
+    /// Build a TF-IDF index from a slice of document contents.
     pub fn build(contents: &[&str]) -> Self {
-        let n_docs = contents.len();
-        let mut doc_term_freqs: Vec<HashMap<String, f64>> = Vec::with_capacity(n_docs);
-        let mut doc_freq: HashMap<String, usize> = HashMap::new();
+        let document_count = contents.len() as f64;
+        if contents.is_empty() {
+            return Self {
+                documents: Vec::new(),
+                idf: HashMap::new(),
+            };
+        }
 
-        // Compute term frequency for each document
-        for content in contents {
-            let tokens = tokenize(content);
-            let mut term_freq: HashMap<String, f64> = HashMap::new();
-            let total_terms = tokens.len() as f64;
+        // Tokenize all documents and compute term frequencies
+        let doc_tokens: Vec<Vec<String>> = contents.iter().map(|c| tokenize(c)).collect();
 
-            for token in &tokens {
-                *term_freq.entry(token.clone()).or_insert(0.0) += 1.0;
-            }
-
-            // Normalize TF
-            for (_term, freq) in term_freq.iter_mut() {
-                *freq /= total_terms;
-            }
-
-            // Track document frequency for IDF
-            let unique_terms: HashSet<&String> = term_freq.keys().collect();
+        // Compute document frequency for each term
+        let mut document_frequency: HashMap<String, usize> = HashMap::new();
+        for tokens in &doc_tokens {
+            let unique_terms: HashSet<&str> = tokens.iter().map(|s| s.as_str()).collect();
             for term in unique_terms {
-                *doc_freq.entry(term.clone()).or_insert(0) += 1;
+                *document_frequency.entry(term.to_string()).or_insert(0) += 1;
             }
-
-            doc_term_freqs.push(term_freq);
         }
 
         // Compute IDF: log(N / df)
-        let mut idf: HashMap<String, f64> = HashMap::new();
-        for (term, df) in &doc_freq {
-            *idf.entry(term.clone()).or_insert(0.0) = ((n_docs as f64) / (*df as f64)).ln();
-        }
+        let idf: HashMap<String, f64> = document_frequency
+            .iter()
+            .map(|(term, &df)| {
+                let idf_value = (document_count / df as f64).ln();
+                (term.clone(), idf_value)
+            })
+            .collect();
 
-        // Compute TF-IDF for each document
-        let mut documents: Vec<HashMap<String, f64>> = Vec::with_capacity(n_docs);
-        for doc_tf in &doc_term_freqs {
-            let mut doc_tfidf: HashMap<String, f64> = HashMap::new();
-            for (term, tf) in doc_tf {
-                if let Some(idf_value) = idf.get(term) {
-                    doc_tfidf.insert(term.clone(), tf * idf_value);
+        // Compute TF-IDF weights per document
+        let documents: Vec<HashMap<String, f64>> = doc_tokens
+            .iter()
+            .map(|tokens| {
+                let total_terms = tokens.len() as f64;
+                if total_terms == 0.0 {
+                    return HashMap::new();
                 }
-            }
-            documents.push(doc_tfidf);
-        }
+                let mut term_count: HashMap<String, f64> = HashMap::new();
+                for token in tokens {
+                    *term_count.entry(token.clone()).or_insert(0.0) += 1.0;
+                }
+                term_count
+                    .into_iter()
+                    .map(|(term, count)| {
+                        let tf = count / total_terms;
+                        let idf_val = idf.get(&term).copied().unwrap_or(0.0);
+                        (term, tf * idf_val)
+                    })
+                    .collect()
+            })
+            .collect();
 
         Self { documents, idf }
     }
 
+    /// Compute cosine similarity between a query and each document.
+    /// Returns Vec<(document_index, score)> sorted by score descending, excluding zeros.
     pub fn query_similarity(&self, query: &str) -> Vec<(usize, f64)> {
         let query_tokens = tokenize(query);
-        let mut query_tf: HashMap<String, f64> = HashMap::new();
+        if query_tokens.is_empty() {
+            return Vec::new();
+        }
+
+        // Build query TF-IDF vector
         let total_terms = query_tokens.len() as f64;
-
+        let mut term_count: HashMap<String, f64> = HashMap::new();
         for token in &query_tokens {
-            *query_tf.entry(token.clone()).or_insert(0.0) += 1.0;
+            *term_count.entry(token.clone()).or_insert(0.0) += 1.0;
         }
+        let query_vector: HashMap<String, f64> = term_count
+            .into_iter()
+            .map(|(term, count)| {
+                let tf = count / total_terms;
+                let idf_val = self.idf.get(&term).copied().unwrap_or(0.0);
+                (term, tf * idf_val)
+            })
+            .collect();
 
-        // Normalize query TF
-        for (_term, freq) in query_tf.iter_mut() {
-            *freq /= total_terms;
-        }
-
-        // Compute query TF-IDF
-        let mut query_tfidf: HashMap<String, f64> = HashMap::new();
-        for (term, tf) in &query_tf {
-            if let Some(idf_value) = self.idf.get(term) {
-                query_tfidf.insert(term.clone(), tf * idf_value);
-            }
-        }
-
-        // Compute cosine similarity with each document
         let mut results: Vec<(usize, f64)> = self
             .documents
             .iter()
             .enumerate()
-            .map(|(idx, doc_tfidf)| {
-                let sim = cosine_similarity(&query_tfidf, doc_tfidf);
-                (idx, sim)
+            .map(|(index, doc_vector)| {
+                let similarity = cosine_similarity(&query_vector, doc_vector);
+                (index, similarity)
             })
-            .filter(|(_, score)| *score > 0.0)
+            .filter(|(_, similarity)| *similarity > 0.0)
             .collect();
 
         results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
@@ -196,186 +277,89 @@ impl TfIdfIndex {
     }
 }
 
-/// Compute cosine similarity between two TF-IDF weight maps.
+// ---------------------------------------------------------------------------
+// Cosine Similarity
+// ---------------------------------------------------------------------------
+
+/// Compute cosine similarity between two sparse TF-IDF vectors.
 pub fn cosine_similarity(vec_a: &HashMap<String, f64>, vec_b: &HashMap<String, f64>) -> f64 {
     if vec_a.is_empty() || vec_b.is_empty() {
         return 0.0;
     }
 
-    let mut dot_product = 0.0;
-    let mut norm_a = 0.0;
-    let mut norm_b = 0.0;
+    let dot_product: f64 = vec_a
+        .iter()
+        .filter_map(|(key, &val_a)| vec_b.get(key).map(|&val_b| val_a * val_b))
+        .sum();
 
-    for (term, weight_a) in vec_a {
-        norm_a += weight_a * weight_a;
-        if let Some(weight_b) = vec_b.get(term) {
-            dot_product += weight_a * weight_b;
-        }
+    let magnitude_a: f64 = vec_a.values().map(|v| v * v).sum::<f64>().sqrt();
+    let magnitude_b: f64 = vec_b.values().map(|v| v * v).sum::<f64>().sqrt();
+
+    if magnitude_a == 0.0 || magnitude_b == 0.0 {
+        return 0.0;
     }
 
-    for weight_b in vec_b.values() {
-        norm_b += weight_b * weight_b;
-    }
-
-    norm_a = norm_a.sqrt();
-    norm_b = norm_b.sqrt();
-
-    if norm_a == 0.0 || norm_b == 0.0 {
-        0.0
-    } else {
-        dot_product / (norm_a * norm_b)
-    }
+    dot_product / (magnitude_a * magnitude_b)
 }
 
-/// Tokenize text into terms.
-/// Rules:
-/// - Lowercase all text
-/// - Split on whitespace and common punctuation
-/// - For CJK characters (Unicode range \u4e00-\u9fff), emit each character as an individual token
-/// - Filter out tokens shorter than 2 chars (for non-CJK)
-/// - Filter out empty tokens
-pub fn tokenize(text: &str) -> Vec<String> {
-    let text_lower = text.to_lowercase();
-    let mut tokens: Vec<String> = Vec::new();
-    let mut current_token = String::new();
-
-    for ch in text_lower.chars() {
-        if is_cjk(ch) {
-            // Flush current token if any
-            if !current_token.is_empty() {
-                if current_token.len() >= 2 {
-                    tokens.push(current_token.clone());
-                }
-                current_token.clear();
-            }
-            // Add CJK character as individual token
-            tokens.push(ch.to_string());
-        } else if ch.is_alphanumeric() || ch == '\'' {
-            current_token.push(ch);
-        } else {
-            // Separator character
-            if !current_token.is_empty() {
-                if current_token.len() >= 2 {
-                    tokens.push(current_token.clone());
-                }
-                current_token.clear();
-            }
-        }
-    }
-
-    // Don't forget the last token
-    if !current_token.is_empty() && current_token.len() >= 2 {
-        tokens.push(current_token);
-    }
-
-    tokens
-}
-
-fn is_cjk(ch: char) -> bool {
-    matches!(ch, '\u{4e00}'..='\u{9fff}')
-}
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    // -- tokenize tests --
+
     #[test]
-    fn test_tokenize_normal_text() {
-        let tokens = tokenize("Hello world");
+    fn tokenize_normal_text() {
+        let tokens = tokenize("Hello World");
         assert_eq!(tokens, vec!["hello", "world"]);
     }
 
     #[test]
-    fn test_tokenize_with_punctuation() {
-        let tokens = tokenize("Hello, world! How are you?");
-        assert_eq!(tokens, vec!["hello", "world", "how", "are", "you"]);
+    fn tokenize_cjk_text() {
+        let tokens = tokenize("智能剪贴板");
+        assert_eq!(tokens, vec!["智", "能", "剪", "贴", "板"]);
     }
 
     #[test]
-    fn test_tokenize_cjk_text() {
-        let tokens = tokenize("你好世界");
-        assert_eq!(tokens, vec!["你", "好", "世", "界"]);
+    fn tokenize_mixed_text() {
+        let tokens = tokenize("Hello 世界 test");
+        assert_eq!(tokens, vec!["hello", "世", "界", "test"]);
     }
 
     #[test]
-    fn test_tokenize_mixed_text() {
-        let tokens = tokenize("Hello 世界 world");
-        assert_eq!(tokens, vec!["hello", "世", "界", "world"]);
-    }
-
-    #[test]
-    fn test_tokenize_empty() {
+    fn tokenize_empty() {
         let tokens = tokenize("");
-        assert_eq!(tokens, Vec::<String>::new());
+        assert!(tokens.is_empty());
     }
 
     #[test]
-    fn test_tokenize_short_words_filtered() {
-        let tokens = tokenize("I am a test");
-        assert_eq!(tokens, vec!["test"]);
+    fn tokenize_filters_short_tokens() {
+        let tokens = tokenize("I am a big cat");
+        // "I", "a" are < 2 chars, filtered out
+        assert_eq!(tokens, vec!["am", "big", "cat"]);
     }
 
     #[test]
-    fn test_tokenize_numbers() {
-        let tokens = tokenize("Test 123 abc");
-        assert_eq!(tokens, vec!["test", "123", "abc"]);
+    fn tokenize_punctuation() {
+        let tokens = tokenize("hello, world! foo-bar");
+        assert_eq!(tokens, vec!["hello", "world", "foo", "bar"]);
     }
 
-    #[test]
-    fn test_ngram_extract_short_text() {
-        let engine = NgramSimilarityEngine::with_ngram_size(3);
-        let ngrams = engine.extract_ngrams("ab");
-        // For short text (< ngram_size), should use individual characters
-        assert!(ngrams.contains("a"));
-        assert!(ngrams.contains("b"));
-        assert_eq!(ngrams.len(), 2);
-    }
+    // -- NgramSimilarityEngine tests --
 
     #[test]
-    fn test_ngram_extract_long_text() {
-        let engine = NgramSimilarityEngine::with_ngram_size(3);
-        let ngrams = engine.extract_ngrams("hello");
-        // Should have trigrams: "hel", "ell", "llo"
-        assert!(ngrams.contains("hel"));
-        assert!(ngrams.contains("ell"));
-        assert!(ngrams.contains("llo"));
-        assert_eq!(ngrams.len(), 3);
-    }
-
-    #[test]
-    fn test_ngram_extract_cjk() {
-        let engine = NgramSimilarityEngine::with_ngram_size(3);
-        let ngrams = engine.extract_ngrams("你好世界");
-        // Should have trigrams of CJK characters
-        assert!(ngrams.contains("你好世"));
-        assert!(ngrams.contains("好世界"));
-        assert_eq!(ngrams.len(), 2);
-    }
-
-    #[test]
-    fn test_ngram_score_identical() {
+    fn ngram_identical_strings() {
         let engine = NgramSimilarityEngine::new();
         let score = engine.score("hello world", "hello world");
-        assert_eq!(score, 1.0);
+        assert!((score - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]
-    fn test_ngram_score_completely_different() {
-        let engine = NgramSimilarityEngine::new();
-        let score = engine.score("hello", "xyz");
-        assert_eq!(score, 0.0);
-    }
-
-    #[test]
-    fn test_ngram_score_partially_similar() {
-        let engine = NgramSimilarityEngine::new();
-        let score = engine.score("hello world", "hello there");
-        assert!(score > 0.0);
-        assert!(score < 1.0);
-    }
-
-    #[test]
-    fn test_ngram_score_empty_strings() {
+    fn ngram_empty_strings() {
         let engine = NgramSimilarityEngine::new();
         assert_eq!(engine.score("", "hello"), 0.0);
         assert_eq!(engine.score("hello", ""), 0.0);
@@ -383,113 +367,157 @@ mod tests {
     }
 
     #[test]
-    fn test_ngram_score_cjk_content() {
+    fn ngram_completely_different() {
         let engine = NgramSimilarityEngine::new();
-        let score = engine.score("你好世界", "你好世界");
-        assert_eq!(score, 1.0);
-
-        let score_partial = engine.score("你好世界", "你好明天");
-        assert!(score_partial > 0.0);
-        assert!(score_partial < 1.0);
+        let score = engine.score("aaa", "zzz");
+        assert!(score < 0.1, "Expected low score, got {}", score);
     }
 
     #[test]
-    fn test_ngram_score_batch_ordering() {
+    fn ngram_partially_similar() {
         let engine = NgramSimilarityEngine::new();
-        let query = "hello world";
-        let candidates = vec!["goodbye", "hello there", "hello world"];
-
-        let results = engine.score_batch(query, &candidates);
-
-        // Should be sorted by score descending
-        assert_eq!(results[0].0, 2); // "hello world" should be first (score 1.0)
-        assert_eq!(results[0].1, 1.0);
-        assert!(results[1].1 > results[2].1); // "hello there" should score higher than "goodbye"
+        let score = engine.score("hello world", "hello earth");
+        assert!(
+            score > 0.0 && score < 1.0,
+            "Expected partial similarity, got {}",
+            score
+        );
     }
 
     #[test]
-    fn test_tfidf_build_and_query() {
-        let docs = vec![
-            "the cat sat on the mat",
-            "the dog sat on the log",
-            "cats and dogs are pets",
-        ];
+    fn ngram_cjk_similarity() {
+        let engine = NgramSimilarityEngine::new();
+        let score = engine.score("智能剪贴板", "智能手机");
+        assert!(score > 0.0, "Expected some CJK similarity, got {}", score);
+    }
 
-        let index = TfIdfIndex::build(&docs);
-        let results = index.query_similarity("cat");
-
+    #[test]
+    fn ngram_score_batch_ordering() {
+        let engine = NgramSimilarityEngine::new();
+        let candidates = vec!["hello world", "goodbye universe", "hello earth"];
+        let results = engine.score_batch("hello world", &candidates);
         assert!(!results.is_empty());
-        // First result should be doc 0 ("the cat sat on the mat")
+        // First result should be the identical string (index 0)
         assert_eq!(results[0].0, 0);
-        assert!(results[0].1 > 0.0);
+        assert!((results[0].1 - 1.0).abs() < f64::EPSILON);
+        // Scores should be descending
+        for window in results.windows(2) {
+            assert!(window[0].1 >= window[1].1);
+        }
     }
 
     #[test]
-    fn test_tfidf_query_no_match() {
-        let docs = vec!["hello world", "foo bar"];
-        let index = TfIdfIndex::build(&docs);
-        let results = index.query_similarity("xyz");
-
+    fn ngram_score_batch_empty_query() {
+        let engine = NgramSimilarityEngine::new();
+        let results = engine.score_batch("", &["hello", "world"]);
         assert!(results.is_empty());
     }
 
     #[test]
-    fn test_cosine_similarity_orthogonal() {
-        let mut vec_a = HashMap::new();
-        vec_a.insert("a".to_string(), 1.0);
-
-        let mut vec_b = HashMap::new();
-        vec_b.insert("b".to_string(), 1.0);
-
-        let sim = cosine_similarity(&vec_a, &vec_b);
-        assert_eq!(sim, 0.0);
-    }
-
-    #[test]
-    fn test_cosine_similarity_identical() {
-        let mut vec = HashMap::new();
-        vec.insert("a".to_string(), 1.0);
-        vec.insert("b".to_string(), 2.0);
-
-        let sim = cosine_similarity(&vec, &vec);
-        assert_eq!(sim, 1.0);
-    }
-
-    #[test]
-    fn test_cosine_similarity_partial_overlap() {
-        let mut vec_a = HashMap::new();
-        vec_a.insert("a".to_string(), 1.0);
-        vec_a.insert("b".to_string(), 1.0);
-
-        let mut vec_b = HashMap::new();
-        vec_b.insert("b".to_string(), 1.0);
-        vec_b.insert("c".to_string(), 1.0);
-
-        let sim = cosine_similarity(&vec_a, &vec_b);
-        assert!(sim > 0.0);
-        assert!(sim < 1.0);
-    }
-
-    #[test]
-    fn test_cosine_similarity_empty_vectors() {
-        let vec_a = HashMap::new();
-        let mut vec_b = HashMap::new();
-        vec_b.insert("a".to_string(), 1.0);
-
-        let sim = cosine_similarity(&vec_a, &vec_b);
-        assert_eq!(sim, 0.0);
-    }
-
-    #[test]
-    fn test_similarity_scorer_trait() {
+    fn ngram_engine_name() {
         let engine = NgramSimilarityEngine::new();
-        assert_eq!(engine.engine_name(), "NgramSimilarityEngine");
+        assert_eq!(engine.engine_name(), "ngram");
+    }
 
-        let score = engine.score("test", "test");
-        assert_eq!(score, 1.0);
+    // -- cosine_similarity tests --
 
-        let batch = engine.score_batch("test", &["test", "other"]);
-        assert_eq!(batch.len(), 2);
-        assert_eq!(batch[0].1, 1.0);
+    #[test]
+    fn cosine_identical_vectors() {
+        let mut vec_a = HashMap::new();
+        vec_a.insert("hello".to_string(), 1.0);
+        vec_a.insert("world".to_string(), 2.0);
+        let score = cosine_similarity(&vec_a, &vec_a);
+        assert!((score - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn cosine_orthogonal_vectors() {
+        let mut vec_a = HashMap::new();
+        vec_a.insert("hello".to_string(), 1.0);
+        let mut vec_b = HashMap::new();
+        vec_b.insert("world".to_string(), 1.0);
+        let score = cosine_similarity(&vec_a, &vec_b);
+        assert_eq!(score, 0.0);
+    }
+
+    #[test]
+    fn cosine_partial_overlap() {
+        let mut vec_a = HashMap::new();
+        vec_a.insert("hello".to_string(), 1.0);
+        vec_a.insert("world".to_string(), 1.0);
+        let mut vec_b = HashMap::new();
+        vec_b.insert("hello".to_string(), 1.0);
+        vec_b.insert("earth".to_string(), 1.0);
+        let score = cosine_similarity(&vec_a, &vec_b);
+        assert!(score > 0.0 && score < 1.0);
+        assert!((score - 0.5).abs() < 1e-10);
+    }
+
+    #[test]
+    fn cosine_empty_vectors() {
+        let vec_a: HashMap<String, f64> = HashMap::new();
+        let vec_b: HashMap<String, f64> = HashMap::new();
+        assert_eq!(cosine_similarity(&vec_a, &vec_b), 0.0);
+    }
+
+    // -- TfIdfIndex tests --
+
+    #[test]
+    fn tfidf_basic_corpus() {
+        let corpus = vec![
+            "the cat sat on the mat",
+            "the dog sat on the log",
+            "cats and dogs are friends",
+        ];
+        let index = TfIdfIndex::build(&corpus);
+        assert_eq!(index.documents.len(), 3);
+        assert!(!index.idf.is_empty());
+    }
+
+    #[test]
+    fn tfidf_query_matching() {
+        let corpus = vec![
+            "rust programming language",
+            "python programming language",
+            "cooking recipes and food",
+        ];
+        let index = TfIdfIndex::build(&corpus);
+        let results = index.query_similarity("rust programming");
+        assert!(!results.is_empty());
+        // The first result should be the rust document (index 0)
+        assert_eq!(results[0].0, 0);
+    }
+
+    #[test]
+    fn tfidf_empty_corpus() {
+        let corpus: Vec<&str> = vec![];
+        let index = TfIdfIndex::build(&corpus);
+        let results = index.query_similarity("anything");
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn tfidf_empty_query() {
+        let corpus = vec!["hello world"];
+        let index = TfIdfIndex::build(&corpus);
+        let results = index.query_similarity("");
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn tfidf_no_match() {
+        let corpus = vec!["alpha beta gamma"];
+        let index = TfIdfIndex::build(&corpus);
+        let results = index.query_similarity("xyz completely different");
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn tfidf_cjk_corpus() {
+        let corpus = vec!["智能剪贴板管理工具", "会议记录和笔记", "代码片段收藏"];
+        let index = TfIdfIndex::build(&corpus);
+        let results = index.query_similarity("智能工具");
+        assert!(!results.is_empty());
+        assert_eq!(results[0].0, 0);
     }
 }

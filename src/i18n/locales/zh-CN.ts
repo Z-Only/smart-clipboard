@@ -418,4 +418,16 @@ export default {
     enableConfirm: '将加密所有现有剪贴板条目，是否继续？',
     disableConfirm: '将解密所有条目并移除加密密钥，是否继续？',
   },
+  smart: {
+    groups: '智能分组',
+    refresh: '刷新',
+    reclustering: '正在分析...',
+    unclustered: '未分组',
+    lastUpdated: '上次更新: {time}',
+    related: '相关 ({count})',
+    suggestedTags: '推荐标签:',
+    noGroups: '条目不足，暂无法进行智能分组',
+    noRelated: '未找到相关条目',
+    entries: '{count} 条',
+  },
 };

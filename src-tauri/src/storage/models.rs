@@ -135,6 +135,8 @@ pub struct SyncLogEntry {
     pub synced_at: NaiveDateTime,
 }
 
+// --- Smart Search Models ---
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClusterSummary {
     pub id: i64,

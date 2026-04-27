@@ -1,6 +1,7 @@
 pub mod clipboard;
 pub mod config;
 pub mod security;
+pub mod smart;
 pub mod sync;
 pub mod tags;
 pub mod transform;
@@ -43,6 +44,10 @@ pub use config::{
 };
 pub use security::{
     get_app_lock_status, lock_app, set_app_lock_password, unlock_app, update_app_lock_settings,
+};
+pub use smart::{
+    accept_tag_suggestion, dismiss_tag_suggestions, get_cluster_entries, get_clusters,
+    get_related_entries, get_tag_suggestions, trigger_recluster,
 };
 pub use sync::{
     disable_encryption, enable_encryption, get_discovered_devices, get_encryption_status,

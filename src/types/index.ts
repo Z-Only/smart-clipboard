@@ -252,3 +252,24 @@ export interface ConflictConfig {
   keepConflictLog: boolean;
   maxLogEntries: number;
 }
+
+// --- Smart Search Types ---
+
+export interface Cluster {
+  id: number;
+  label: string;
+  entry_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TagSuggestion {
+  entry_id: number;
+  tag: Tag;
+  confidence: number;
+}
+
+export interface RelatedEntry {
+  entry: ClipboardEntry;
+  score: number;
+}

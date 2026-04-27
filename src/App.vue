@@ -69,6 +69,28 @@
       </button>
       <button
         class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        :title="$t('smart.groups')"
+        @click="showSmartGroups = true"
+      >
+        <svg
+          class="h-4 w-4"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="18" cy="5" r="3" />
+          <circle cx="6" cy="12" r="3" />
+          <circle cx="18" cy="19" r="3" />
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+        </svg>
+      </button>
+      <button
+        class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
         :title="$t('app.settings')"
         @click="showSettings = true"
       >
@@ -118,6 +140,9 @@
     <!-- Sync panel -->
     <SyncPanel :is-open="showSync" @close="showSync = false" />
 
+    <!-- Smart Groups panel -->
+    <SmartGroupsPanel :is-open="showSmartGroups" @close="showSmartGroups = false" />
+
     <!-- Settings panel -->
     <SettingsPanel :is-open="showSettings" @close="showSettings = false" />
 
@@ -153,6 +178,7 @@ import SettingsPanel from '@/components/SettingsPanel.vue';
 import StatisticsPanel from '@/components/StatisticsPanel.vue';
 import TemplateList from '@/components/TemplateList.vue';
 import SyncPanel from '@/components/SyncPanel.vue';
+import SmartGroupsPanel from '@/components/SmartGroupsPanel.vue';
 import LockScreen from '@/components/LockScreen.vue';
 import ConflictResolveDialog from '@/components/ConflictResolveDialog.vue';
 import QuickPasteOverlay from '@/components/QuickPasteOverlay.vue';
@@ -162,6 +188,7 @@ import { useSyncStore } from '@/stores/syncStore';
 import { useTemplateStore } from '@/stores/templateStore';
 import { useWebDavStore } from '@/stores/webdavStore';
 import { useConflictStore } from '@/stores/conflictStore';
+import { useSmartStore } from '@/stores/smartStore';
 import { useClipboard } from '@/composables/useClipboard';
 import { useTheme } from '@/composables/useTheme';
 
@@ -171,6 +198,7 @@ const syncStore = useSyncStore();
 const templateStore = useTemplateStore();
 const webdavStore = useWebDavStore();
 const conflictStore = useConflictStore();
+const smartStore = useSmartStore();
 useTheme();
 
 const { totalCount } = storeToRefs(store);
@@ -181,6 +209,7 @@ const showSettings = ref(false);
 const showStatistics = ref(false);
 const showTemplates = ref(false);
 const showSync = ref(false);
+const showSmartGroups = ref(false);
 const showLockOverlay = computed(() => security.status.enabled && security.status.locked);
 
 const quickPasteActive = ref(false);
@@ -197,10 +226,12 @@ watch(
       syncStore.clearSensitiveState();
       templateStore.clearSensitiveState();
       webdavStore.clearSensitiveState();
+      smartStore.clearSensitiveState();
       showSettings.value = false;
       showStatistics.value = false;
       showTemplates.value = false;
       showSync.value = false;
+      showSmartGroups.value = false;
       quickPasteActive.value = false;
       return;
     }
@@ -212,6 +243,7 @@ watch(
         templateStore.fetchTemplates(),
         templateStore.fetchCategories(),
         webdavStore.refreshAll(),
+        smartStore.fetchClusters(),
       ]);
       searchBarRef.value?.focus();
     }

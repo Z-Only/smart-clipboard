@@ -6,8 +6,8 @@ use rusqlite::{params, Connection, Result};
 
 use super::migrations;
 use super::models::{
-    CategoryCount, ClipboardEntry, DayCount, PairedDevice, SearchQuery, SearchResult, Statistics,
-    Tag, Template,
+    CategoryCount, ClipboardEntry, ClusterSummary, DayCount, PairedDevice, SearchQuery,
+    SearchResult, Statistics, Tag, TagSuggestion, Template,
 };
 use super::search_pinyin::{build_fts_match_expr, build_pinyin_fields, normalize_search_keyword};
 
@@ -754,6 +754,230 @@ impl Database {
             params![content, encrypted as i32, id],
         )?;
         Ok(())
+    }
+
+    // --- Smart Search: Cluster methods ---
+
+    pub fn get_cluster_list(&self) -> Result<Vec<ClusterSummary>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT c.id, c.label, COUNT(m.entry_id) as entry_count, c.created_at, c.updated_at
+             FROM entry_clusters c
+             LEFT JOIN entry_cluster_members m ON c.id = m.cluster_id
+             GROUP BY c.id
+             ORDER BY entry_count DESC",
+        )?;
+        let clusters = stmt
+            .query_map([], |row| {
+                Ok(ClusterSummary {
+                    id: row.get(0)?,
+                    label: row.get(1)?,
+                    entry_count: row.get(2)?,
+                    created_at: row.get(3)?,
+                    updated_at: row.get(4)?,
+                })
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(clusters)
+    }
+
+    pub fn get_cluster_entries(
+        &self,
+        cluster_id: i64,
+        limit: i64,
+        offset: i64,
+    ) -> Result<SearchResult> {
+        let conn = self.conn.lock().unwrap();
+        let total_count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM entry_cluster_members WHERE cluster_id = ?1",
+            params![cluster_id],
+            |row| row.get(0),
+        )?;
+        let mut stmt = conn.prepare(
+            "SELECT e.id, e.content, e.content_type, e.category, e.hash, e.source_app,
+                    e.is_favorite, e.is_sensitive, e.use_count, e.created_at, e.updated_at,
+                    e.expires_at, e.source_device
+             FROM clipboard_entries e
+             INNER JOIN entry_cluster_members m ON e.id = m.entry_id
+             WHERE m.cluster_id = ?1
+             ORDER BY m.score DESC
+             LIMIT ?2 OFFSET ?3",
+        )?;
+        let entries: Vec<ClipboardEntry> = stmt
+            .query_map(params![cluster_id, limit, offset], row_to_entry)?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(SearchResult {
+            entries,
+            total_count,
+        })
+    }
+
+    pub fn upsert_cluster(&self, label: &str) -> Result<i64> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO entry_clusters (label) VALUES (?1)",
+            params![label],
+        )?;
+        Ok(conn.last_insert_rowid())
+    }
+
+    pub fn add_to_cluster(&self, cluster_id: i64, entry_id: i64, score: f64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT OR REPLACE INTO entry_cluster_members (cluster_id, entry_id, score) VALUES (?1, ?2, ?3)",
+            params![cluster_id, entry_id, score],
+        )?;
+        Ok(())
+    }
+
+    pub fn remove_from_cluster(&self, cluster_id: i64, entry_id: i64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "DELETE FROM entry_cluster_members WHERE cluster_id = ?1 AND entry_id = ?2",
+            params![cluster_id, entry_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_unclustered_entries(&self, limit: i64) -> Result<Vec<ClipboardEntry>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, content, content_type, category, hash, source_app,
+                    is_favorite, is_sensitive, use_count, created_at, updated_at,
+                    expires_at, source_device
+             FROM clipboard_entries
+             WHERE id NOT IN (SELECT entry_id FROM entry_cluster_members)
+             ORDER BY created_at DESC
+             LIMIT ?1",
+        )?;
+        let entries = stmt
+            .query_map(params![limit], row_to_entry)?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(entries)
+    }
+
+    pub fn clear_clusters(&self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute_batch("DELETE FROM entry_cluster_members; DELETE FROM entry_clusters;")?;
+        Ok(())
+    }
+
+    // --- Smart Search: Tag suggestion methods ---
+
+    pub fn save_tag_suggestions(&self, entry_id: i64, suggestions: &[(i64, f64)]) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "DELETE FROM tag_suggestions WHERE entry_id = ?1",
+            params![entry_id],
+        )?;
+        for (tag_id, confidence) in suggestions {
+            conn.execute(
+                "INSERT INTO tag_suggestions (entry_id, tag_id, confidence) VALUES (?1, ?2, ?3)",
+                params![entry_id, tag_id, confidence],
+            )?;
+        }
+        Ok(())
+    }
+
+    pub fn get_tag_suggestions(&self, entry_id: i64) -> Result<Vec<TagSuggestion>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT ts.entry_id, t.id, t.name, ts.confidence
+             FROM tag_suggestions ts
+             INNER JOIN tags t ON ts.tag_id = t.id
+             WHERE ts.entry_id = ?1
+             ORDER BY ts.confidence DESC",
+        )?;
+        let suggestions = stmt
+            .query_map(params![entry_id], |row| {
+                Ok(TagSuggestion {
+                    entry_id: row.get(0)?,
+                    tag: Tag {
+                        id: Some(row.get(1)?),
+                        name: row.get(2)?,
+                    },
+                    confidence: row.get(3)?,
+                })
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(suggestions)
+    }
+
+    pub fn dismiss_tag_suggestions(&self, entry_id: i64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "DELETE FROM tag_suggestions WHERE entry_id = ?1",
+            params![entry_id],
+        )?;
+        Ok(())
+    }
+
+    // --- Smart Search: Related entries ---
+
+    pub fn get_entries_for_similarity(
+        &self,
+        exclude_id: i64,
+        limit: i64,
+    ) -> Result<Vec<ClipboardEntry>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, content, content_type, category, hash, source_app,
+                    is_favorite, is_sensitive, use_count, created_at, updated_at,
+                    expires_at, source_device
+             FROM clipboard_entries
+             WHERE id != ?1
+             ORDER BY created_at DESC
+             LIMIT ?2",
+        )?;
+        let entries = stmt
+            .query_map(params![exclude_id, limit], row_to_entry)?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(entries)
+    }
+
+    pub fn get_tagged_entries_with_tags(&self) -> Result<Vec<(ClipboardEntry, Vec<Tag>)>> {
+        let conn = self.conn.lock().unwrap();
+
+        // Get all entry ids that have at least one tag
+        let mut entry_stmt = conn.prepare(
+            "SELECT DISTINCT e.id, e.content, e.content_type, e.category, e.hash, e.source_app,
+                    e.is_favorite, e.is_sensitive, e.use_count, e.created_at, e.updated_at,
+                    e.expires_at, e.source_device
+             FROM clipboard_entries e
+             INNER JOIN entry_tags et ON e.id = et.entry_id
+             ORDER BY e.created_at DESC",
+        )?;
+        let entries: Vec<ClipboardEntry> = entry_stmt
+            .query_map([], row_to_entry)?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        let mut result = Vec::with_capacity(entries.len());
+        for entry in entries {
+            let entry_id = entry.id.unwrap_or(0);
+            let mut tag_stmt = conn.prepare(
+                "SELECT t.id, t.name FROM tags t
+                 INNER JOIN entry_tags et ON t.id = et.tag_id
+                 WHERE et.entry_id = ?1
+                 ORDER BY t.name",
+            )?;
+            let tags: Vec<Tag> = tag_stmt
+                .query_map(params![entry_id], |row| {
+                    Ok(Tag {
+                        id: Some(row.get(0)?),
+                        name: row.get(1)?,
+                    })
+                })?
+                .filter_map(|r| r.ok())
+                .collect();
+            result.push((entry, tags));
+        }
+        Ok(result)
     }
 }
 

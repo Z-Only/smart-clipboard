@@ -57,6 +57,14 @@ pub struct AppConfig {
     pub quick_paste_shortcut: String,
     #[serde(default = "default_quick_paste_entry_count")]
     pub quick_paste_entry_count: u8,
+    #[serde(default = "default_smart_search_enabled")]
+    pub smart_search_enabled: bool,
+    #[serde(default = "default_cluster_similarity_threshold")]
+    pub cluster_similarity_threshold: f64,
+    #[serde(default = "default_tag_suggestion_min_confidence")]
+    pub tag_suggestion_min_confidence: f64,
+    #[serde(default = "default_max_related_entries")]
+    pub max_related_entries: u8,
 }
 
 fn default_quick_paste_shortcut() -> String {
@@ -65,6 +73,22 @@ fn default_quick_paste_shortcut() -> String {
 
 fn default_quick_paste_entry_count() -> u8 {
     9
+}
+
+fn default_smart_search_enabled() -> bool {
+    true
+}
+
+fn default_cluster_similarity_threshold() -> f64 {
+    0.3
+}
+
+fn default_tag_suggestion_min_confidence() -> f64 {
+    0.25
+}
+
+fn default_max_related_entries() -> u8 {
+    5
 }
 
 impl Default for AppConfig {
@@ -85,6 +109,10 @@ impl Default for AppConfig {
             plugin_enabled: HashMap::new(),
             quick_paste_shortcut: default_quick_paste_shortcut(),
             quick_paste_entry_count: default_quick_paste_entry_count(),
+            smart_search_enabled: default_smart_search_enabled(),
+            cluster_similarity_threshold: default_cluster_similarity_threshold(),
+            tag_suggestion_min_confidence: default_tag_suggestion_min_confidence(),
+            max_related_entries: default_max_related_entries(),
         }
     }
 }

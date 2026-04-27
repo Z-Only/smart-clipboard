@@ -140,6 +140,14 @@ pub fn run() {
             commands::sync::get_encryption_status,
             commands::sync::enable_encryption,
             commands::sync::disable_encryption,
+            // smart search commands
+            commands::smart::get_clusters,
+            commands::smart::get_cluster_entries,
+            commands::smart::trigger_recluster,
+            commands::smart::get_tag_suggestions,
+            commands::smart::accept_tag_suggestion,
+            commands::smart::dismiss_tag_suggestions,
+            commands::smart::get_related_entries,
         ])
         .setup(|app| app_setup::setup_app(app))
         .run(tauri::generate_context!())
