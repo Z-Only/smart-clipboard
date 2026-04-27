@@ -78,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue';
+import { watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useSmartStore } from '@/stores/smartStore';
 
@@ -86,7 +86,7 @@ const props = defineProps<{
   isOpen: boolean;
 }>();
 
-const emit = defineEmits<{
+defineEmits<{
   close: [];
 }>();
 
