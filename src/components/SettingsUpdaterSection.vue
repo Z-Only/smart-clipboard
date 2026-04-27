@@ -135,7 +135,7 @@
       <div class="text-sm font-medium">
         {{ $t('settings.updater.availableTitle', { version: updater.status.availableVersion }) }}
       </div>
-      <div class="text-xs text-muted-foreground">{{ updater.status.availableNotes }}</div>
+      <div class="text-xs text-muted-foreground">{{ localizedAvailableNotes }}</div>
       <div class="flex gap-2">
         <Button size="sm" @click="downloadAvailable">{{
           $t('settings.updater.downloadInstaller')
@@ -148,7 +148,7 @@
         {{ $t('settings.updater.readyTitle', { version: updater.status.pendingUpdate.version }) }}
       </div>
       <div class="text-xs text-muted-foreground">
-        {{ updater.status.pendingUpdate.notes }}
+        {{ localizedPendingNotes }}
       </div>
       <div class="flex gap-2">
         <Button size="sm" @click="installPending">{{
@@ -164,9 +164,11 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from '@/components/ui/button';
 import { useUpdaterStore } from '@/stores/updaterStore';
+import { extractLocalizedNotes } from '@/lib/changelog';
 
 interface UpdaterConfig {
   auto_check_enabled: boolean;
@@ -180,9 +182,18 @@ interface UpdaterConfig {
 const props = defineProps<{ modelValue: UpdaterConfig }>();
 const emit = defineEmits<{ 'update:modelValue': [value: UpdaterConfig] }>();
 
+const { locale } = useI18n();
 const updater = useUpdaterStore();
 
 const config = computed(() => props.modelValue);
+
+const localizedAvailableNotes = computed(() =>
+  extractLocalizedNotes(updater.status.availableNotes, locale.value),
+);
+
+const localizedPendingNotes = computed(() =>
+  extractLocalizedNotes(updater.status.pendingUpdate?.notes ?? null, locale.value),
+);
 
 function updateField<K extends keyof UpdaterConfig>(key: K, value: UpdaterConfig[K]) {
   emit('update:modelValue', { ...props.modelValue, [key]: value });
