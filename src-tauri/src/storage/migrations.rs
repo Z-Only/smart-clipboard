@@ -274,6 +274,36 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         ",
     )?;
 
+    // Smart search: cluster and tag suggestion tables
+    conn.execute_batch(
+        "
+        CREATE TABLE IF NOT EXISTS entry_clusters (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            label       TEXT NOT NULL,
+            created_at  DATETIME DEFAULT (datetime('now', 'localtime')),
+            updated_at  DATETIME DEFAULT (datetime('now', 'localtime'))
+        );
+
+        CREATE TABLE IF NOT EXISTS entry_cluster_members (
+            cluster_id  INTEGER NOT NULL REFERENCES entry_clusters(id) ON DELETE CASCADE,
+            entry_id    INTEGER NOT NULL REFERENCES clipboard_entries(id) ON DELETE CASCADE,
+            score       REAL NOT NULL DEFAULT 0.0,
+            PRIMARY KEY (cluster_id, entry_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_cluster_members_entry
+            ON entry_cluster_members(entry_id);
+
+        CREATE TABLE IF NOT EXISTS tag_suggestions (
+            entry_id    INTEGER NOT NULL REFERENCES clipboard_entries(id) ON DELETE CASCADE,
+            tag_id      INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+            confidence  REAL NOT NULL DEFAULT 0.0,
+            created_at  DATETIME DEFAULT (datetime('now', 'localtime')),
+            PRIMARY KEY (entry_id, tag_id)
+        );
+        ",
+    )?;
+
     Ok(())
 }
 
@@ -402,6 +432,52 @@ mod tests {
             .unwrap();
 
         assert!(rowid > 0);
+    }
+
+    #[test]
+    fn smart_search_tables_created() {
+        let conn = Connection::open_in_memory().unwrap();
+        run_migrations(&conn).unwrap();
+
+        // Verify entry_clusters table exists
+        let cluster_exists: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type='table' AND name='entry_clusters'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert!(cluster_exists, "entry_clusters table should exist");
+
+        // Verify entry_cluster_members table exists
+        let members_exists: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type='table' AND name='entry_cluster_members'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert!(members_exists, "entry_cluster_members table should exist");
+
+        // Verify tag_suggestions table exists
+        let suggestions_exists: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type='table' AND name='tag_suggestions'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert!(suggestions_exists, "tag_suggestions table should exist");
+
+        // Verify idx_cluster_members_entry index exists
+        let index_exists: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type='index' AND name='idx_cluster_members_entry'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert!(index_exists, "idx_cluster_members_entry index should exist");
     }
 
     #[test]
